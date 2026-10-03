@@ -15,3 +15,6 @@ node_modules/
 
 # 샌드박스 빌드 산출물 (DB 덤프 등)
 deploy/openshell/build/
+
+# 커밋하지 않는 개인 문서 (팀 정보·크레딧 코드·초안 메모). Brev 인스턴스에는 scp 로 따로 옮긴다
+docs/private/

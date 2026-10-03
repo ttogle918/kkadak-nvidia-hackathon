@@ -18,3 +18,12 @@ NVIDIA 에이전트 스택(OpenShell · NemoClaw · NVIDIA Agent Skills) 위에�
 
 ## 로컬 환경 (실측 2026-10-03)
 openshell 0.0.116 · nemoclaw v0.0.124 · 게이트웨이 `nemoclaw`(127.0.0.1:8080). 다른 프로젝트의 샌드박스(`maintq*`)가 같은 게이트웨이에 있으니 이름 충돌·삭제에 주의.
+
+## 작업 흐름
+`/idea-judge`(주제 선택) → `/sprint`(계획) → `/stage N`(구현·검증·커밋) → `/done`(세션 마무리·로그). 마무리 없이 로그만은 `/logger`, 작업 상태 저장은 `/checkpoint`.
+에이전트(`.claude/agents/`): `pm`(계획) · `dev`(구현) · `reviewer`(설계·보안 게이트, 읽기 전용) · `eval-runner`(회귀·평가).
+문서: `docs/SCOPE.md`(범위) · `docs/DECISIONS.md`(결정) · `docs/guides/`(스킬·스택 가이드, 커밋) · `docs/private/`(후보·팀 정보, **gitignore**) · `docs/sprints/` · `docs/session_log/`(`/done`·`/logger` 가 `날짜_시각_주요작업.md` 로 저장).
+`skills/` 는 **제품이 에이전트에게 주는** 스킬, `.claude/skills/` 는 **개발 중 Claude Code 가 쓰는** 스킬이다.
+
+## 회귀 테스트 — 코드 변경 후 실행
+(미정 — 첫 코드가 생기면 pytest · ruff · 계약 스파이크 명령을 여기에 적는다. `eval-runner` 와 `/stage` 가 이 절을 기준으로 삼는다.)
