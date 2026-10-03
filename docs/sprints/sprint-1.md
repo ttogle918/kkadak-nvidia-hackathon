@@ -1011,3 +1011,21 @@ uv run ruff check .
 7. [린트] E501 이 꺼져 있어 100자 초과 3곳(`core/guard/untrusted.py:48`, `core/guard/rules.py:91`, `tests/core/hitl/test_hitl_db.py:108`)을 ruff 가 못 잡는다.
 8. [문서] 위 달라진 점을 §6 명세 본문에 반영(Stage 2 reviewer 가 "T101 D2 보강"을 명세와 대조한다).
 9. W6(자기 승인 id 정규화: strip·`agent:` 접두 거부)는 Stage 2 이월.
+
+### Stage 2 (부분) — 2026-10-04 · 커밋 `9553385`
+| 태스크 | 상태 | 구현 파일 | 테스트 |
+|---|---|---|---|
+| T201 쓰기 경계 + E2E | **완료** | `tests/test_write_boundary.py`, `tests/test_slice_e2e.py` | 100건 |
+| T202 policy_proposer 본체 | **보류 — D4 승인 대기** | — | — |
+| T202-opt | 보류(T202 뒤) | — | — |
+
+- 회귀: pytest **389 passed**(Stage 1 종료 시 289) 3회 동일 · ruff 통과.
+- reviewer: 1차 **FAIL** → 2차 **PASS**. 1차 블로커: 케이스 2·3·13 의 `UPDATE drafts SET state='approved'` 는 authorizer 없이도 트리거가 막아서, authorizer 가 약해져도 테스트가 녹색이었다. 정상 형태 자기 승인 UPDATE(`decided_by`·`decided_at` 포함)는 authorizer 없는 연결에서 **통과**하고 agent 연결에서만 `not authorized` 로 막힌다(직접 재현). 수정: 해당 케이스 추가 + 메시지 고정 + 대조 테스트. 변형 실험(`_agent_authorizer` 가 UPDATE 를 허용하게 monkeypatch)에서 8건이 실패함을 확인.
+- Stage 2 게이트는 **미충족**: T202 와 reviewer 의 D4·T202 확인이 남았다. Stage 3 는 착수하지 않는다.
+
+### 이월 · 미결 (Stage 2 reviewer 가 기록을 요구)
+- **W1 (D2, core)**: `_connect_reviewer` 의 raw 문장으로 자기 승인·판정자 위조가 된다(`UPDATE drafts SET state='approved', decided_by=created_by, decided_at='t'`; WHERE 없는 일괄 승인, 빈 `decided_by` 도 통과). 자기 승인 금지는 `ReviewDesk._decide` 의 Python 검사에만 있다. reviewer 연결은 사람 쪽 비공개 연결이라 설계 위반은 아니다. 대안: 트리거에 `NEW.decided_by IS NOT OLD.created_by`·비어 있지 않음 조건 추가, 또는 알려진 한계로 고정하는 테스트.
+- **W2 (D2, core)**: agent 연결의 raw INSERT 가 `created_by`·`kind`·`payload` 를 검증하지 않는다(`created_by='human:alice'`, 깨진 JSON payload 가능 → `list_drafts`·`approve` 의 `json.loads` 가 실패해 대기열이 멈춤). Stage 1 권고 1·`core/hitl/db.py` docstring 한계 미기재와 같은 항목. T104 의 mcp_server raw sqlite 금지와 `DraftWriter` 신원 주입에 의존한다.
+- **W6**: 자기 승인 id 정규화(strip·`agent:` 접두 거부) — `Reviewer(id=" agent:test-run")` 로 자기 승인 우회 가능.
+- 위 셋은 DB 파일 권한 분리·별도 프로세스(다음 스프린트, §7)로 근본 해결된다.
+- 테스트 정비(경고): 케이스 13 의 `"insert" not in sql.lower()` 분기를 시도 튜플의 기대 문구로 바꾼다 · VACUUM 단언을 `sqlite_errorname == "SQLITE_AUTH"` 로 완화 · 대조 테스트 주석에 "허용된 동작이 아니라 알려진 한계, 트리거를 강화하면 이 테스트를 갱신" 명시 · `:176` 주석 라벨 "W3" 가 Stage 1 의 W3 와 겹침.
