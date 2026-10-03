@@ -1,0 +1,26 @@
+{
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "python3 .claude/hooks/guard_writes.py" }]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write",
+        "hooks": [{ "type": "command", "command": "python3 .claude/hooks/lint_edited.py" }]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "uv run ruff check . 2>&1 | tail -n 5 || echo \"[stop-hook] ruff 실행 실패 — uv 설치/경로 확인\""
+          }
+        ]
+      }
+    ]
+  }
+}

@@ -2,7 +2,7 @@
 
 NVIDIA 에이전트 스택(OpenShell · NemoClaw · NVIDIA Agent Skills) 위에서 만드는 프로젝트. 제품 도메인은 아직 미정 —
 정해지면 이 문서 맨 위에 한 줄 소개와 절대 규칙을 추가한다.
-참고 구현: `/home/hyun/MaintQ-NVIDIA` (같은 스택을 쓴 선행 프로젝트. 결정 기록은 그쪽 `docs/10_DECISIONS.md`).
+참고: `/home/hyun/MaintQ-NVIDIA` 는 같은 스택을 쓴 선행 프로젝트다. 코드는 가져오지 않고, 필요할 때만 패턴을 참고한다.
 
 ## 스택 배치
 - **OpenShell** — 에이전트가 도는 샌드박스. 정책 템플릿 `deploy/openshell/policy.yaml`(기본 전부 차단).
@@ -26,4 +26,7 @@ openshell 0.0.116 · nemoclaw v0.0.124 · 게이트웨이 `nemoclaw`(127.0.0.1:8
 `skills/` 는 **제품이 에이전트에게 주는** 스킬, `.claude/skills/` 는 **개발 중 Claude Code 가 쓰는** 스킬이다.
 
 ## 회귀 테스트 — 코드 변경 후 실행
-(미정 — 첫 코드가 생기면 pytest · ruff · 계약 스파이크 명령을 여기에 적는다. `eval-runner` 와 `/stage` 가 이 절을 기준으로 삼는다.)
+`eval-runner` 와 `/stage` 가 이 절을 기준으로 삼는다. 명령은 레포 루트에서:
+- pytest: `uv run python -m pytest -q` (건수는 러너 출력이 기준 — 직전보다 줄었다면 테스트가 사라진 것)
+- 린트: `uv run ruff check .` (`.claude/skills/` 는 NVIDIA 카탈로그라 제외)
+- 계약 스파이크·평가셋: 생기면 여기에 추가
