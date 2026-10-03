@@ -27,3 +27,4 @@ extend-exclude = [".claude/skills"]   # NVIDIA 카탈로그 스킬 — 우리 �
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 testpaths = ["tests"]
+pythonpath = ["."]

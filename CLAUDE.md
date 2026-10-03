@@ -10,6 +10,19 @@ NVIDIA 에이전트 스택(OpenShell · NemoClaw · NVIDIA Agent Skills) 위에�
 - **추론** — 샌드박스 안에서는 `https://inference.local` 로만 호출. API 키는 게이트웨이 provider 에만 있다(`scripts/gateway_setup.sh`).
 - **Agent Skills** — 우리 스킬은 `skills/`, NVIDIA 카탈로그 스킬은 `.claude/skills/`.
 
+## 레포 구조
+```
+core/          도메인 무관 뼈대 — llm · hitl · guard · audit · policy_proposer (README 참고)
+mcp_server/    MCP 서버, 도구는 tools/ 에 파일당 1개
+backend/       사람 전용 승인 API (routers/)
+domains/<n>/   미션 공개 후 채우는 슬롯 — data · tools · skills · evals
+skills/        제품 스킬(에이전트에게 주는 SKILL.md)
+deploy/        openshell(정책·이미지) · nemoclaw(presets·workspace) · brev
+eval/ tests/   평가셋 · pytest(tests/ 는 소스 구조를 따라간다)
+docs/          SCOPE · DECISIONS · guides · session_log · sprints · private(gitignore)
+```
+MCP 서버와 backend 는 프로세스를 분리하고 서로 import 하지 않는다. 공통 로직은 `core/` 로 둔다 (D3).
+
 ## 절대 규칙
 1. 샌드박스 이미지·빌드 컨텍스트·리포에 `NVIDIA_API_KEY` 등 비밀을 넣지 않는다. `.env` 는 gitignore, 키는 셸 env → 게이트웨이 provider.
 2. `network_policies` 는 비어 있는 것이 기본. 허용을 추가하면 이유와 실측(로그의 ALLOWED/DENIED)을 정책 파일 주석에 남긴다.
