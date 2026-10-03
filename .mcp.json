@@ -1,0 +1,8 @@
+{
+  "mcpServers": {
+    "nemoclaw-docs": {
+      "type": "http",
+      "url": "https://docs.nvidia.com/nemoclaw/_mcp/server"
+    }
+  }
+}

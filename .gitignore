@@ -1,0 +1,17 @@
+# 비밀 — 키는 호스트 셸 env 와 OpenShell 게이트웨이 provider 에만 둔다
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Python / Node
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+.ruff_cache/
+node_modules/
+
+# 샌드박스 빌드 산출물 (DB 덤프 등)
+deploy/openshell/build/

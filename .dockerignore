@@ -1,0 +1,10 @@
+.git
+.claude
+.env
+.env.*
+!.env.example
+.venv
+__pycache__
+*.pyc
+node_modules
+deploy/openshell/build
