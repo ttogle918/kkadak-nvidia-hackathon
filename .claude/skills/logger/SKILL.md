@@ -1,6 +1,7 @@
 ---
 name: logger
 description: 세션을 끝내지 않고 지금까지의 작업·결정 맥락을 docs/session_log/ 에 기록(또는 갱신)한다. 사용자가 /logger 를 호출하거나 "로그 남겨줘 / 지금까지 정리해서 저장해줘" 라고 할 때 사용. 세션을 마무리할 때는 /done.
+model: sonnet
 ---
 
 # /logger — 세션 로그 저장 (마무리 없이)
