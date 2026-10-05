@@ -7,6 +7,10 @@
 가정(문서 미확인, CLAUDE.md 규칙 4): 게이트웨이의 다중 provider·모델 라우팅 지원은 확인 전이다.
 그래서 provider 이름이 호출 대상을 가리키는 유일한 키이고, env 변수 이름 대신 게이트웨이
 provider 이름으로 바꿔 끼울 수 있게 `api_key_envs` 해석을 `resolve_keys` 한 곳에 모았다.
+
+백엔드 스위치: 키는 provider 단위로 고르고 env 로 바뀌는 것은 엔드포인트(api|local)뿐이다.
+자동 폴백은 없다 — 로컬이 죽었다고 조용히 외부 API 로 요청(본문)이 나가면 안 되므로 사람이
+환경변수로 명시한다. 로컬 백엔드는 호스트 경로 전용이다(샌드박스 안은 D1 에 따라 inference.local).
 """
 
 from __future__ import annotations
@@ -29,6 +33,7 @@ __all__ = [
     "UnknownFeature",
     "load_config",
     "parse_config",
+    "resolve_backend",
     "resolve_keys",
 ]
 
@@ -36,7 +41,18 @@ DEFAULT_COOLDOWN_S = 30.0
 DEFAULT_TIMEOUT_S = 60.0
 _ENV_NAME = re.compile(r"^[A-Za-z_][A-Za-z0-9_]*$")
 _FEATURE_NAME = re.compile(r"^[A-Za-z0-9_.\-]+$")
-_PROVIDER_KEYS = {"api_key_envs", "base_url", "max_concurrency", "cooldown_s", "timeout_s"}
+_PROVIDER_KEYS = {
+    "api_key_envs",
+    "base_url",
+    "max_concurrency",
+    "local_max_concurrency",
+    "cooldown_s",
+    "timeout_s",
+    "local_base_url",
+    "local_api_key_envs",
+}
+BACKENDS = ("api", "local")
+BACKEND_ENV = "LLM_BACKEND"
 
 
 class LlmError(Exception):
@@ -63,6 +79,24 @@ class ProviderConfig:
     max_concurrency: int
     cooldown_s: float = DEFAULT_COOLDOWN_S
     timeout_s: float = DEFAULT_TIMEOUT_S
+    local_base_url: str | None = None
+    local_api_key_envs: tuple[str, ...] = ()
+    local_max_concurrency: int | None = None  # None 이면 max_concurrency 와 같은 값(별도 세마포어)
+
+    def concurrency_for(self, backend: str) -> int:
+        if backend == "local" and self.local_max_concurrency is not None:
+            return self.local_max_concurrency
+        return self.max_concurrency
+
+    def base_url_for(self, backend: str) -> str:
+        if backend == "local":
+            if not self.local_base_url:
+                raise LlmConfigError(f"provider {self.name!r}: local_base_url 이 없다")
+            return self.local_base_url
+        return self.base_url
+
+    def key_envs_for(self, backend: str) -> tuple[str, ...]:
+        return self.local_api_key_envs if backend == "local" else self.api_key_envs
 
 
 @dataclass(frozen=True)
@@ -86,6 +120,20 @@ def _nonempty(v: Any) -> bool:
     return isinstance(v, str) and v.strip() != ""
 
 
+def _env_names(name: str, key: str, envs: Any, *, allow_empty: bool) -> tuple[str, ...]:
+    if not isinstance(envs, (list, tuple)) or (not envs and not allow_empty):
+        raise LlmConfigError(f"provider {name!r}: {key} 는 비어 있지 않은 목록이어야 한다")
+    for i, e in enumerate(envs):
+        # 값이 잘못 들어왔을 때 그 값을 에러에 싣지 않는다(키를 붙여 넣은 실수 대비). 위치만 보고.
+        if not isinstance(e, str) or not _ENV_NAME.match(e):
+            raise LlmConfigError(
+                f"provider {name!r}: {key}[{i}] 는 env 변수 이름(영문·숫자·_)이어야 한다"
+            )
+    if len(set(envs)) != len(envs):
+        raise LlmConfigError(f"provider {name!r}: {key} 에 중복이 있다")
+    return tuple(envs)
+
+
 def _parse_provider(name: str, raw: Any) -> ProviderConfig:
     if not isinstance(raw, Mapping):
         raise LlmConfigError(f"provider {name!r}: 매핑이어야 한다")
@@ -95,22 +143,25 @@ def _parse_provider(name: str, raw: Any) -> ProviderConfig:
     for req in ("api_key_envs", "base_url", "max_concurrency"):
         if req not in raw:
             raise LlmConfigError(f"provider {name!r}: 필수 키 {req} 가 없다")
-    envs = raw["api_key_envs"]
-    if not isinstance(envs, (list, tuple)) or not envs:
-        raise LlmConfigError(f"provider {name!r}: api_key_envs 는 비어 있지 않은 목록이어야 한다")
-    for i, e in enumerate(envs):
-        # 값이 잘못 들어왔을 때 그 값을 에러에 싣지 않는다(키를 붙여 넣은 실수 대비). 위치만 보고.
-        if not isinstance(e, str) or not _ENV_NAME.match(e):
-            raise LlmConfigError(
-                f"provider {name!r}: api_key_envs[{i}] 는 env 변수 이름(영문·숫자·_)이어야 한다"
-            )
-    if len(set(envs)) != len(envs):
-        raise LlmConfigError(f"provider {name!r}: api_key_envs 에 중복이 있다")
+    envs = _env_names(name, "api_key_envs", raw["api_key_envs"], allow_empty=False)
+    local_envs = _env_names(
+        name, "local_api_key_envs", raw.get("local_api_key_envs", []), allow_empty=True
+    )
     if not _nonempty(raw["base_url"]):
         raise LlmConfigError(f"provider {name!r}: base_url 이 비어 있다")
+    local_url = raw.get("local_base_url")
+    if "local_base_url" in raw and not _nonempty(local_url):
+        raise LlmConfigError(f"provider {name!r}: local_base_url 이 비어 있다")
     mc = raw["max_concurrency"]
     if isinstance(mc, bool) or not isinstance(mc, int) or mc < 1:
         raise LlmConfigError(f"provider {name!r}: max_concurrency 는 1 이상의 정수여야 한다")
+    lmc = raw.get("local_max_concurrency")
+    if "local_max_concurrency" in raw and (
+        isinstance(lmc, bool) or not isinstance(lmc, int) or lmc < 1
+    ):
+        raise LlmConfigError(
+            f"provider {name!r}: local_max_concurrency 는 1 이상의 정수여야 한다"
+        )
     nums = {"cooldown_s": DEFAULT_COOLDOWN_S, "timeout_s": DEFAULT_TIMEOUT_S}
     for k in nums:
         if k in raw:
@@ -124,18 +175,43 @@ def _parse_provider(name: str, raw: Any) -> ProviderConfig:
         max_concurrency=mc,
         cooldown_s=nums["cooldown_s"],
         timeout_s=nums["timeout_s"],
+        local_base_url=local_url,
+        local_api_key_envs=local_envs,
+        local_max_concurrency=lmc,
     )
 
 
-def resolve_keys(provider: ProviderConfig, env: Mapping[str, str]) -> list[tuple[str, str]]:
+def backend_env_name(feature: str) -> str:
+    return f"{BACKEND_ENV}_{re.sub(r'[^A-Z0-9_]', '_', feature.upper())}"
+
+
+def resolve_backend(feature: str, env: Mapping[str, str]) -> str:
+    """기능별 LLM_BACKEND_<FEATURE> > 전역 LLM_BACKEND > 기본 api. 잘못된 값은 이름만 보고한다.
+
+    빈 문자열도 잘못된 값이다(fail-closed: 의도를 추측하지 않는다).
+    """
+    for var in (backend_env_name(feature), BACKEND_ENV):
+        if var in env:
+            if env[var] not in BACKENDS:  # 값은 에러에 싣지 않는다
+                raise LlmConfigError(f"env 변수 {var} 는 {list(BACKENDS)} 중 하나여야 한다")
+            return env[var]
+    return "api"
+
+
+def resolve_keys(
+    provider: ProviderConfig, env: Mapping[str, str], backend: str = "api"
+) -> list[tuple[str, str]]:
     """(env 변수 이름, 값) 목록. 누락·빈 값이면 **이름만** 밝혀 LlmConfigError.
 
+    local 백엔드는 키가 없어도 되므로 `local_api_key_envs` 가 비면 빈 목록이다.
     게이트웨이 provider 로 바꿔 끼울 때 이 함수만 교체한다(가정, 문서 미확인).
     """
-    missing = [n for n in provider.api_key_envs if not env.get(n, "").strip()]
+    provider.base_url_for(backend)  # local_base_url 없으면 fail-closed
+    envs = provider.key_envs_for(backend)
+    missing = [n for n in envs if not env.get(n, "").strip()]
     if missing:
         raise LlmConfigError(f"provider {provider.name!r}: env 변수가 없거나 비어 있다: {missing}")
-    return [(n, env[n]) for n in provider.api_key_envs]
+    return [(n, env[n]) for n in envs]
 
 
 def parse_config(data: Mapping[str, Any], env: Mapping[str, str] | None = None) -> LlmConfig:
@@ -151,11 +227,26 @@ def parse_config(data: Mapping[str, Any], env: Mapping[str, str] | None = None) 
     if not isinstance(raw_f, Mapping) or not raw_f:
         raise LlmConfigError("features 가 비어 있다")
     providers = {str(n): _parse_provider(str(n), r) for n, r in raw_p.items()}
+    # api 키 env 가 로컬 서버로 가면 안 된다 — local 목록은 어떤 provider 의 api 목록과도 겹치지 않는다.
+    api_envs = {e for p in providers.values() for e in p.api_key_envs}
+    for p in providers.values():
+        overlap = sorted(set(p.local_api_key_envs) & api_envs)
+        if overlap:
+            raise LlmConfigError(
+                f"provider {p.name!r}: local_api_key_envs 가 api_key_envs 와 겹친다: {overlap}"
+            )
     features: dict[str, FeatureConfig] = {}
+    norm_seen: dict[str, str] = {}
     for fname, r in raw_f.items():
         fname = str(fname)
         if not _FEATURE_NAME.match(fname):
             raise LlmConfigError(f"feature 이름이 올바르지 않다: {fname!r}")
+        norm = backend_env_name(fname)
+        if norm in norm_seen:
+            raise LlmConfigError(
+                f"feature {norm_seen[norm]!r}·{fname!r} 이 같은 env 변수 {norm} 로 정규화된다"
+            )
+        norm_seen[norm] = fname
         if not isinstance(r, Mapping) or set(r) != {"provider", "model"}:
             raise LlmConfigError(f"feature {fname!r}: provider·model 두 키만 있어야 한다")
         if not _nonempty(r["provider"]) or not _nonempty(r["model"]):
@@ -165,8 +256,12 @@ def parse_config(data: Mapping[str, Any], env: Mapping[str, str] | None = None) 
         features[fname] = FeatureConfig(fname, r["provider"], r["model"])
     cfg = LlmConfig(providers=providers, features=features)
     if env is not None:
+        used: dict[str, set[str]] = {n: set() for n in providers}
+        for f in features.values():
+            used[f.provider].add(resolve_backend(f.name, env))
         for p in providers.values():
-            resolve_keys(p, env)
+            for backend in used[p.name] or {"api"}:
+                resolve_keys(p, env, backend)
     return cfg
 
 

@@ -1,7 +1,7 @@
 """LlmClient — feature → provider·model 라우팅, provider 별 Semaphore, 키 풀, audit.
 
 실제 HTTP 전송은 구현하지 않는다(Transport 프로토콜만). 게이트웨이 연결은 문서 확인 후(D5).
-audit 에는 모델명·메시지 수·키의 env 변수 이름만 남기고 본문·키 값은 넣지 않는다.
+audit 에는 모델명·메시지 수·백엔드(api|local)·키의 env 변수 이름만 남기고 본문·키 값은 넣지 않는다.
 """
 
 from __future__ import annotations
@@ -19,6 +19,7 @@ from core.llm.config import (
     LlmError,
     ProviderConfig,
     UnknownFeature,
+    resolve_backend,
     resolve_keys,
 )
 from core.llm.pool import KeyLease, KeyPool
@@ -44,7 +45,8 @@ class Transport(Protocol):
         *,
         provider: ProviderConfig,
         model: str,
-        api_key: str,
+        base_url: str,
+        api_key: str | None,  # local 백엔드에 키가 없으면 None
         messages: Sequence[Message],
     ) -> TransportResponse: ...
 
@@ -78,17 +80,30 @@ class LlmClient:
         self._transport = transport
         self._audit = audit
         src = os.environ if env is None else env
-        self._pools: dict[str, KeyPool] = {}
-        self._sems: dict[str, asyncio.Semaphore] = {}
+        # 백엔드는 생성 시점에 한 번 정한다(잘못된 값·local_base_url 누락은 여기서 실패).
+        self._backends = {n: resolve_backend(n, src) for n in config.features}
+        used: dict[str, set[str]] = {n: set() for n in config.providers}
+        for fname, fc in config.features.items():
+            used[fc.provider].add(self._backends[fname])
+        # 키 풀은 (provider, backend) 별로 따로 둔다 — 쿨다운 상태를 공유하지 않는다.
+        self._pools: dict[tuple[str, str], KeyPool | None] = {}
+        # 세마포어도 (provider, backend) 별 — 느린 local 이 같은 provider 의 api 를 막지 않는다(D5).
+        self._sems: dict[tuple[str, str], asyncio.Semaphore] = {}
         for name, p in config.providers.items():
-            self._pools[name] = KeyPool(
-                resolve_keys(p, src),
-                cooldown_s=p.cooldown_s,
-                timeout_s=p.timeout_s,
-                clock=clock,
-                sleep=sleep,
-            )
-            self._sems[name] = asyncio.Semaphore(p.max_concurrency)
+            for backend in used[name] or {"api"}:
+                keys = resolve_keys(p, src, backend)
+                self._pools[(name, backend)] = (
+                    KeyPool(
+                        keys,
+                        cooldown_s=p.cooldown_s,
+                        timeout_s=p.timeout_s,
+                        clock=clock,
+                        sleep=sleep,
+                    )
+                    if keys
+                    else None
+                )
+                self._sems[(name, backend)] = asyncio.Semaphore(p.concurrency_for(backend))
 
     async def complete(self, feature: str, messages: Sequence[Message]) -> str:
         fc = self._config.features.get(feature)
@@ -96,13 +111,14 @@ class LlmClient:
             raise UnknownFeature(f"알 수 없는 feature: {feature!r}")
         _check_messages(messages)
         provider = self._config.providers[fc.provider]
-        pool = self._pools[fc.provider]
-        async with self._sems[fc.provider]:
+        backend = self._backends[feature]
+        pool = self._pools[(fc.provider, backend)]
+        async with self._sems[(fc.provider, backend)]:
             call_id = self._audit.call(
-                f"llm:{feature}", {"model": fc.model, "messages": len(messages)}
+                f"llm:{feature}", {"model": fc.model, "messages": len(messages), "backend": backend}
             )
             try:
-                text = await self._call(provider, pool, fc.model, messages)
+                text = await self._call(provider, backend, pool, fc.model, messages)
             except BaseException as exc:
                 self._audit.error(call_id, exc)
                 raise
@@ -112,28 +128,38 @@ class LlmClient:
     async def _call(
         self,
         provider: ProviderConfig,
-        pool: KeyPool,
+        backend: str,
+        pool: KeyPool | None,
         model: str,
         messages: Sequence[Message],
     ) -> str:
         last = "응답 없음"
-        for _ in provider.api_key_envs:  # 키 수만큼만 시도한다(재시도 정책 고도화는 범위 밖)
-            lease: KeyLease = await pool.acquire()
+        base_url = provider.base_url_for(backend)
+        # 키 수만큼만 시도한다(재시도 정책 고도화는 범위 밖). 키 없는 local 은 1번.
+        for _ in range(len(provider.key_envs_for(backend)) or 1):
+            lease: KeyLease | None = await pool.acquire() if pool else None
+            kname = lease.name if lease else "없음"
             try:
                 resp = await self._transport.send(
-                    provider=provider, model=model, api_key=lease.value, messages=messages
+                    provider=provider,
+                    model=model,
+                    base_url=base_url,
+                    api_key=lease.value if lease else None,
+                    messages=messages,
                 )
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # noqa: BLE001 - transport 구현이 무엇을 던지든 같은 정책
                 # 원 예외 메시지에 키가 섞일 수 있어 타입 이름만 쓴다.
-                pool.cool_down(lease.name)
-                raise LlmCallError(f"transport 오류 {type(exc).__name__} (키 {lease.name})") from None
+                if pool and lease:
+                    pool.cool_down(lease.name)
+                raise LlmCallError(f"transport 오류 {type(exc).__name__} (키 {kname})") from None
             if 200 <= resp.status < 300:
                 return resp.text
             if _cools_down(resp.status):
-                pool.cool_down(lease.name)
-                last = f"status {resp.status} (키 {lease.name})"
+                if pool and lease:
+                    pool.cool_down(lease.name)
+                last = f"status {resp.status} (키 {kname})"
                 continue
-            raise LlmCallError(f"status {resp.status} (키 {lease.name})")
+            raise LlmCallError(f"status {resp.status} (키 {kname})")
         raise LlmCallError(f"모든 키 시도 실패: {last}")

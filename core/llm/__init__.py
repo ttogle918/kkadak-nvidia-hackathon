@@ -9,6 +9,7 @@ from core.llm.config import (
     UnknownFeature,
     load_config,
     parse_config,
+    resolve_backend,
     resolve_keys,
 )
 from core.llm.pool import KeyLease, KeyPool
@@ -30,5 +31,6 @@ __all__ = [
     "UnknownFeature",
     "load_config",
     "parse_config",
+    "resolve_backend",
     "resolve_keys",
 ]

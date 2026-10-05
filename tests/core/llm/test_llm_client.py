@@ -45,11 +45,13 @@ class FakeTransport:
         self.statuses = list(statuses or [])
         self.raises = raises
         self.calls = []  # (provider, model, api_key)
+        self.full = []  # (provider, base_url, api_key)
         self.active = {}
         self.peak = {}
 
-    async def send(self, *, provider, model, api_key, messages):
+    async def send(self, *, provider, model, base_url, api_key, messages):
         self.calls.append((provider.name, model, api_key))
+        self.full.append((provider.name, base_url, api_key))
         n = self.active.get(provider.name, 0) + 1
         self.active[provider.name] = n
         self.peak[provider.name] = max(self.peak.get(provider.name, 0), n)
@@ -213,7 +215,7 @@ async def test_audit_events_have_no_key_or_body():
     assert [e.phase for e in sink.events] == ["call", "result"]
     call = sink.events[0]
     assert call.name == "llm:feature1"
-    assert call.data["args"] == {"model": "model-a", "messages": 1}
+    assert call.data["args"] == {"model": "model-a", "messages": 1, "backend": "api"}
     dump = "\n".join(e.to_json() for e in sink.events)
     for secret in (KEY_A1, KEY_A2, KEY_B, BODY):
         assert secret not in dump

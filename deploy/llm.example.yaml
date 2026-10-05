@@ -2,7 +2,22 @@
 # TODO: feature1, feature2 채우기 (10/7 미션 공개 후 기능이 정해지면 이름을 바꾼다)
 # 가정(문서 미확인): base_url·model 은 자리표시자다. 게이트웨이의 다중 provider·모델 라우팅은
 # 문서로 확인한 뒤, api_key_envs 대신 게이트웨이 provider 이름으로 바꿔 끼운다.
+#
+# 백엔드 스위치 (api <-> local). 키 선택은 provider 단위(api_key_envs / local_api_key_envs)이고,
+# 환경변수로 바뀌는 것은 엔드포인트뿐이다. 자동 폴백은 없다 — 사람이 명시적으로 바꾼다.
+#   LLM_BACKEND=local                 전역: 모든 기능을 local_base_url 로
+#   LLM_BACKEND_FEATURE1=local        기능별(전역보다 우선). 이름은 대문자화, [A-Z0-9_] 밖은 _
+#   값은 api | local 만(기본 api). local 인데 provider 에 local_base_url 이 없으면 시작 시 실패.
+# 로컬 엔드포인트는 가정(문서 미확인): OpenAI 호환 NIM/vLLM, 예 http://localhost:8000/v1.
+# D1: 로컬 백엔드는 호스트 경로 전용이다. 샌드박스 안에서는 inference.local 만 쓴다.
+# local_api_key_envs 는 선택(기본 빈 목록 = 키 없이 호출). env 변수 **이름**만 적는다.
+# 동시성: max_concurrency 는 api 상한. local_max_concurrency(선택, 1 이상 정수)는 local 상한이며
+# 없으면 max_concurrency 와 같은 값이다. 세마포어는 (provider, backend) 별이라 서로 막지 않는다.
+# local_api_key_envs 는 어떤 provider 의 api_key_envs 와도 겹치면 안 된다(api 키가 로컬로 가는 것 방지).
+# 기능 이름은 LLM_BACKEND_<이름> 으로 정규화되며 서로 충돌하는 이름(a.b, a-b, A_B)은 거부된다.
+# TODO(transport 구현 시): local_base_url 루프백 제한 필요(지금은 검증하지 않는다).
 providers:
+  # 로컬 예시(주석 해제): local_base_url: "http://localhost:8000/v1", local_api_key_envs: [LOCAL_KEY]
   nvidia_a: {api_key_envs: [NVIDIA_API_KEY_A], base_url: "<가정: 문서 확인 전>", max_concurrency: 4}
   nvidia_b: {api_key_envs: [NVIDIA_API_KEY_B], base_url: "<가정: 문서 확인 전>", max_concurrency: 4}
 features:
