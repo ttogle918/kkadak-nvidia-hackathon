@@ -1099,3 +1099,9 @@ uv run ruff check .
 - **W8**: 401·403 키를 쿨다운하지 않아 폐기된 키가 라운드로빈에 남는다. 재시도별 키 이름·상태가 audit 에 없다.
 - **W9**: `base_url` 스킴·호스트 검증 없음 → transport 를 붙일 때 https 또는 게이트웨이(`inference.local`) 제약.
 - **MCP 도구로 노출할 때**: 메시지 role 검증과 guard 적용은 호출자 몫. 도구 층에서 `audited`·guard 를 적용한다.
+
+### 문서 확인 후속 (2026-10-06 저녁, nemoclaw-docs searchDocs·OpenShell 문서 WebFetch)
+- **해소**: 정책 스키마 항목 모양·method 집합·`binaries{path}`·rule path glob·`protocol: tcp` 는 L7 필드를 받지 않음 · **`name` 은 정책 키와 같아야 한다**(T202 가 `key.replace("_","-")` 로 어긋나 있어 수정, 신규 테스트 `test_network_entry_name_equals_key`) · 샌드박스 경로(`/sandbox` 홈·`/tmp` 기본 쓰기, 읽기 전용 `/usr`·`/lib`·`/app`·`/etc` 등).
+- **후보 2 관건 해소**: OpenShell 은 OCSF v1.8.0 JSONL 내보내기를 제공한다(`openshell settings set <sandbox> --key ocsf_json_enabled --value true`, 샌드박스 안 `/var/log/openshell-ocsf.YYYY-MM-DD.log`). 차단된 연결 레코드에 host·port·binary 가 있다(method·path·타임스탬프 필드명은 미확인) → **T302 착수 근거 확보**(실측 캡처 필요).
+- **미결(T202)**: `WRITE_PROPOSAL_ROOTS` 의 `/workspace` 는 문서에 없는 가정 → 제거하고 `/sandbox/.openclaw`·`.hermes`·`.deepagents`·`.nemoclaw`(에이전트 자기 설정) 를 `NEVER_WRITE` 에 추가해야 한다(W-D 가 현실). 같은 host:port 에 rest 항목 여러 개의 **명시적** 허용 여부, rule path 퍼센트 디코딩·접두 일치는 미확인.
+- **D5·D6 영향**: 샌드박스당·게이트웨이당 추론 route 는 하나이며(`inference set`), 기능별 다른 provider·키는 호스트에서 도는 코드 경로에서만 가능. 샌드박스 안의 모델 풀 선택은 Model Router provider 가 가장 가깝다. mcp_server 의 실행 위치(호스트/샌드박스)는 미확인.

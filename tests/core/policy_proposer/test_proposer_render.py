@@ -36,7 +36,7 @@ def test_golden_rest_entry():
   # 근거: 관찰 3회 (allowed 3 / denied 0 / observed 0), 첫 seq 1, run r1, 출처 core.audit
   # 실측: L7 line
   api_example_com_443:
-    name: api-example-com-443
+    name: api_example_com_443
     endpoints:
       - host: api.example.com
         port: 443
@@ -123,3 +123,37 @@ def test_header_marks_draft():
     assert "사람 승인 전 적용 금지" in out.splitlines()[0]
     assert "이벤트 0건" in out.splitlines()[1]
     assert propose([]).status == "draft"
+
+
+def _key_name_pairs(out):
+    """렌더된 network_policies 의 (항목 키, name) 쌍. 외부 YAML 의존성 없이 줄 단위로 읽는다."""
+    block = out[out.index("network_policies:"):].splitlines()[1:]
+    pairs, key = [], None
+    for ln in block:
+        if ln.startswith("  ") and not ln.startswith("   ") and ln.strip().endswith(":"):
+            if not ln.lstrip().startswith("#"):
+                key = ln.strip()[:-1].strip('"')
+        elif ln.startswith("    name: ") and key is not None:
+            pairs.append((key, ln[len("    name: "):].strip('"')))
+    return pairs
+
+
+def test_network_entry_name_equals_key():
+    # 문서: "name ... Must match the policy key it is nested under" (밑줄 허용, 하이픈 변환 금지)
+    # https://docs.nvidia.com/nemoclaw/user-guide/openclaw/network-policy/configure-policies/change-baseline-network-policy
+    log, s = mk()
+    log.observe_net("api.example.com", 443, binary="/usr/bin/curl", method="GET", path="/a")
+    log.observe_net("db.example.com", 5432, binary="/usr/bin/psql")
+    log.observe_net("a.b", 443, binary="/usr/bin/curl")  # 키 충돌 -> 해시 접미사
+    log.observe_net("a-b", 443, binary="/usr/bin/curl")
+    log.observe_net("x.example.com", 443, binary="/usr/bin/curl", method="GET", path="/a")
+    log.observe_net("x.example.com", 443, binary="/usr/bin/wget", method="GET", path="/a")
+    log.observe_net("x.example.com", 443, binary="/usr/bin/wget", method="POST", path="/b")
+    draft = propose(s.events)
+    pairs = _key_name_pairs(render_yaml(draft))
+    assert len(pairs) == len(draft.network) >= 6
+    assert any("_" in k and k.rsplit("_", 1)[1] != "443" for k, _ in pairs)  # 해시 접미사 포함
+    for key, name in pairs:
+        assert name == key
+        assert "-" not in name
+    assert all(n.name == n.key for n in draft.network)

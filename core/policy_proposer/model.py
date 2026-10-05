@@ -21,7 +21,7 @@ class Evidence:
 @dataclass(frozen=True)
 class NetworkEntry:
     key: str
-    name: str  # key.replace("_", "-")
+    name: str  # 항상 key 와 동일 (문서: name 은 정책 키와 일치해야 함)
     host: str
     port: int
     protocol: Literal["rest", "tcp"]

@@ -1,8 +1,16 @@
 """PolicyDraft → OpenShell 정책 YAML 초안 문자열 (결정적 미니 에미터, 파일에 쓰지 않는다).
 
-스키마 문서 미확인 가정: 정책 스키마 문서를 확인하지 못했다 — 근거: 선행 프로젝트의
-`deploy/openshell/policy-nat.yaml` 실측(openshell 0.0.116, 프로젝트명은 D3 로 적지 않는다). 사람이 문서를 붙여 주면 대조한다.
-(deploy/openshell/policy.yaml 주석의 스키마 URL 은 이 구현이 열어 본 것이 아니다.)
+스키마 근거: NemoClaw·OpenShell 문서(2026-10-06 확인; OpenShell 쪽은 WebFetch 요약이라 원문 대조 권장)
+https://docs.nvidia.com/nemoclaw/user-guide/openclaw/network-policy/configure-policies/change-baseline-network-policy
+https://docs.nvidia.com/openshell/how-it-works/policies/schema
+확인된 것 — `name == 정책 키`(필수, 스키마가 강제하며 어긋나면 온보딩 실패; 밑줄 허용),
+엔드포인트 필드 구성(`host`·`port`·`protocol`·`enforcement`·`rules[].allow{method,path}`),
+method 집합(`GET POST PUT PATCH DELETE HEAD OPTIONS *`), `binaries: [{path}]`,
+rule path 는 glob(`*` 는 `/` 를 넘지 않고 `**` 는 세그먼트 전체일 때만 넘는다),
+`protocol: tcp` 는 `path`·`enforcement`·`access`·`rules` 를 받지 않는다, SSRF 거부(루프백·사설·link-local).
+아직 미확인: 같은 host:port 에 rest 항목 여러 개를 허용하는지(금지 문구는 없고 "같은 이름·포트에
+매칭될 수 있는 엔드포인트는 같은 `tls`·`allowed_ips`" 제약만 있다), rule path 의 퍼센트 디코딩·접두
+일치 여부.
 출력은 초안이며 자동 적용 경로가 없다(SCOPE 4).
 """
 
@@ -64,7 +72,7 @@ def _net_lines(n: NetworkEntry) -> list[str]:
         out.append(f"  # 실측: {_c(ev.sample_raw)}")
     out += [
         f"  {_scalar(n.key)}:",
-        f"    name: {_scalar(n.name)}",
+        f"    name: {_scalar(n.key)}",  # name == 키 (문서 확인됨)
         "    endpoints:",
         f"      - host: {_scalar(n.host)}",
         f"        port: {_scalar(n.port)}",

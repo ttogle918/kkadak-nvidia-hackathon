@@ -266,7 +266,7 @@ def _net_entries(
             h = hashlib.sha256(ident(host, port, protocol, rules, binaries).encode()).hexdigest()
             key = key + "_" + h[:8]
         out.append(
-            NetworkEntry(key, key.replace("_", "-"), host, port, protocol, rules, binaries, ev)
+            NetworkEntry(key, key, host, port, protocol, rules, binaries, ev)
         )
     return sorted(out, key=lambda n: n.key)
 
