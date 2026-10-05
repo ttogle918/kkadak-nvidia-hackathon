@@ -1076,3 +1076,26 @@ uv run ruff check .
 - **W-B**: 특수 주소가 거부 목록(메타데이터 hostname·사설 대역은 통과). 사설·메타데이터 의심 사유를 주석에 붙이는 방안 검토. `_norm_host` 의 `lower()` 를 ASCII 전용으로 통일.
 - **W-E**: 허용 루트 sanity 테스트를 양방향(NEVER_WRITE 가 쓰기 루트 아래, READ 루트에 `/` 없음)으로 확대.
 - **T303(`core/llm`)**: 착수 전. T202 재작업(4차)에 시간을 썼다. 대회 전날(10/6) 시점의 판단은 사용자에게 맡긴다(이월 또는 최소판).
+
+### Stage 3 T303 — 2026-10-06 · 커밋 메시지 "feat(core): core/llm 최소판 (T303)" (해시는 `git log` 로 확인)
+| 태스크 | 상태 | 구현 파일 | 테스트 |
+|---|---|---|---|
+| T303 core/llm 최소판 (D5) | **완료(최소판)** | `core/llm/{__init__,config,pool,client}.py`, `deploy/llm.example.yaml` | `tests/core/llm/test_llm_{config,pool,client}.py` (+41건, 566→607) |
+| T301 · T302 · T202-opt | **이월** | — | — |
+
+- 회귀: pytest **607 passed**(skip 0, 전체 2회·`tests/core/llm` 5회 동일, 플레이크 없음) · ruff 통과. `core/audit` 는 수정하지 않음(`AuditLog.call/result/error` 직접 호출).
+- reviewer: **PASS**(블로커 0, 경고 9). 키 값 저장 위치가 `resolve_keys → KeyPool → KeyLease(repr=False) → transport` 하나뿐이고 에러·audit 에는 env 변수 **이름**만 나간다는 점을 구조적으로 확인.
+- 범위: 호스트 경로만. 실제 HTTP transport(Protocol 과 가짜 구현까지)·게이트웨이 연결·스트리밍·재시도 고도화·비용 집계는 제외. 게이트웨이 연결은 문서 미확인 가정(config.py·client.py·example.yaml 주석).
+- 명세와 달라진 점: PyYAML 이 없어 `llm.example.yaml` 모양만 읽는 최소 YAML 파서를 직접 작성(`.json` 도 읽음) · 에러 클래스는 `config.py` 에 배치 · `cooldown_s`(30)·`timeout_s`(60) 선택 키 추가 · 알 수 없는 feature·잘못된 messages 는 audit 전에 거부.
+
+### T303 이월 · 미결 (reviewer 경고 W1~W9)
+- **W1 (규칙 1)**: `api_key_envs` 에 붙여 넣은 키 방어가 `[A-Za-z0-9_]` 밖 문자일 때만 동작. `hf_xxx` 같은 영숫자·`_` 토큰은 이름으로 취급되어 누락 오류에 찍힌다 → 이름 규칙 좁히기(대문자 관례·길이 상한) 또는 누락 보고 마스킹, `-` 없는 토큰 테스트.
+- **W2 (규칙 1)**: `from None` 은 `__cause__` 만 끊는다. `__context__`(원 예외·traceback 의 `api_key` 지역변수)가 남는다 → except 밖에서 raise 또는 `__context__ = None`, `ei.value.__context__ is None` 단언.
+- **W3 (테스트)**: 키 표지가 `nvapi-…` 라 audit redact 가 어차피 가린다 → redact 패턴에 안 걸리는 표지로 audit 덤프 검사.
+- **W4**: `cooldown_s`·`timeout_s` 에 `nan`/`inf` 통과 → `math.isfinite` 검사.
+- **W5**: 중복 섹션·중복 항목·중복 키는 뒤 값이 이긴다 → 중복 거부.
+- **W6**: 세마포어 대기·`transport.send` 에 타임아웃 없음 → 실제 transport 구현 때 `wait_for`/내부 타임아웃을 계약으로 명시, `Retry-After` 반영.
+- **W7**: 취소 처리 중 `audit.error` 가 실패하면 CancelledError 가 일반 예외로 바뀜, 취소 경로 테스트 없음, 동기 파일 I/O 가 이벤트 루프를 잠깐 막을 수 있음.
+- **W8**: 401·403 키를 쿨다운하지 않아 폐기된 키가 라운드로빈에 남는다. 재시도별 키 이름·상태가 audit 에 없다.
+- **W9**: `base_url` 스킴·호스트 검증 없음 → transport 를 붙일 때 https 또는 게이트웨이(`inference.local`) 제약.
+- **MCP 도구로 노출할 때**: 메시지 role 검증과 guard 적용은 호출자 몫. 도구 층에서 `audited`·guard 를 적용한다.

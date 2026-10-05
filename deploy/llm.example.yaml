@@ -1,0 +1,10 @@
+# core/llm 설정 예시 (D5). 키 값은 절대 적지 않는다 — env 변수 **이름**만 적는다.
+# TODO: feature1, feature2 채우기 (10/7 미션 공개 후 기능이 정해지면 이름을 바꾼다)
+# 가정(문서 미확인): base_url·model 은 자리표시자다. 게이트웨이의 다중 provider·모델 라우팅은
+# 문서로 확인한 뒤, api_key_envs 대신 게이트웨이 provider 이름으로 바꿔 끼운다.
+providers:
+  nvidia_a: {api_key_envs: [NVIDIA_API_KEY_A], base_url: "<가정: 문서 확인 전>", max_concurrency: 4}
+  nvidia_b: {api_key_envs: [NVIDIA_API_KEY_B], base_url: "<가정: 문서 확인 전>", max_concurrency: 4}
+features:
+  feature1: {provider: nvidia_a, model: "<가정>"}
+  feature2: {provider: nvidia_b, model: "<가정>"}
