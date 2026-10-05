@@ -2,7 +2,7 @@
 
 > 상태: **확정**(pm, 2026-10-04). 초안 `docs/sprints/sprint-1.draft.md` 에 dev 현실성 평가를 반영했다. 초안은 기록용으로 남긴다.
 > 시간 상자: 2026-10-04 ~ 10-06 (대회 10/7 09:00 전). 스테이지 3개.
-> 범위 근거: `docs/SCOPE.md` "Sprint 1 범위"의 "반드시 만들 것" 1~5. 이전 스프린트가 없어서 이월 태스크도 없다.
+> 범위 근거: `docs/SCOPE.md` "Sprint 1 범위"의 "반드시 만들 것" 1~4·6(5번 `core/llm` 은 D5 선택 항목, T303). 이전 스프린트가 없어서 이월 태스크도 없다.
 > 실측 기준선(dev, 읽기 전용): pytest **10 passed** · Python 3.12.3 · SQLite 3.45.1.
 
 ## Sprint 1 최종 실행 계획
@@ -13,7 +13,7 @@
 | Stage 2 | **[필수]** T201 쓰기 경계 + 수직 슬라이스 E2E · **[필수·축소]** T202 policy_proposer 본체 · *[선택]* T202-opt 정보성 항목 | T201 ∥ T202 (T202-opt 는 T202 뒤에 같은 담당이 이어서) | 경로를 끝까지 잇는 테스트 2파일, `core/policy_proposer` 본체(audit/v1 → YAML 초안), reviewer 게이트 통과 기록 |
 | Stage 3 | *[선택]* T301 초안 → hitl 제출 · *[선택·기본 이월]* T302 OpenShell 로그 어댑터 | T301 ∥ T302 | `core/policy_proposer/submit.py`, (문서가 확인되면) `core/policy_proposer/openshell_log.py` |
 
-- **필수 경로**: T101 → T102 → T103 → T104 (Stage 1, 병렬) → T201 · T202 축소본 (Stage 2). 이 경로만으로 SCOPE "반드시 만들 것" 1~5 가 모두 충족된다.
+- **필수 경로**: T101 → T102 → T103 → T104 (Stage 1, 병렬) → T201 · T202 축소본 (Stage 2). 이 경로만으로 SCOPE "반드시 만들 것" 1~4·6 이 모두 충족된다(5번은 선택, T303).
 - **선택 경로**: T202-opt, T301, T302. 이월 규칙은 §5 에 있다.
 - 사람이 개입하는 지점은 두 곳이다. ① D4 승인(Stage 2 의 T202 착수 전) ② Stage 2 끝 reviewer 게이트.
 
@@ -91,7 +91,7 @@ dev 제안(번호는 dev 목록)이 확정본에 어떻게 들어갔는지:
 YAML 은 파서 없이 **결정적 미니 에미터**(T202 `render.py`)로 출력하고, golden 텍스트 비교로 검증한다. PyYAML 은 쓰지 않는다.
 
 ### 2.4 SCOPE "지금 안 만들 것"과의 경계 (승격 금지)
-`domains/` · `core/llm.py` · 에이전트 루프·채팅 UI · 샌드박스 이미지·Brev · 프론트엔드는 **어떤 태스크에도 넣지 않았다.** (작업 트리의 `frontend/` 는 이번 스프린트 범위 밖이고, 어떤 태스크도 건드리지 않는다.)
+`domains/` · 에이전트 루프·채팅 UI · 샌드박스 이미지·Brev · 프론트엔드는 **어떤 태스크에도 넣지 않았다.** (`core/llm` 은 D5 로 승격되어 선택 태스크 T303 이 됐다.) (작업 트리의 `frontend/` 는 이번 스프린트 범위 밖이고, 어떤 태스크도 건드리지 않는다.)
 `backend/routers` 의 승인 HTTP 엔드포인트와 `mcp_server` 실제 도구·엔트리포인트도 이번에는 만들지 않는다. 둘 다 SCOPE "반드시"에 없다.
 대신 경계 규칙(D2·D3)을 **정적 스캔 테스트**와 core 함수 수준에서 먼저 고정한다.
 
@@ -144,7 +144,7 @@ P1 searchDocs 접근 점검 — Stage 1 중
 | TASK | 제목 | 범위 | 선행 | 구분 |
 |------|------|------|------|------|
 | T201 | 쓰기 경계 테스트 + 얇은 수직 슬라이스 E2E | `tests/test_write_boundary.py`, `tests/test_slice_e2e.py` | T101, T102, T103 | 필수 |
-| T202 | policy_proposer 본체(audit/v1 → 정책 YAML 초안), 축소본 | `core/policy_proposer/{__init__,model,baseline,propose,render}.py`, `tests/core/policy_proposer/test_proposer_{propose,render}.py` | T102, **D4 추가** | 필수 |
+| T202 | policy_proposer 본체(audit/v1 → 정책 YAML 초안), 축소본 | `core/policy_proposer/{__init__,model,baseline,propose,render}.py`, `tests/core/policy_proposer/test_proposer_{propose,render,hardening}.py` | T102, D4(2026-10-06 반영) | 필수 |
 | T202-opt | 정보성 Skipped·20개 초과 규칙·참고 주석 섹션·ToolUse 집계 | T202 와 같은 파일(`propose.py`, `render.py`), `tests/core/policy_proposer/test_proposer_notes.py` | T202 | 선택 |
 
 #### Stage 3
@@ -162,7 +162,7 @@ P1 searchDocs 접근 점검 — Stage 1 중
   모듈이 먼저 있어야 하므로 Stage 1 에 둘 수 없다. T202 는 audit 형식(D4)을 입력으로 쓰므로 T102 다음이다. T201 은 `tests/` 최상위 파일 두 개만, T202 는 `core/policy_proposer/` 와 그 테스트 폴더만 만져서 병렬이 가능하다.
   T202-opt 는 T202 와 같은 파일을 고치므로 **병렬로 돌리지 않고** T202 를 끝낸 뒤 이어서 한다.
 - **Stage 3**: T301 은 hitl 과 proposer 를 모두 써야 하므로 마지막이다. T302 는 문서 확인 블로커가 있어서 원칙 5 에 따라 맨 뒤로 뺐다.
-  **T301·T302 를 모두 이월해도 SCOPE 5개 항목은 Stage 2 까지로 충족된다**(D4 에 따라 proposer 입력은 audit/v1 이다).
+  **T301·T302 를 모두 이월해도 SCOPE 필수 항목(1~4·6)은 Stage 2 까지로 충족된다**(D4 에 따라 proposer 입력은 audit/v1 이다).
   T301·T302 가 `core/policy_proposer/__init__.py` 를 함께 고치지 않도록, **두 태스크 모두 `__init__.py` 를 수정하지 않는다**(서브모듈 경로로 import).
 
 ---
@@ -847,7 +847,7 @@ uv run ruff check .
     - `bool` → `true`/`false`. `int`(bool 제외) → `str(v)`. `float` 와 그 밖의 타입 → `TypeError`(이 출력에는 float 가 없다).
     - `str` 은 다음을 **모두** 만족할 때만 따옴표 없이 쓴다. ① `re.fullmatch(r"[A-Za-z_/][A-Za-z0-9_./@+-]*", v)` — 첫 글자가 영문자·`_`·`/` 이고 `:`·공백·`#` 이 없다. ② `v.lower()` 가 `{"true","false","null","yes","no","on","off","y","n"}` 에 없다.
     - 나머지는 모두 `json.dumps(v, ensure_ascii=False)`(큰따옴표)로 쓴다. 그래서 숫자로 시작하는 문자열(`"1000"`, `"1.5"`, `"2026-10-04"`, `"10.0.0.1"`), `:` 가 든 문자열, `-` 로 시작하는 문자열에는 따옴표가 붙는다.
-  - 섹션 사이 빈 줄은 위 예시와 같다(헤더 주석 다음, `version` 다음, 각 최상위 블록 사이 1줄).
+  - 섹션 사이 빈 줄은 위 예시와 같다(`version` 다음, 각 최상위 블록 사이 1줄). 헤더 주석 다음에는 빈 줄을 두지 않는다(deploy 파일과 같게, dev 구현·reviewer 허용).
 - **엣지 케이스**: 빈 입력 → 베이스라인 그대로(golden 과 같다) · inference.local 만 관찰됨 → `network_policies: {}`, skipped 에 D1 항목 · binary 없는 접속 → skipped · `/app/x` 쓰기 → skipped · `/tmp/a` 쓰기 → 이미 덮여 있어서 제안 없음 · 상대 경로는 audit 단계에서 이미 거부됨 · 같은 host 의 다른 port → 별도 항목 · key 충돌 → 해시 접미사 · raw 에 비밀 패턴 → 주석에서 치환
 - **지켜야 할 규칙**: SCOPE 4 — 결과는 초안이고(`status="draft"`, 헤더 주석), 파일에 쓰지 않는다. CLAUDE.md 규칙 1 — 주석에도 비밀을 쓰지 않는다. 규칙 2 — 허용 항목마다 근거와 실측 주석을 단다. 규칙 4 — 스키마는 문서로 확인한다(P1 분기). D1 — inference.local 은 넣지 않는다. D4 — 입력은 audit/v1 뿐이다. D3 — 도메인 용어를 쓰지 않는다.
 - **테스트 케이스** (필수)
@@ -1041,12 +1041,12 @@ uv run ruff check .
 | 태스크 | 상태 | 구현 파일 | 테스트 |
 |---|---|---|---|
 | T201 쓰기 경계 + E2E | **완료** | `tests/test_write_boundary.py`, `tests/test_slice_e2e.py` | 100건 |
-| T202 policy_proposer 본체 | **보류 — D4 승인 대기** | — | — |
+| T202 policy_proposer 본체 | **완료**(아래 Stage 2 T202 기록) | — | — |
 | T202-opt | 보류(T202 뒤) | — | — |
 
 - 회귀: pytest **389 passed**(Stage 1 종료 시 289) 3회 동일 · ruff 통과.
 - reviewer: 1차 **FAIL** → 2차 **PASS**. 1차 블로커: 케이스 2·3·13 의 `UPDATE drafts SET state='approved'` 는 authorizer 없이도 트리거가 막아서, authorizer 가 약해져도 테스트가 녹색이었다. 정상 형태 자기 승인 UPDATE(`decided_by`·`decided_at` 포함)는 authorizer 없는 연결에서 **통과**하고 agent 연결에서만 `not authorized` 로 막힌다(직접 재현). 수정: 해당 케이스 추가 + 메시지 고정 + 대조 테스트. 변형 실험(`_agent_authorizer` 가 UPDATE 를 허용하게 monkeypatch)에서 8건이 실패함을 확인.
-- Stage 2 게이트는 **미충족**: T202 와 reviewer 의 D4·T202 확인이 남았다. Stage 3 는 착수하지 않는다.
+- (T201 커밋 시점 기록) Stage 2 게이트는 이 시점에 미충족이었다. T202 완료로 아래 기록에서 충족.
 
 ### 이월 · 미결 (Stage 2 reviewer 가 기록을 요구)
 - **W1 (D2, core)**: `_connect_reviewer` 의 raw 문장으로 자기 승인·판정자 위조가 된다(`UPDATE drafts SET state='approved', decided_by=created_by, decided_at='t'`; WHERE 없는 일괄 승인, 빈 `decided_by` 도 통과). 자기 승인 금지는 `ReviewDesk._decide` 의 Python 검사에만 있다. reviewer 연결은 사람 쪽 비공개 연결이라 설계 위반은 아니다. 대안: 트리거에 `NEW.decided_by IS NOT OLD.created_by`·비어 있지 않음 조건 추가, 또는 알려진 한계로 고정하는 테스트.
@@ -1054,3 +1054,25 @@ uv run ruff check .
 - **W6**: 자기 승인 id 정규화(strip·`agent:` 접두 거부) — `Reviewer(id=" agent:test-run")` 로 자기 승인 우회 가능.
 - 위 셋은 DB 파일 권한 분리·별도 프로세스(다음 스프린트, §7)로 근본 해결된다.
 - 테스트 정비(경고): 케이스 13 의 `"insert" not in sql.lower()` 분기를 시도 튜플의 기대 문구로 바꾼다 · VACUUM 단언을 `sqlite_errorname == "SQLITE_AUTH"` 로 완화 · 대조 테스트 주석에 "허용된 동작이 아니라 알려진 한계, 트리거를 강화하면 이 테스트를 갱신" 명시 · `:176` 주석 라벨 "W3" 가 Stage 1 의 W3 와 겹침.
+
+### Stage 2 T202 — 2026-10-06 · 커밋 메시지 "feat(core): policy_proposer … (T202)" (해시는 `git log` 로 확인)
+| 태스크 | 상태 | 구현 파일 | 테스트 |
+|---|---|---|---|
+| T202 policy_proposer 본체(축소) | **완료** | `core/policy_proposer/{__init__,model,baseline,propose,render}.py` | `tests/core/policy_proposer/test_proposer_{propose,render,hardening}.py` (+177건, 389→566) |
+| T202-opt | 미착수(이월) | — | — |
+
+- D4·D5 는 2026-10-06 승인되어 `docs/DECISIONS.md` 에 반영(커밋 `72c8d83`). SCOPE·§2.4 에 D5(`core/llm`, T303)를 반영.
+- 회귀: pytest **566 passed**(skip 0, 2회 동일) · ruff 통과. P2: `baseline.py` 상수가 `deploy/openshell/policy.yaml` 과 일치.
+- reviewer: 1차 FAIL(B1~B3: 정책 본문 값 미검증·경로/호스트 정규화 우회) → 2차 FAIL(B4: `/` 쓰기, B5: 주체 불명 이벤트 귀속) → 3차 FAIL(B6: fs 쓰기가 거부 목록에만 의존, B7: 거부된 이벤트의 binary 유입) → 4차 **PASS**(블로커 0).
+- 구조 변경: 정책 본문으로 나가는 값 검증을 거부 목록에서 **허용 목록**으로 전환(host 형식·method 7종·path/binary 문자 집합·fs 허용 루트). 외부 입력은 `from_json` 으로 재검증하고 실패 시 `AuditFormatError`(이벤트 번호 포함)로 전체 실패.
+- 명세와 달라진 점: binary 별로 항목 분할 · 읽기/쓰기 모두 허용 루트 방식(`WRITE_PROPOSAL_ROOTS`, `READ_PROPOSAL_ROOTS`) · 헤더 주석 뒤 빈 줄 없음 · file 이벤트 Evidence 는 `observed` 만 · 끝 `/` rule 과 `:`·`=`·`,` 가 든 path 는 Skipped.
+
+### 미결 · 이월 (Stage 2 T202 reviewer 가 커밋 전 기록을 요구)
+- **정책 스키마 문서 미확인 (P1 불가)**: `network_policies` 항목 모양(`protocol`·`enforcement`·`rules`·`binaries`)은 선행 프로젝트 실측 가정이다. `nemoclaw-docs` MCP 로 확인되면 `render.py` 대조.
+- **W-C**: 같은 host:port 에 rest 항목이 여러 개 생기는 것이 OpenShell 스키마상 허용되는지(덮어쓰는지·합쳐지는지) 미확인. 허용되지 않으면 binary 별 분할(W1)을 합치는 쪽으로 바꿔야 한다.
+- **W-D**: `WRITE_PROPOSAL_ROOTS`(`/sandbox`·`/workspace`)와 `READ_PROPOSAL_ROOTS` 는 문서 미확인 가정이다. `/sandbox` 아래에 에이전트 런타임 설정이 있으면 쓰기 제안이 자기 설정 변조 승인 요청이 된다 → nemoclaw-docs 로 sandbox 홈·설정 경로를 확인하고 필요하면 하위 경로를 `NEVER_WRITE` 에 추가(규칙 4).
+- **W-F**: rule path 매칭(디코딩 여부·정확 일치/접두) 미확인. 퍼센트 인코딩은 관찰된 값 그대로 통과한다.
+- **W-A**: binary 위치가 "writable 아님"이면 허용(거부 목록 성격). Landlock `best_effort` 에서 Landlock 이 꺼지면 `/home`·`/var/tmp` 의 binary 가 통과 → READ_ONLY 베이스라인과 시스템 실행 루트(`/usr`·`/bin`·`/sbin`·`/opt`·`/app`) 아래로만 허용하도록 강화(다음 스테이지).
+- **W-B**: 특수 주소가 거부 목록(메타데이터 hostname·사설 대역은 통과). 사설·메타데이터 의심 사유를 주석에 붙이는 방안 검토. `_norm_host` 의 `lower()` 를 ASCII 전용으로 통일.
+- **W-E**: 허용 루트 sanity 테스트를 양방향(NEVER_WRITE 가 쓰기 루트 아래, READ 루트에 `/` 없음)으로 확대.
+- **T303(`core/llm`)**: 착수 전. T202 재작업(4차)에 시간을 썼다. 대회 전날(10/6) 시점의 판단은 사용자에게 맡긴다(이월 또는 최소판).
