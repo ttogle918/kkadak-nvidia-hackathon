@@ -68,6 +68,7 @@ dev 제안(번호는 dev 목록)이 확정본에 어떻게 들어갔는지:
 - 확인 절차는 §3.1 사전 점검 P1 이 정한다.
 
 ### 2.2 D4 — 먼저 결정을 추가해야 함
+> **(2026-10-06 D4·D5 승인, DECISIONS.md 반영 완료.)** 아래는 기록용 원문이다.
 > **D4 는 사용자가 승인한 뒤 `docs/DECISIONS.md` 에 추가한다. Stage 1 은 D4 없이 진행하고, Stage 2 시작 전에는 필요하다.**
 > (pm·dev 는 DECISIONS.md 를 고치지 않는다. T201 은 D4 와 무관하다. 그래서 승인이 늦어지면 Stage 2 에서 T201 만 먼저 진행할 수 있다. T202 는 D4 가 추가될 때까지 착수하지 않는다.)
 
@@ -151,6 +152,7 @@ P1 searchDocs 접근 점검 — Stage 1 중
 |------|------|------|------|------|
 | T301 | 정책 초안을 hitl draft 로 제출 | `core/policy_proposer/submit.py`, `tests/core/policy_proposer/test_proposer_submit.py` | T101, T202 | 선택(Stage 2 가 일찍 끝날 때만) |
 | T302 | OpenShell 로그 → audit/v1 net 이벤트 어댑터 | `core/policy_proposer/openshell_log.py`, `tests/core/policy_proposer/test_openshell_log.py` | T102, T202, **문서 확인** | 선택(기본 이월) |
+| T303 | core/llm: 기능별 라우팅·동시 호출·키 풀 (D5) | `core/llm/`, `deploy/llm.example.yaml`, `tests/core/llm/` | T102 | 선택(T202 이후, 필수 우선) |
 
 ### 3.5 스테이지 구성 근거
 - **Stage 1**: 네 태스크가 서로 다른 디렉터리만 만지고 서로 import 하지 않는다. 그래서 병렬로 돌려도 충돌하지 않는다. 각 태스크는 자기 `tests/core/<모듈>/` 만으로 따로 검증할 수 있다.
@@ -191,7 +193,7 @@ uv run ruff check .
 | *선택* T202-opt | T201·T202 축소본이 끝나고 Stage 2 게이트의 pytest·ruff 가 통과한 뒤 시간이 남을 때만 한다. 못 하면 "S2 이월 — 사유: 시간 상자" |
 | *선택* T301 | **Stage 2 게이트를 일찍 통과했을 때만** 착수한다. 아니면 "S2 이월 — 사유: 시간 상자" |
 | *선택* T302 | **기본 이월**("S2 이월 — 사유: 문서 미확인"). 다음 중 하나가 되면 착수한다. ① P1 이 가능이고 dev 가 `searchDocs` 로 로그 형식을 확인했다 ② 사람이 해당 문서를 붙여 줬다 |
-| `audited` 의 async 지원 | **미룬다.** 비동기 도구가 실제로 필요하다고 확정되면(mcp_server 도구 설계 시) 그때 태스크로 만든다. 그 전까지 async 함수에 `audited` 를 붙이면 `TypeError` 다 |
+| `audited` 의 async 지원 | **T303 착수 시에만 만든다(D5).** 그 전까지는 미룬다. 비동기 도구가 실제로 필요하다고 확정되면(mcp_server 도구 설계 시) 그때 태스크로 만든다. 그 전까지 async 함수에 `audited` 를 붙이면 `TypeError` 다 |
 
 이월 항목은 `/done` 이 이 문서 맨 끝 "이월" 절에 사유와 함께 적는다. 다음 스프린트 Stage 1 에서 최우선으로 다룬다.
 
@@ -967,9 +969,32 @@ uv run ruff check .
 
 ---
 
+#### T303 — core/llm: 기능별 라우팅 · 동시 호출 · 키 풀 [선택 — D5, T202 이후]
+- **변경 파일**: `core/llm/{__init__,config,pool,client}.py` (신규), `deploy/llm.example.yaml` (신규, 키 값 없음), `tests/core/llm/test_llm_{config,pool,client}.py` (신규). `audited` 의 async 지원이 필요하면 `core/audit/log.py` 만 최소 수정한다(T303 이 처음으로 async 호출을 만든다).
+- **설정** (`deploy/llm.example.yaml`, 키 값 금지 — 변수 **이름**만):
+  ```yaml
+  # TODO: feature1, feature2 채우기 (10/7 미션 공개 후 기능이 정해지면 이름을 바꾼다)
+  providers:
+    nvidia_a: {api_key_envs: [NVIDIA_API_KEY_A], base_url: "<가정: 문서 확인 전>", max_concurrency: 4}
+    nvidia_b: {api_key_envs: [NVIDIA_API_KEY_B], base_url: "<가정: 문서 확인 전>", max_concurrency: 4}
+  features:
+    feature1: {provider: nvidia_a, model: "<가정>"}
+    feature2: {provider: nvidia_b, model: "<가정>"}
+  ```
+- **핵심 로직**
+  1. `load_config(path, env=os.environ)`: 필수 키·참조 무결성(feature 의 provider 존재)을 검증한다. 참조한 env 변수가 없으면 **시작 시점에** 변수 이름을 밝혀 `LlmConfigError`. 에러·로그에 키 값을 절대 넣지 않는다.
+  2. `KeyPool`: provider 별 라운드로빈. 429·5xx 가 난 키는 `cooldown_s` 동안 건너뛴다. 전부 쉬는 중이면 가장 빨리 풀리는 키까지 기다리되 `timeout_s` 를 넘으면 `LlmUnavailable`.
+  3. `LlmClient.complete(feature, messages)`(async): feature → provider → `Semaphore(max_concurrency)` 획득 → 키 선택 → 호출 → 결과. provider 별로 세마포어가 따로라서 한 provider 의 정체가 다른 provider 를 막지 않는다. 전송은 주입 가능한 `transport` 로 분리해 테스트는 가짜 transport 만 쓴다. 알 수 없는 feature 는 `UnknownFeature`.
+  4. 호출 직전 audit `call` 이벤트를 발행한다(이름 `llm:<feature>`, args 는 모델명·메시지 수만 — 본문·키는 넣지 않는다). 결과·오류 이벤트도 남긴다.
+- **지켜야 할 규칙**: D1·절대 규칙 1(키 값은 코드·설정·리포·로그에 없다) · D3(도메인 용어 금지, feature 는 placeholder) · D5 적용 범위(호스트 경로만. 게이트웨이 연결은 문서 확인 후). 네트워크 호출은 테스트에서 하지 않는다.
+- **테스트 케이스**: 라우팅(feature→provider) · 알 수 없는 feature · env 변수 누락 시 변수 이름만 보고되고 값은 노출되지 않음 · 라운드로빈 순서 · 429 키 쿨다운과 복귀 · 전부 쉬는 중 타임아웃 · provider A 가 느려도 provider B 호출이 끝남(동시성, 가짜 transport 의 지연) · `max_concurrency` 상한 준수 · audit 에 키·메시지 본문이 없음(redact 확인)
+- **DoD**: `uv run python -m pytest -q tests/core/llm` · 전체 회귀 · ruff · `core/llm` 안에 키 리터럴 없음
+
+---
+
 ## 7. 이번 스프린트에서 의도적으로 하지 않는 것
 - `backend/routers` 승인 HTTP API, `mcp_server` 엔트리포인트와 실제 도구, `APP_PROCESS_ROLE=agent` 를 실제로 주입하는 일, **mcp_server 프로세스 분리와 DB 파일 권한 분리(실제 격리)** → 다음 스프린트 후보. SCOPE "반드시"에 없어서 넣지 않았다.
-- `audited` 의 async 지원 → 필요가 확정될 때까지 미룬다(§5).
+- `audited` 의 async 지원 → T303 을 착수할 때만 최소 범위로 만든다(§5).
 - OpenShell 정책을 실제 샌드박스에 적용·검증하는 일 → 샌드박스 이미지가 SCOPE "지금 안 만들 것"이다.
 - 파일 접근 관찰의 실제 수집원: 지금은 우리 도구가 `observe_file` 을 직접 부를 때만 생긴다. Landlock 로그 같은 다른 수집원은 문서 확인 후에 다룬다.
 
