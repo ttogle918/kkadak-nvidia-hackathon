@@ -5,6 +5,7 @@ import { createT, bindDocumentLang, normalizeLang } from './lib/i18n.js';
 import { bindDocumentTheme } from './lib/theme.js';
 import { h } from './lib/dom.js';
 import { createApi } from './api/index.js';
+import { safeBase } from './events/api.js';
 import { createInitialState } from './state/initial.js';
 import { createActions } from './state/actions.js';
 import { mountAppShell } from './components/layout/app-shell.js';
@@ -37,7 +38,7 @@ export async function boot(rootEl = document.getElementById('app'), search = loc
   const store = createStore(createInitialState(initialFromUrl(search)));
   const apiMode = ['http', 'chat'].includes(q.get('api')) ? q.get('api') : 'mock';
   // chat(챗봇만 backend)의 기본 주소: uvicorn 기본 포트. backend CORS 기본 허용 origin 은 http://localhost:8766.
-  const baseUrl = q.get('base') || (apiMode === 'chat' ? 'http://localhost:8000/api' : undefined);
+  const baseUrl = safeBase(q.get('base')) || (apiMode === 'chat' ? 'http://localhost:8000/api' : undefined);
   const api = createApi({ mode: apiMode, baseUrl });
   const t = createT(() => store.getState().lang);
   const actions = createActions({ store, api });
