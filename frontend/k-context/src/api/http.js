@@ -75,6 +75,16 @@ async function requestJson(baseUrl, path, { method = 'GET', body, timeoutMs = RE
   return data;
 }
 
+/** 백엔드가 떠 있는지 짧게 확인한다(GET /messages 가 JSON 배열이면 true). 어떤 실패도 throw 하지 않는다. */
+export async function probeBackend(baseUrl, timeoutMs = 2500) {
+  try {
+    const data = await requestJson(baseUrl, '/messages', { timeoutMs });
+    return Array.isArray(data);
+  } catch {
+    return false;
+  }
+}
+
 export function createHttpApi({ baseUrl = '/api' } = {}) {
   const nope = (method) => async () => {
     throw new ApiNotImplementedError(method, baseUrl);

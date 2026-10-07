@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createApi, API_METHODS } from '../src/api/index.js';
+import { createApi, resolveApi, DEFAULT_CHAT_BASE, API_METHODS } from '../src/api/index.js';
 import { createHttpApi } from '../src/api/http.js';
 import { createT } from '../src/lib/i18n.js';
 import { messageView } from '../src/components/chat/logic.js';
@@ -99,4 +99,28 @@ test("'chat' 모드: getMessages·sendMessage 만 http, 나머지는 mock", asyn
   await chat.getMessages();
   assert.equal(calls.length, 1);
   assert.equal(typeof http.getMessages, 'function');
+});
+
+test('resolveApi auto: backend 가 응답하면 chat(기본 주소로 probe)', async () => {
+  const calls = fake(jsonRes(200, []));
+  const api = await resolveApi({ mode: 'auto' });
+  assert.equal(api.mode, 'chat');
+  assert.equal(api.baseUrl, DEFAULT_CHAT_BASE);
+  assert.equal(calls[0].url, `${DEFAULT_CHAT_BASE}/messages`);
+});
+
+test('resolveApi auto: 연결 실패·비정상 응답·배열 아님이면 mock 으로 폴백', async () => {
+  fake(() => { throw new TypeError('fetch failed'); });
+  assert.equal((await resolveApi({ latencyMs: 0 })).mode, 'mock');
+  fake(jsonRes(500, { error: { code: 'x' } }));
+  assert.equal((await resolveApi({ latencyMs: 0 })).mode, 'mock');
+  fake(jsonRes(200, { not: 'array' }));
+  assert.equal((await resolveApi({ latencyMs: 0 })).mode, 'mock');
+});
+
+test('resolveApi: 명시 모드는 probe 없이 그대로(chat 강제는 backend 없어도 chat)', async () => {
+  const calls = fake(() => { throw new TypeError('fetch failed'); });
+  assert.equal((await resolveApi({ mode: 'mock', latencyMs: 0 })).mode, 'mock');
+  assert.equal((await resolveApi({ mode: 'chat', baseUrl: BASE })).mode, 'chat');
+  assert.equal(calls.length, 0);
 });

@@ -18,7 +18,7 @@ node --test                                               # 순수 로직 테스
 
 `node --test tests/` 는 node 22 에서 "Cannot find module" 이 난다(디렉터리를 파일로 읽음). `node --test` 또는 `node --test tests/*.test.js` 를 쓴다.
 
-URL 파라미터: `?lang=en` · `?theme=dark|light|auto` · `?mode=old|now|both` · `?day=1..3` · `?api=mock|http|chat&base=/api` (`chat` = 챗봇만 backend `http://localhost:8000/api`, 나머지 mock)
+URL 파라미터: `?lang=en` · `?theme=dark|light|auto` · `?mode=old|now|both` · `?day=1..3` · `?api=auto|mock|http|chat&base=/api` (기본 `auto` = 부팅 때 backend `http://localhost:8000/api` 를 한 번 찔러 보고 떠 있으면 `chat`(챗봇만 backend, 나머지 mock), 아니면 `mock`. `mock`·`chat` 은 강제 지정이고 `chat` 은 backend 가 없어도 mock 으로 넘어가지 않는다)
 
 ## 지도 렌더러 (SVG 기본 · 카카오맵 선택)
 기본은 SVG 지도(외부 요청 없음). 카카오맵은 **키가 있고 SDK 가 로드될 때만** 자동으로 쓰이며, 아니면 SVG 로 폴백하고 콘솔에 사유 한 줄(`[map] 카카오맵 대신 SVG 지도 사용: …`, 키 값은 출력 안 함)을 남긴다.
