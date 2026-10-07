@@ -78,3 +78,19 @@ def test_api_reads_audit_dir_and_skips_broken(tmp_path):
 def test_missing_audit_dir_is_empty(tmp_path):
     s = Settings(tmp_path / "h.db", tmp_path / "nodir", tmp_path / "o", reviewer_id="human:t")
     assert TestClient(create_app(s)).get("/api/audit").json() == []
+
+
+def test_build_entries_mixed_naive_aware_sorts():
+    from backend.security_log import build_entries_counted
+    from core.audit import AuditEvent
+
+    def ev(seq, ts):
+        return AuditEvent(
+            seq=seq, ts=ts, run_id="r", actor="a", phase="observe", kind="net", name="n",
+            call_id=None, data={"host": "h", "port": 1, "decision": "denied"},
+        )
+
+    evs = [ev(1, "2026-10-07T02:00:00"), ev(2, "2026-10-07T01:00:00+00:00"), ev(3, "bad"), ev(4, "")]
+    out, skipped = build_entries_counted([], {"r": evs})
+    assert skipped == 2
+    assert [e["id"] for e in out] == ["audit:r:2", "audit:r:1"]

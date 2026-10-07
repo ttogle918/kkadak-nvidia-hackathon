@@ -45,3 +45,26 @@ def test_import_ok_without_role(tmp_path):
         cwd=REPO, env=env, capture_output=True, text=True, timeout=60, check=False,
     )
     assert r.returncode == 0, r.stderr[-300:]
+
+
+import pytest as _pytest
+
+
+@_pytest.mark.parametrize(
+    "rid", ["Agent:x", "AGENT:x", " agent:x", "agent:", "aGeNt:run-1", "\tAgent:x "]
+)
+def test_reviewer_id_agent_prefix_rejected_case_insensitive(rid):
+    from backend.settings import Settings
+
+    with _pytest.raises(ValueError):
+        Settings(hitl_db="a", audit_dir="b", output_dir="c", reviewer_id=rid)
+
+
+@_pytest.mark.parametrize("rid", ["agentx", "agent", "human:agent:x", "agents:y", "Agent :x"])
+def test_reviewer_id_other_names_allowed(rid):
+    from pathlib import Path
+
+    from backend.settings import Settings
+
+    s = Settings(hitl_db=Path("a"), audit_dir=Path("b"), output_dir=Path("c"), reviewer_id=rid)
+    assert s.reviewer_id == rid.strip()

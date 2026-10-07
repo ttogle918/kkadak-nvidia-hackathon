@@ -3,7 +3,7 @@
 from __future__ import annotations
 
 from collections.abc import Iterable, Mapping
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Any
 from zoneinfo import ZoneInfo
 
@@ -22,11 +22,23 @@ _DRAFT_KIND = {
 
 
 def _parse(ts: str) -> datetime:
-    return datetime.fromisoformat(ts)
+    """aware(UTC) 로 정규화한다. naive 는 UTC 로 본다. 실패하면 ValueError."""
+    if not isinstance(ts, str):
+        raise TypeError("ts 가 문자열이 아니다")
+    dt = datetime.fromisoformat(ts)
+    if dt.tzinfo is None or dt.utcoffset() is None:
+        dt = dt.replace(tzinfo=UTC)
+    try:
+        return dt.astimezone(UTC)
+    except OverflowError:
+        raise ValueError("ts 범위 초과") from None
 
 
 def _hms(ts: str) -> str:
-    return _parse(ts).astimezone(_SEOUL).strftime("%H:%M:%S")
+    try:
+        return _parse(ts).astimezone(_SEOUL).strftime("%H:%M:%S")
+    except OverflowError:
+        raise ValueError("ts 범위 초과") from None
 
 
 def _count(v: Any) -> int:
@@ -101,15 +113,48 @@ def _event_entry(e: AuditEvent, run_id: str) -> dict[str, Any] | None:
 
 
 def entries_from_events(events: Iterable[AuditEvent], *, run_id: str) -> list[dict[str, Any]]:
-    out = (_event_entry(e, run_id) for e in events)
-    return [x for x in out if x is not None]
+    return _safe_events(events, run_id)[0]
+
+
+def _safe_events(
+    events: Iterable[AuditEvent], run_id: str
+) -> tuple[list[dict[str, Any]], int]:
+    """변환에 실패한 이벤트(깨진 ts 등)는 건너뛰고 개수를 센다."""
+    out: list[dict[str, Any]] = []
+    skipped = 0
+    for e in events:
+        try:
+            x = _event_entry(e, run_id)
+        except (ValueError, TypeError, AttributeError, OverflowError):
+            skipped += 1
+            continue
+        if x is not None:
+            out.append(x)
+    return out, skipped
+
+
+def build_entries_counted(
+    drafts: Iterable[Draft], events_by_run: Mapping[str, list[AuditEvent]]
+) -> tuple[list[dict[str, Any]], int]:
+    """(정렬된 항목, 건너뛴 이벤트·초안 수). 시각이 섞여도 정렬이 터지지 않는다."""
+    entries: list[dict[str, Any]] = []
+    skipped = 0
+    for d in drafts:
+        if d.kind not in SECURITY_DRAFT_KINDS:
+            continue
+        try:
+            entries.append(entry_from_draft(d))
+        except (ValueError, TypeError, OverflowError):
+            skipped += 1
+    for run_id, events in events_by_run.items():
+        got, n = _safe_events(events, run_id)
+        entries.extend(got)
+        skipped += n
+    entries.sort(key=lambda x: (_parse(x["at"]), x["id"]))
+    return entries, skipped
 
 
 def build_entries(
     drafts: Iterable[Draft], events_by_run: Mapping[str, list[AuditEvent]]
 ) -> list[dict[str, Any]]:
-    entries = [entry_from_draft(d) for d in drafts if d.kind in SECURITY_DRAFT_KINDS]
-    for run_id, events in events_by_run.items():
-        entries.extend(entries_from_events(events, run_id=run_id))
-    entries.sort(key=lambda x: (_parse(x["at"]), x["id"]))
-    return entries
+    return build_entries_counted(drafts, events_by_run)[0]

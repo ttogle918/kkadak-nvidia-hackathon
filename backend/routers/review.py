@@ -12,8 +12,8 @@ from fastapi import APIRouter, Request, Response
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.security_log import SECURITY_DRAFT_KINDS, build_entries, entry_from_draft
-from core.audit import read_jsonl
+from backend.security_log import SECURITY_DRAFT_KINDS, build_entries_counted, entry_from_draft
+from core.audit import AuditEvent, AuditFormatError
 from core.hitl import (
     DraftNotFound,
     DraftValidationError,
@@ -50,13 +50,32 @@ def get_audit(request: Request, response: Response) -> list[dict]:
     skipped = 0
     if s.audit_dir.is_dir():
         for p in sorted(s.audit_dir.glob("*.jsonl")):
-            try:
-                events_by_run[p.stem] = read_jsonl(p)
-            except (OSError, ValueError):
-                skipped += 1
+            events, bad = _read_events(p)
+            skipped += bad
+            events_by_run[p.stem] = events
+    entries, bad = build_entries_counted(drafts, events_by_run)
+    skipped += bad
     if skipped:
         response.headers["X-Audit-Skipped"] = str(skipped)
-    return build_entries(drafts, events_by_run)
+    return entries
+
+
+def _read_events(path) -> tuple[list[AuditEvent], int]:
+    """비신뢰 JSONL 을 줄 단위로 읽는다. 깨진 줄은 건너뛰고, 읽기 실패한 파일은 1로 센다."""
+    events: list[AuditEvent] = []
+    skipped = 0
+    try:
+        with open(path, encoding="utf-8") as f:
+            for line in f:
+                if not line.strip():
+                    continue
+                try:
+                    events.append(AuditEvent.from_json(line))
+                except (AuditFormatError, ValueError, TypeError, KeyError, AttributeError):
+                    skipped += 1
+    except (OSError, ValueError):  # UnicodeDecodeError 포함
+        skipped += 1
+    return events, skipped
 
 
 @router.post("/audit/{entry_id}/decision")

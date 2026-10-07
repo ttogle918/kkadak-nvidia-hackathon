@@ -169,3 +169,18 @@ def test_cli_stats_empty_and_search(tmp_path):
         capture_output=True, text=True, check=False,
     )  # fmt: skip
     assert r.returncode == 0 and "합성 §1" in r.stdout
+
+
+@pytest.mark.parametrize("bad", ["region_a", "", None, {"region_a"}, ("region_a", ""), ("a", 1), [" "]])
+def test_regions_must_be_sequence_of_nonblank_str(idx, bad):
+    c = mk("○○ 지역 검증", locator="l-reg")
+    c = Chunk(**{**c.__dict__, "regions": bad})
+    with pytest.raises(ChunkValidationError):
+        idx.add([c])
+    assert idx.count() == 0
+
+
+def test_regions_list_accepted(idx):
+    c = mk("○○ 지역 리스트", locator="l-reg2")
+    idx.add([Chunk(**{**c.__dict__, "regions": ["region_a", "region_b"]})])
+    assert idx.count() == 1

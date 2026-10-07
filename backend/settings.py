@@ -10,6 +10,10 @@ from pathlib import Path
 REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
+def _is_agent(rid: str) -> bool:
+    return rid.strip().casefold().startswith("agent:")
+
+
 @dataclass(frozen=True)
 class Settings:
     hitl_db: Path
@@ -21,7 +25,7 @@ class Settings:
 
     def __post_init__(self) -> None:
         rid = self.reviewer_id.strip() if isinstance(self.reviewer_id, str) else ""
-        if not rid or rid.startswith("agent:"):
+        if not rid or _is_agent(rid):
             raise ValueError("reviewer_id 는 비어 있지 않아야 하고 'agent:' 로 시작할 수 없다 (D2)")
         if not isinstance(self.reviewer_auth_source, str) or not self.reviewer_auth_source.strip():
             raise ValueError("reviewer_auth_source 가 비어 있다")

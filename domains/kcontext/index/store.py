@@ -119,7 +119,9 @@ def _validate(chunk: Chunk) -> Chunk:
     quote = chunk.quote if not _blank(chunk.quote) else chunk.text[:DEFAULT_QUOTE]
     if len(quote) > MAX_QUOTE:
         raise fail(f"quote 가 {MAX_QUOTE}자를 넘는다")
-    if any(not isinstance(r, str) or not r for r in chunk.regions):
+    if not isinstance(chunk.regions, (tuple, list)):
+        raise fail("regions 는 문자열의 tuple/list 여야 한다")
+    if any(not isinstance(r, str) or not r.strip() for r in chunk.regions):
         raise fail("regions 항목은 비어 있지 않은 문자열이어야 한다")
     if any(not isinstance(k, str) or not isinstance(v, str) for k, v in chunk.meta.items()):
         raise fail("meta 는 문자열 쌍이어야 한다")

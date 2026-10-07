@@ -129,3 +129,47 @@ def test_unknown_route_error_shape(env):
     c, _, _ = env
     r = c.get("/api/nope")
     assert r.status_code == 404 and set(r.json()["error"]) == {"code", "message"}
+
+
+# ---- 비신뢰 audit JSONL (D10): 깨진 줄·ts 혼재에도 200 ----
+def _line(seq, ts, host="a.example"):
+    import json
+
+    from core.audit import SCHEMA
+
+    return json.dumps(
+        {
+            "seq": seq, "ts": ts, "run_id": "r1", "actor": "agent:x", "phase": "observe",
+            "kind": "net", "name": "net", "call_id": None,
+            "data": {
+                "host": host, "port": 443, "decision": "denied", "binary": None,
+                "method": None, "path": None, "raw": None,
+            },
+            "source": "core.audit", "schema": SCHEMA,
+        },
+        ensure_ascii=False,
+    )
+
+
+def test_audit_bad_ts_mixed_naive_aware_and_empty(env):
+    c, _, s = env
+    s.audit_dir.mkdir()
+    lines = [
+        _line(1, "2026-10-07T01:00:00+00:00", "ok1.example"),
+        _line(2, "2026-10-07T02:00:00", "naive.example"),  # naive
+        _line(3, "2026-10-07T11:30:00+09:00", "kst.example"),  # aware 비-UTC
+        _line(4, "not-a-time"),
+        _line(5, ""),
+        "{깨진 json",
+        _line(6, "9999-12-31T23:59:59-23:00"),  # 범위 초과 가능
+    ]
+    (s.audit_dir / "r1.jsonl").write_text("\n".join(lines)+ "\n")
+    (s.audit_dir / "r2.jsonl").write_bytes(b"\xff\xfe\x00bad")
+    r = c.get("/api/audit")
+    assert r.status_code == 200
+    hosts = [e["text"]["ko"].split(":")[0] for e in r.json()]
+    assert {"ok1.example", "naive.example", "kst.example"} <= set(hosts)
+    assert "not-a-time" not in r.text and "r2" not in r.text and "Traceback" not in r.text
+    assert int(r.headers["X-Audit-Skipped"]) >= 4
+    ats = [e["at"] for e in r.json()]
+    assert len(ats) >= 3
