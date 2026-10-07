@@ -31,8 +31,10 @@ CLAIM_KINDS = ("fact", "lore", "inference")
 ALIGNMENTS = ("exact", "approx")
 EVENT_GEOMETRY_TYPES = ("point", "area", "approx")
 EVENT_STATUSES = ("scheduled", "cancelled", "changed", "unknown")
-FETCHED_FROM = ("tourapi", "seoul", "manual", "fixture")
+FETCHED_FROM = ("tourapi", "seoul", "manual", "web", "fixture")
 BLOCK_VERDICTS = ("injection", "suspicious")
+# 월·연도가 적히지 않은 일자를 게시일 기준으로 보충한 레코드의 source.locator 에 붙는 표시(D12).
+INFERRED_DATE_NOTE = "날짜 게시일 기준 추정"
 
 __all__ = [
     "ALIGNMENTS",
@@ -42,6 +44,7 @@ __all__ = [
     "EVENT_GEOMETRY_TYPES",
     "EVENT_STATUSES",
     "FETCHED_FROM",
+    "INFERRED_DATE_NOTE",
     "Blocked",
     "EventRecord",
     "Evidence",
@@ -237,7 +240,7 @@ class EventRecord:
     outdoor: bool | None
     description: str
     source: SourceRef
-    fetched_from: Literal["tourapi", "seoul", "manual", "fixture"]
+    fetched_from: Literal["tourapi", "seoul", "manual", "web", "fixture"]
     synthetic: bool = False
 
     @classmethod

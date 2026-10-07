@@ -1,0 +1,20 @@
+{
+  "region": "mapo",
+  "gu": "마포구",
+  "domains": [
+    "www.mapo.go.kr"
+  ],
+  "allow_url_prefixes": [
+    "https://www.mapo.go.kr/"
+  ],
+  "disallow_path_prefixes": [
+    "/CmsWeb/"
+  ],
+  "drop_urls_with_query": true,
+  "queries": [
+    "{gu} 축제 행사 {month}",
+    "{gu} 문화행사 {month}"
+  ],
+  "status": "confirmed",
+  "note": "사용자가 수집을 허용(2026-10-07). 단 robots.txt 의 User-agent: * 는 'Disallow: /' 로 일반 크롤러를 전부 막고 있다 — 허용은 사용자 결정이며 robots 가 허용한 것이 아니다. 존중할 수 있는 부분(/CmsWeb/ 차단, 쿼리스트링 URL 차단)은 코드가 거른다. 우리는 직접 페이지를 가져오지 않고 Tavily 가 돌려준 본문만 쓴다. region 'mapo' 는 regions/mapo.json (T226). [실측 2026-10-07] Tavily 질의 1건(include_domains=www.mapo.go.kr)의 상위 10건이 전부 council·bid·health·mplib 하위 도메인이었고 www.mapo.go.kr 본 사이트 페이지는 하나도 없었다 — robots.txt 의 일반 크롤러 전면 차단과 맞는 결과다. 현재 설정으로는 후보가 0건이다. 마포구 행사는 D7 의 TourAPI·서울 열린데이터광장 또는 수기(manual)로 채운다."
+}

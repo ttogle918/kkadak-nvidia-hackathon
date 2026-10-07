@@ -1,0 +1,21 @@
+{
+  "region": "jung",
+  "gu": "중구",
+  "domains": [
+    "www.junggu.seoul.kr"
+  ],
+  "allow_url_prefixes": [
+    "https://www.junggu.seoul.kr/"
+  ],
+  "disallow_path_prefixes": [
+    "/content.do?cmsid=14232",
+    "/search"
+  ],
+  "queries": [
+    "{gu} 축제 행사 {month}",
+    "{gu} 문화행사 {month}",
+    "{gu} 보도자료 행사 개최 {month}"
+  ],
+  "status": "confirmed",
+  "note": "도메인은 사용자 제시(2026-10-07), 메인 페이지에서 공식 사이트 확인. 공식 블로그 blog.naver.com/junggu4u 는 네이버 robots.txt 가 AI 학습·RAG 봇 접근을 금지해 사용자가 제외했다(2026-10-07). robots.txt 는 /content.do?cmsid=14232(고시공고)와 /search 만 막는다. 중구 지역은 regions/jung.json 으로 매칭. Tavily include_domains 가 www 호스트를 어떻게 받는지는 실호출 전 미확인. [보도자료, 사용자 제시 2026-10-07] 보도자료 게시판은 /content.do?cmsid=14390 (상세는 &mode=view&cid=…, 쪽은 &page=N)이다. 사용자가 준 /content.do 는 cmsid 가 없어 '페이지가 존재하지 않습니다' 오류 페이지다. 제목에 '16일 저녁' 처럼 월 없이 일만 적힌 행사 공지가 많고 게시일은 목록에만 있다 — 현재 추출은 월 없는 일자를 날짜로 인정하지 않는다. 보도자료 질의 1건을 queries 에 추가했다."
+}
