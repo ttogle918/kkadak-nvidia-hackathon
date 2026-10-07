@@ -1,7 +1,7 @@
 """실록 수집기: XML → 기사 → 청크 → 로컬 색인. 호스트에서만 실행한다(D7).
 
 - XML 은 표준 `ElementTree.iterparse` 로만 읽는다. DTD 를 가져오지 않고 엔티티를 풀지 않는다.
-  DOCTYPE 은 D13 대로 `<!DOCTYPE 이름 SYSTEM "파일이름.dtd">` 하나만 허용하고, 파싱 전에 파일 앞 4KB 로 검사한다.
+  DOCTYPE 은 D14 대로 `<!DOCTYPE 이름 SYSTEM "파일이름.dtd">` 하나만 허용하고, 파싱 전에 파일 앞 4KB 로 검사한다.
 - 요소·속성 이름은 docs/spikes/sillok.md 의 표 그대로다. 국역이 없어 본문은 한문(`lang=orig`)이고,
   한글 제목은 한국사DB 편집자의 한 줄 요약이라 원문이 아니다(`meta["title_is_summary"]`).
 - 청크 텍스트는 제목+본문(docs/spikes/sillok_embedding.md) — 인용(quote)은 항상 원문 구절만 쓴다.
@@ -57,7 +57,7 @@ _SURROGATE_PAIR = re.compile(r"&#(5[5-6]\d{3});&#(5[67]\d{3});")
 
 
 class SillokFormatError(ValueError):
-    """파일을 읽을 수 없거나 D13 검사를 통과하지 못했다."""
+    """파일을 읽을 수 없거나 D14 검사를 통과하지 못했다."""
 
 
 @dataclass(frozen=True)
@@ -92,7 +92,7 @@ class _Reject(Exception):
 
 
 def doctype_problem(head: bytes | str) -> str | None:
-    """D13 검사. 통과하면 None, 아니면 거부 이유. head 는 파일 앞 4KB.
+    """D14 검사. 통과하면 None, 아니면 거부 이유. head 는 파일 앞 4KB.
 
     정규식이 아니라 expat 에게 문맥(주석·따옴표·내부 서브셋)을 판단시킨다. 선언 핸들러가 걸리면 즉시 거부하고,
     이 검사 파서는 DTD 를 읽지도 엔티티를 풀지도 않는다(외부 엔티티 핸들러 없음).
@@ -173,7 +173,7 @@ def _join_pair(m: re.Match[str]) -> str:
 
 
 def parse_file(path: Path) -> Iterator[SillokArticle]:
-    """기사(level5) 단위로 읽는다. D13 검사에 실패하면 첫 기사 전에 SillokFormatError."""
+    """기사(level5) 단위로 읽는다. D14 검사에 실패하면 첫 기사 전에 SillokFormatError."""
     p = Path(path)
     try:
         if p.is_symlink():

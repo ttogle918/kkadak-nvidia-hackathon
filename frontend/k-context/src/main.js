@@ -5,6 +5,7 @@ import { createT, bindDocumentLang, normalizeLang } from './lib/i18n.js';
 import { bindDocumentTheme } from './lib/theme.js';
 import { h } from './lib/dom.js';
 import { resolveApi } from './api/index.js';
+import { safeBase } from './events/api.js';
 import { createInitialState } from './state/initial.js';
 import { createActions } from './state/actions.js';
 import { mountAppShell } from './components/layout/app-shell.js';
@@ -36,8 +37,9 @@ export async function boot(rootEl = document.getElementById('app'), search = loc
   const q = new URLSearchParams(search);
   const store = createStore(createInitialState(initialFromUrl(search)));
   // 기본 auto: backend(챗봇)가 떠 있으면 chat, 아니면 mock. 명시(?api=mock|http|chat)하면 그대로 따른다.
+  // ?base= 는 safeBase 로 검증한다(검증 실패 시 undefined → 기본 주소).
   const apiMode = ['mock', 'http', 'chat'].includes(q.get('api')) ? q.get('api') : 'auto';
-  const api = await resolveApi({ mode: apiMode, baseUrl: q.get('base') || undefined });
+  const api = await resolveApi({ mode: apiMode, baseUrl: safeBase(q.get('base')) || undefined });
   const t = createT(() => store.getState().lang);
   const actions = createActions({ store, api });
   const ctx = { store, api, t, actions };

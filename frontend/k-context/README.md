@@ -171,3 +171,18 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 2. `createHttpApi` 의 메서드를 `fetch(baseUrl + path)` 로 채운다(응답 검증은 `api/schema.js`). 인자 개수는 mock 과 같아야 한다(테스트가 검사).
 3. 실행: `?api=http&base=/api`. 프론트는 정적 서버가 `/api` 를 프록시하거나 같은 origin 에서 서빙한다. **키·토큰은 프론트에 두지 않는다**(게이트웨이 provider 에만 있다).
 4. `decideAudit` 은 사람 세션에서만 호출되는 사람 전용 API 로 연결한다. 에이전트용 MCP 서버와 프로세스를 분리한다(CLAUDE.md D3).
+
+
+## 행사 찾기·관리자 화면 (별도 페이지)
+기존 앱 골격과 분리된 두 페이지다. 같은 `lib/`(dom·store)와 디자인 토큰을 쓴다.
+
+| 페이지 | 설명 |
+|---|---|
+| `events.html` | 여행 날짜·숙소·관심사·기존 일정 입력 → 행사 목록·지도·상세(날짜·장소·요금·예약·참여조건·언어·출처·마지막 검증)·일정 추가/취소·저장한 행사의 변경 배지·제보 |
+| `admin.html` | 신규·변경, 충돌·누락, 수집 오류, 참여조건 확인 필요, 제보 승인/반려, 수동 확인 링크, 출처 현황·수동 재수집 (토큰 필요) |
+
+- URL 파라미터: `?api=http|mock` (기본 http) · `?base=<backend 주소>` · `?lang=en`
+- 정적 서버(8766)에서 열면 backend 기본 주소는 같은 호스트의 `:8000/api` 다. 다르면 `?base=` 를 쓴다.
+- `?api=mock` 은 데모 데이터(전부 합성, 배너·"(데모)" 표시)다. 실제 행사처럼 쓰지 않는다.
+- 일정·저장한 행사는 이 브라우저(localStorage)에만 저장된다. 관리자 토큰은 이 탭(sessionStorage)에만 둔다.
+- 코드: `src/events/{api,logic,controller,view,admin,main,i18n,demo-data}.js`. 테스트: `tests/events.*.test.js`.
