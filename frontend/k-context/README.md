@@ -20,6 +20,16 @@ node --test                                               # 순수 로직 테스
 
 URL 파라미터: `?lang=en` · `?theme=dark|light|auto` · `?mode=old|now|both` · `?day=1..3` · `?api=mock|http|chat&base=/api` (`chat` = 챗봇만 backend `http://localhost:8000/api`, 나머지 mock)
 
+## 지도 렌더러 (SVG 기본 · 카카오맵 선택)
+기본은 SVG 지도(외부 요청 없음). 카카오맵은 **키가 있고 SDK 가 로드될 때만** 자동으로 쓰이며, 아니면 SVG 로 폴백하고 콘솔에 사유 한 줄(`[map] 카카오맵 대신 SVG 지도 사용: …`, 키 값은 출력 안 함)을 남긴다.
+
+1. 카카오 개발자 콘솔에서 앱 생성 → 카카오맵 사용 설정 ON → **JavaScript SDK 도메인**에 `http://localhost:8766` 등록(`127.0.0.1` 은 별도 도메인이라 따로 등록).
+2. `cp config.local.example.js config.local.js` 후 **JavaScript 키**를 넣는다(`config.local.js` 는 gitignore). URL 파라미터로 키를 받지 않는다.
+3. `python3 -m http.server 8766` → `http://localhost:8766/`. 키가 없으면 `config.local.js` 404 가 한 번 보이는데 정상이다(SVG 폴백).
+
+**지도 SDK 에는 REST API 키를 쓰지 않는다**(JavaScript 키만). 외부 스크립트는 `https://dapi.kakao.com/v2/maps/sdk.js` 하나뿐이다. 코드: `src/lib/kakao-sdk.js`(로더·8초 타임아웃) · `src/components/map/renderer.js`(선택) · `kakao-view.js`(마커·폴리라인).
+좌표는 `[lat, lng]`; lat/lng 가 null 인 항목은 건너뛴다(현재 mock 은 전부 null → 덕수궁 부근 기본 중심 + "좌표 없음" 표시). 결정 초안: `docs/D13-kakao-map-sdk.draft.md`.
+
 ## 구조
 ```
 index.html                 진입점: CSS 1개(src/styles/index.css) + module script 1개(src/main.js)

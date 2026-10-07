@@ -9,6 +9,8 @@ import {
   approxRadius, buildNowPin, buildSegment, centroid, dayOpacity, layeredSegments, makeProjector, modeOpacity, pathD, segStyle,
 } from './route-layer.js';
 import { buildRouteCards, buildStepList } from './route-list.js';
+import { createKakaoView } from './kakao-view.js';
+import { sharedRenderer } from './renderer.js';
 
 const WATCH = (s) => [s.mode, s.day, s.selectedSeg, s.selectedRoute, s.selectedNow, s.lang, s.data, s.loaded];
 const same = (a, b) => a.every((v, i) => Object.is(v, b[i]));
@@ -148,6 +150,14 @@ export function mount(root, ctx) {
   // 지도가 메인이므로 구간 목록은 접힌 채로 시작한다(데스크톱·모바일 공통)
   let stepsOpen = false;
   let destroyed = false;
+  // 렌더러 선택: 기본은 SVG. 카카오 키·SDK 가 준비되면(비동기) 카카오 뷰로 바꾼다. 실패는 SVG 유지(사유는 selectRenderer 가 경고).
+  let kview = null;
+  const kakaoHost = h('div', { class: 'map-kakao', role: 'group', 'aria-label': t({ ko: '지도 (카카오맵)', en: 'Map (Kakao Maps)' }) });
+  (ctx.mapRenderer ?? sharedRenderer()).then((r) => {
+    if (destroyed || r.kind !== 'kakao') return;
+    try { kview = createKakaoView(r.kakao, kakaoHost, t); } catch (e) { console.warn('[map] 카카오 뷰 생성 실패, SVG 유지'); return; }
+    draw();
+  }).catch(() => {});
 
   function draw() {
     if (destroyed) return;
@@ -163,8 +173,9 @@ export function mount(root, ctx) {
     const route = routeById(s, s.selectedRoute) ?? s.data.routes[0];
     render(root, h('div', { class: 'map', dataset: { module: 'map' } },
       buildRouteCards(s.data.routes, route.id, t),
-      h('div', { class: 'map-stage' }, buildMapSvg(s, t), buildLegend(t)),
+      h('div', { class: 'map-stage' }, kview ? [kakaoHost, kview.status] : [buildMapSvg(s, t), buildLegend(t)]),
       buildStepList({ route, selectedSeg: s.selectedSeg, cardOf: (id) => cardById(s, id), t, open: stepsOpen })));
+    if (kview) { try { kview.update(s); } catch { console.warn('[map] 카카오 지도 갱신 실패'); } }
     // 포커스·스크롤 복원
     const list = root.querySelector?.('.map-steps__list');
     if (list) list.scrollTop = prevScroll;
@@ -193,6 +204,7 @@ export function mount(root, ctx) {
     destroy() {
       destroyed = true;
       offStore();
+      kview?.destroy();
       offClick();
       offKey();
       root.replaceChildren();

@@ -26,3 +26,4 @@ docs/private/
 var/
 domains/kcontext/data/raw/*
 !domains/kcontext/data/raw/.gitkeep
+frontend/k-context/config.local.js

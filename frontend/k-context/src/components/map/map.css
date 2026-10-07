@@ -109,3 +109,9 @@
   .map-skeleton__bar, .map-skeleton__map { animation: none; }
   .map-layer, .map-day, .map-labels { transition: none; }
 }
+
+/* 카카오 렌더러(선택됐을 때만 쓰임) */
+.map-kakao { position: absolute; inset: 0; width: 100%; height: 100%; }
+.map-kakao__status { position: absolute; left: var(--sp-2); bottom: var(--sp-2); z-index: 5; padding: var(--sp-1) var(--sp-2); border-radius: var(--r-md); background: var(--c-surface); color: var(--c-text-2); font-size: var(--fs-xs); border: 1px solid var(--c-line); }
+.map-kakao__status:empty { display: none; }
+.map-kakao__info { padding: var(--sp-1) var(--sp-2); font-size: var(--fs-sm); }
