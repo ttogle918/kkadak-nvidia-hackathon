@@ -2,6 +2,10 @@
 import { h } from '../../lib/dom.js';
 import { metaOf, canDecide, decidedNoteKey } from './logic.js';
 import { approveButtons } from './approve-buttons.js';
+import { mockBadge } from '../../lib/mock-badge.js';
+
+/** 프론트 고정 예시 로그(data/auditlog.js)는 id 가 log_ 로 시작한다. 서버 기록(audit:…)은 실제다. */
+export const isMockLogEntry = (entry) => typeof entry?.id === 'string' && entry.id.startsWith('log_');
 
 /** @param {{entry:object, t:Function, busy:boolean, error:string|null}} p */
 export function logRowNode({ entry, t, busy = false, error = null }) {
@@ -11,6 +15,7 @@ export function logRowNode({ entry, t, busy = false, error = null }) {
   return h('li', { class: 'securitylog-row', dataset: { kind: entry.kind, id: entry.id } },
     h('div', { class: 'securitylog-row__head' },
       h('span', { class: 'securitylog-row__time' }, entry.time),
+      isMockLogEntry(entry) ? mockBadge(t) : null,
       h('b', { class: 'securitylog-row__label' }, h('span', { 'aria-hidden': 'true' }, meta.icon, ' '), meta.labelKey ? t(meta.labelKey) : String(entry.kind))),
     h('div', { class: 'securitylog-row__text' }, text, note ? h('span', { class: 'securitylog-row__note' }, ` → ${t(note)}`) : null),
     canDecide(entry) ? approveButtons({ entry, label: text, busy, t }) : null,

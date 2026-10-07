@@ -102,3 +102,16 @@ test('destroy', async () => {
   store.setState({ logs: [] });
   assert.equal(root.children.length, 0);
 });
+
+test('mock 예시 로그(log_…)에만 MOCK 딱지, 서버 기록(audit:…)에는 없다', async () => {
+  const { store, root } = await setup();
+  const mockRows = rows(root).filter((r) => r.dataset.id.startsWith('log_'));
+  assert.equal(mockRows.length, 4);
+  assert.ok(mockRows.every((r) => byClass(r, 'mock-badge').length === 1));
+  const real = { id: 'audit:backend-chat-x:9', time: '10:00:00', kind: 'deny', text: '서버가 기록한 거부', decided_by: null };
+  store.setState((s) => ({ logs: [...s.logs, real] }));
+  const all = rows(root);
+  const serverRow = all.find((r) => r.dataset.id === real.id);
+  assert.ok(serverRow, '서버 기록 행이 있다');
+  assert.equal(byClass(serverRow, 'mock-badge').length, 0);
+});
