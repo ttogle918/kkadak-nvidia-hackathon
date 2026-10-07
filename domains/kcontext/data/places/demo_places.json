@@ -1,0 +1,47 @@
+[
+  {
+    "name": "창덕궁",
+    "aliases": ["Changdeokgung"],
+    "lat": 37.57964694739535,
+    "lng": 126.99099980677127,
+    "source": "카카오맵 MCP 길찾기 응답 sp/ep",
+    "verified_at": "2026-10-07",
+    "note": "frontend/k-context/src/data/itinerary.js 의 anchors 에서 옮김"
+  },
+  {
+    "name": "익선동",
+    "aliases": ["Ikseon-dong"],
+    "lat": 37.5734371942191,
+    "lng": 126.989775723896,
+    "source": "카카오맵 MCP 길찾기 응답 sp/ep",
+    "verified_at": "2026-10-07",
+    "note": "frontend/k-context/src/data/itinerary.js 의 anchors 에서 옮김"
+  },
+  {
+    "name": "경복궁",
+    "aliases": ["Gyeongbokgung"],
+    "lat": 37.577613288258206,
+    "lng": 126.97689786832184,
+    "source": "카카오맵 MCP 길찾기 응답 sp/ep",
+    "verified_at": "2026-10-07",
+    "note": "frontend/k-context/src/data/itinerary.js 의 anchors 에서 옮김"
+  },
+  {
+    "name": "광화문",
+    "aliases": ["Gwanghwamun"],
+    "lat": 37.57596445980707,
+    "lng": 126.97685309595215,
+    "source": "카카오맵 MCP 길찾기 응답 sp/ep",
+    "verified_at": "2026-10-07",
+    "note": "frontend/k-context/src/data/itinerary.js 의 anchors 에서 옮김"
+  },
+  {
+    "name": "종로3가",
+    "aliases": ["숙소 · 종로3가", "숙소·종로3가", "종로3가역", "Jongno 3-ga", "Hotel · Jongno 3-ga"],
+    "lat": 37.570420844523,
+    "lng": 126.992153252476,
+    "source": "프론트 샘플 anchors 의 대표 좌표(근사)",
+    "verified_at": "2026-10-07",
+    "note": "숙소의 실제 위치 데이터가 없어 종로3가역 1호선 좌표를 근사로 쓴다. 정확한 숙소 좌표가 아니다"
+  }
+]
