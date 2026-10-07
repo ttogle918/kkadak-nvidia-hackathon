@@ -53,7 +53,7 @@ class Point(BaseModel):
 
 
 class Plan(BaseModel):
-    model_config = ConfigDict(extra="allow")  # 화면이 붙인 표시용 키(source·entry_id 등)를 되돌려 받는다
+    model_config = ConfigDict(extra="ignore")  # 모르는 키는 버린다(크기 상한 우회 방지)
     id: str = Field(min_length=1, max_length=80)
     title: str = Field(default="", max_length=120)
     date: str = Field(pattern=r"^\d{4}-\d{2}-\d{2}$")
@@ -61,6 +61,9 @@ class Plan(BaseModel):
     end: str = Field(pattern=r"^\d{2}:\d{2}$")
     lat: float | None = Field(default=None, ge=-90, le=90)
     lng: float | None = Field(default=None, ge=-180, le=180)
+    source: Literal["user", "catalog", "demo"] | None = None  # 화면이 붙인 표시용 키
+    entry_id: str | None = Field(default=None, max_length=40)
+    end_assumed: bool | None = None
 
 
 class Slot(BaseModel):
@@ -114,7 +117,8 @@ class ReportBody(BaseModel):
     official_link: str = Field(max_length=500)
     reason: str = Field(max_length=1000)
     entry_id: str | None = Field(default=None, max_length=40)
-    fields: dict[str, str] = Field(default_factory=dict, max_length=10)
+    fields: dict[Literal["title", "start_date", "end_date", "start_time", "venue_name", "venue_address", "note"],
+                 Annotated[str, Field(max_length=200)]] = Field(default_factory=dict, max_length=7)
 
 
 def _dump(m: BaseModel) -> dict:
@@ -184,8 +188,7 @@ class DecideBody(BaseModel):
 
 
 class RefreshBody(BaseModel):
-    model_config = ConfigDict(extra="forbid")
-    sample: bool = False
+    model_config = ConfigDict(extra="forbid")  # 본문은 비어 있다. sample 키 수집은 CLI 전용이다
 
 
 class LinkCheckBody(BaseModel):
@@ -216,7 +219,7 @@ def admin_decide(report_id: str, body: DecideBody, request: Request, actor: Admi
 
 @router.post("/admin/refresh/{source_id}")
 def admin_refresh(source_id: str, body: RefreshBody, request: Request, actor: Admin):
-    return _call(request, "admin_refresh", {"source_id": source_id, "sample": body.sample}, actor)
+    return _call(request, "admin_refresh", {"source_id": source_id}, actor)
 
 
 @router.post("/admin/link-checks/{source_id}")

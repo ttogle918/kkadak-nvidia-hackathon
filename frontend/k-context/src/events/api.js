@@ -11,6 +11,26 @@ export class EventsApiError extends Error {
   }
 }
 
+const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
+
+/**
+ * ?base= 로 받은 backend 주소를 검증한다. 같은 출처의 경로("/api")이거나 루프백(localhost·127.0.0.1) 주소만 받는다.
+ * 그 밖의 주소는 버리고 기본값을 쓴다 — 링크 하나로 관리자 토큰이나 일정·숙소 좌표를 다른 서버로 보내지 못하게 한다.
+ */
+export function safeBase(value, loc = globalThis.location) {
+  if (!value) return undefined;
+  const v = String(value);
+  if (/^\/(?!\/)[\w\-./]*$/.test(v)) return v; // 같은 출처 경로
+  try {
+    const u = new URL(v);
+    if ((u.protocol === 'http:' || u.protocol === 'https:') && LOOPBACK.has(u.hostname) && !u.username && !u.password) {
+      return `${u.origin}${u.pathname.replace(/\/$/, '')}`;
+    }
+    if (loc && u.origin === loc.origin) return `${u.origin}${u.pathname.replace(/\/$/, '')}`;
+  } catch { /* 잘못된 주소는 버린다 */ }
+  return undefined;
+}
+
 /** 정적 서버(8766)에서 열었으면 같은 호스트의 8000 포트 backend 를 기본으로 본다. */
 export function defaultBase(loc = globalThis.location) {
   if (loc && loc.port === '8766') return `${loc.protocol}//${loc.hostname}:8000/api`;
@@ -58,7 +78,7 @@ export function createHttpEventsApi({ baseUrl = defaultBase(), fetchImpl = globa
       sources: (token) => call('GET', '/admin/sources', { token }),
       reports: (token, status) => call('GET', `/admin/reports${q({ status })}`, { token }),
       decide: (token, id, decision, note = '') => call('POST', `/admin/reports/${encodeURIComponent(id)}/decision`, { token, body: { decision, note } }),
-      refresh: (token, sourceId, sample = false) => call('POST', `/admin/refresh/${encodeURIComponent(sourceId)}`, { token, body: { sample } }),
+      refresh: (token, sourceId) => call('POST', `/admin/refresh/${encodeURIComponent(sourceId)}`, { token, body: {} }),
       linkCheck: (token, sourceId, note = '') => call('POST', `/admin/link-checks/${encodeURIComponent(sourceId)}`, { token, body: { note } }),
     },
   };

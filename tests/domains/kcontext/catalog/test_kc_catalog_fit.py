@@ -199,3 +199,45 @@ def test_invalid_itinerary_items_are_dropped_with_reasons():
     good, problems = validate_itinerary([plan("낮", "10:00", "12:00", A), {"id": "x"}, "문자열",
                                          plan("거꾸로", "12:00", "10:00", A)])
     assert [g["id"] for g in good] == ["낮"] and len(problems) == 3
+
+
+# ---- 2차 검토(reviewer) 재발 방지 ----------------------------------------------------------
+HOTEL_XY = (37.5600, 126.9800)
+
+
+def test_origin_as_the_previous_point_uses_the_full_formula_when_a_next_plan_exists():
+    ev = event(eligibility=parse_eligibility("누구나 외국인 참여 가능"), reservation=Reservation(required="no"))
+    prov = TableRouteProvider({(HOTEL_XY, V): 20, (V, B): 12, (HOTEL_XY, B): 25})
+    (s,) = fit(ev, [plan("밤", "22:00", "23:00", B)], prov, origin={"lat": HOTEL_XY[0], "lng": HOTEL_XY[1]})
+    assert s["extra_basis"] == "formula" and s["extra_minutes"] == 20 + 12 - 25 and s["route"]["from"] == "origin"
+
+
+def test_unknown_leg_to_the_next_plan_is_check_needed_even_without_a_previous_plan():
+    ev = event(eligibility=parse_eligibility("누구나"), reservation=Reservation(required="no"))
+    (s,) = fit(ev, [plan("밤", "22:00", "23:00", B)], TableRouteProvider({}))
+    assert s["status"] == "check_needed" and any(r["code"] == "travel_unknown" for r in s["reasons"])
+
+
+def test_same_start_time_clashes_even_when_the_duration_is_unknown():
+    ev = event(sessions=(session("2026-10-16", "19:00", None),))
+    (s,) = fit(ev, [plan("겹침", "19:00", "20:00", A)])
+    assert s["status"] == "no_fit" and any(r["code"] == "overlaps" for r in s["reasons"])
+    (t,) = fit(ev, [plan("직전", "18:00", "19:00", A)])  # 끝과 시작이 맞닿는 것은 겹침이 아니다
+    assert not any(r["code"] == "overlaps" for r in t["reasons"])
+
+
+def test_added_event_uses_the_users_assumed_duration_and_clamps_at_midnight():
+    ev = event(sessions=(session("2026-10-16", "19:00", None),))
+    (s,) = fit(ev, [plan("낮", "10:00", "12:00", A)], cfg=FitConfig(assumed_duration_min=90))
+    assert s["session"]["assumed_minutes"] == 90
+    item = add_to_itinerary([plan("낮", "10:00", "12:00", A)], s, ev)[1]
+    assert (item["start"], item["end"]) == ("19:00", "20:30") and item["end_assumed"] is True
+    late = event(sessions=(session("2026-10-16", "23:30", None),))
+    (l1,) = fit(late, [], cfg=FitConfig(assumed_duration_min=90), origin={"lat": 1.0, "lng": 1.0})
+    assert add_to_itinerary([], l1, late)[0]["end"] == "23:59"
+    edge = event(sessions=(session("2026-10-16", "23:59", None),))
+    (l2,) = fit(edge, [], origin={"lat": 1.0, "lng": 1.0})
+    import pytest as _p
+
+    with _p.raises(ValueError, match="종료 시각"):
+        add_to_itinerary([], l2, edge)

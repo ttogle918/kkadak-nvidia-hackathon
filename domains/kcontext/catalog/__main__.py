@@ -92,6 +92,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(status(store, sources), ensure_ascii=False, indent=1))
         return 0
     if a.cmd == "update":
+        if a.sample and not a.dir:
+            print("--sample(5행 연결 확인)은 실제 카탈로그를 오염시키지 않도록 --dir <임시 폴더> 와 함께만 쓴다",
+                  file=sys.stderr)
+            return 2
         fetchers = _fetchers(sources, region, now, env, sample=a.sample)
         if a.source not in fetchers:
             print(f"{a.source}: 자동 수집이 구현돼 있지 않거나 알 수 없는 출처다 — status 로 확인", file=sys.stderr)

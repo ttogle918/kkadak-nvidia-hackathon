@@ -6,7 +6,7 @@ import { createMockEventsApi, EventsApiError } from '../src/events/api.js';
 
 const memStorage = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v), m }; };
 function setup(api = createMockEventsApi(), storage = memStorage(), today = '2026-10-15') {
-  const store = createStore(initialState(storage, { today }));
+  const store = createStore(initialState(storage, { today, demo: api.demo }));
   const c = createController({ store, api, storage, now: () => new Date('2026-10-07T03:00:00Z') });
   return { store, c, api, storage };
 }
@@ -18,7 +18,7 @@ test('초기 상태: 서울 오늘 기준 기본 날짜, 저장된 값이 있으
   assert.equal(get(x).form.to, '2026-10-18');
   x.c.setForm({ interests: '공연' });
   x.c.setLang('en');
-  const again = createStore(initialState(x.storage, { today: '2030-01-01' }));
+  const again = createStore(initialState(x.storage, { today: '2030-01-01', demo: true }));
   assert.equal(again.getState().form.interests, '공연');
   assert.equal(again.getState().lang, 'en');
   assert.equal(again.getState().form.from, '2026-10-15'); // 저장된 폼이 우선
@@ -88,7 +88,7 @@ test('내 일정: 입력 검증·정렬·삭제(행사 항목은 이 경로로 �
   assert.equal(get(x).itinerary.length, 3);
   x.c.deleteUserPlan(get(x).itinerary[0].id);
   assert.equal(get(x).itinerary.length, 2);
-  assert.equal(JSON.parse(x.storage.m.get('kc.events.v1')).itinerary.length, 2); // 저장됨
+  assert.equal(JSON.parse(x.storage.m.get('kc.events.v1.demo')).itinerary.length, 2); // 저장됨
 });
 
 test('샘플 일정은 데모 모드에서만', () => {
@@ -177,4 +177,55 @@ test('제보: 클라이언트 검증·서버 검증 메시지·성공', async ()
   assert.equal(await x.c.submitReport({ kind: 'new_event', official_link: ' https://a.invalid/x ', reason: ' 사유가 충분히 깁니다 ', entry_id: '', fields: { title: ' ○○ ', start_date: '', note: undefined } }), true);
   assert.deepEqual(sent, { kind: 'new_event', official_link: 'https://a.invalid/x', reason: '사유가 충분히 깁니다', fields: { title: '○○' } });
   assert.equal(get(x).reportStatus, 'sent');
+});
+
+
+test('저장 키: 데모와 실제 모드의 일정·저장 목록이 섞이지 않는다', () => {
+  const storage = memStorage();
+  const demo = setup(createMockEventsApi(), storage);
+  demo.c.addUserPlan({ title: '데모 점심', date: '2026-10-16', start: '12:00', end: '13:00' });
+  const real = setup({ ...createMockEventsApi(), demo: false }, storage);
+  assert.equal(get(real).itinerary.length, 0);
+  real.c.addUserPlan({ title: '실제 점심', date: '2026-10-16', start: '12:00', end: '13:00' });
+  const again = createStore(initialState(storage, { today: '2026-10-15', demo: true }));
+  assert.deepEqual(again.getState().itinerary.map((p) => p.title), ['데모 점심']);
+  assert.ok(storage.m.has('kc.events.v1') && storage.m.has('kc.events.v1.demo'));
+});
+
+test('저장소에서 읽은 일정·저장 목록은 검증한다(손상된 항목 하나가 검색을 막지 않는다)', async () => {
+  const storage = memStorage();
+  storage.setItem('kc.events.v1.demo', JSON.stringify({
+    itinerary: [
+      { id: 'ok', title: '점심', date: '2026-10-16', start: '12:00', end: '13:00' },
+      { id: 'bad1', date: '내일', start: '12:00', end: '13:00' }, { id: '', date: '2026-10-16', start: '1', end: '2' }, null, 'x',
+      { id: 'bad2', date: '2026-10-16', start: '14:00', end: '13:00' },
+      { id: 'bad3', date: '2026-10-16', start: '10:00', end: '11:00', lat: 'abc', lng: 1 },
+    ],
+    saved: { 'ev:1': { id: 'ev:1', title: '저장', seenAt: '2026-10-07T12:00' }, 'ev:2': 'x', 'ev:3': { title: 1 } },
+  }));
+  const x = setup(createMockEventsApi(), storage);
+  assert.deepEqual(get(x).itinerary.map((p) => p.id), ['ok']);
+  assert.deepEqual(Object.keys(get(x).saved), ['ev:1']);
+  x.c.setForm({ from: '2026-10-16', to: '2026-10-17' });
+  assert.ok(await x.c.search());
+  storage.setItem('kc.events.v1.demo', JSON.stringify({ itinerary: 'oops', saved: [1, 2] }));
+  const y = setup(createMockEventsApi(), storage);
+  assert.deepEqual(get(y).itinerary, []);
+  assert.deepEqual(get(y).saved, {});
+});
+
+test('검색 경쟁: 먼저 시작한 느린 검색의 응답이 최신 결과를 덮지 않는다', async () => {
+  const x = setup();
+  const waiting = [];
+  x.api.search = (b) => new Promise((res) => waiting.push(() => res({ events: [{ id: b.trip.from }], suggestions: [], excluded: [], problems: [], coverage: null, map: { points: [], unlocated: [] } })));
+  x.c.setForm({ from: '2026-10-16', to: '2026-10-17' });
+  const slow = x.c.search();
+  x.c.setForm({ from: '2026-10-17', to: '2026-10-18' });
+  const fast = x.c.search();
+  waiting[1](); // 나중 검색이 먼저 도착
+  await fast;
+  waiting[0](); // 먼저 시작한 검색이 늦게 도착 — 버려져야 한다
+  assert.equal(await slow, null);
+  assert.deepEqual(get(x).result.events.map((e) => e.id), ['2026-10-17']);
+  assert.equal(get(x).loading, false);
 });

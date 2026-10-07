@@ -1,15 +1,18 @@
 """관찰값(출처별 보고) → 행사 항목. 묶기·값 고르기·충돌·검증 상태.
 
 묶기 규칙
-- 같은 외부 식별자(주최 측·원천이 준 id)를 공유하면 같은 행사다.
-- 식별자가 없으면 **장소 + 기간 + (주최 또는 거의 같은 행사명)** 을 함께 본다. 행사명만 같다고 합치지 않는다.
-  장소·날짜를 모르면 합치지 않는다. 같은 이름·같은 장소라도 기간이 겹치지 않으면 다른 회차로 남긴다.
+- 같은 외부 식별자(주최 측·원천이 준 id)를 공유하면 같은 행사다. 같은 체계의 식별자(예: ``seoul_cult:``)인데
+  값이 서로 다르면 **다른 행사**다(같은 극장의 다른 공연, 같은 건물의 다른 홀).
+- 식별자가 없으면 **장소 + 기간 + 행사명 유사도(주최가 같으면 느슨하게, 아니면 엄격하게)** 를 함께 본다.
+  행사명만 같거나 주최만 같다고 합치지 않는다. 장소·날짜를 모르면 합치지 않는다. 같은 이름·같은 장소라도
+  기간이 겹치지 않으면 다른 회차로 남긴다.
 - 데모(합성) 관찰은 실제 관찰과 합치지 않는다.
 - 같은 원천(`Evidence.origin`)에서 재배포된 자료는 독립 출처로 세지 않는다.
 
 값 고르기: 출처 우선순위(주최·운영 측 홈페이지 > 공식 API > 보도자료 > SNS > 제보·수기 > AI 추출) → 더 최근 수정.
 충돌: 서로 다른 원천이 다른 값을 말하면 기록한다. 우선순위나 시각으로 한쪽이 확실히 앞서면 해결, 아니면 미해결 —
-미해결 충돌이 있으면 검증 상태는 ``conflict`` 이고 값은 "확인 필요"로 보인다.
+미해결 충돌이 있으면 검증 상태는 ``conflict`` 이고, 그 필드의 값은 비워 "확인 필요"로 두며 후보 값은 ``conflicts`` 에만 남긴다.
+예약·언어·참여조건처럼 사실로 오해하기 쉬운 필드는 주최·공식 API·보도자료 출처의 값만 쓴다(제보·SNS·AI 추출은 쓰지 않는다).
 """
 
 from __future__ import annotations
@@ -41,7 +44,9 @@ _RANK = {
     "report": 4, "manual": 4, "ai_extracted": 5, "demo": 9,
 }
 _OFFICIAL = ("official_site", "official_api")
+TRUSTED_RANK = 2  # press 까지(주최·공식 API·보도자료). 제보·SNS·AI 추출은 사실 필드를 채우지 않는다
 TITLE_SIMILARITY = 0.8  # [제안, 시험 후 조정] 장소·기간이 맞은 뒤에만 쓰는 보조 조건
+ORG_TITLE_SIMILARITY = 0.5  # 주최가 같을 때 요구하는 최소 행사명 유사도(주최만으로 합치지 않는다)
 NEAR_M = 150
 
 
@@ -89,21 +94,34 @@ def _days(s: Schedule) -> set[date]:
     return days
 
 
+def _scheme_ids(o: Observation) -> dict[str, set[str]]:
+    out: dict[str, set[str]] = {}
+    for k in o.external_ids:
+        scheme, _, val = k.partition(":")
+        if val:
+            out.setdefault(scheme, set()).add(val)
+    return out
+
+
 def same_event(a: Observation, b: Observation) -> bool:
     if a.demo != b.demo:
         return False
     if set(a.external_ids) & set(b.external_ids):
         return True
+    ia, ib = _scheme_ids(a), _scheme_ids(b)
+    if any(ia[k] != ib[k] for k in ia.keys() & ib.keys()):
+        return False  # 같은 체계의 식별자가 다르면 다른 행사다
     if not _same_venue(a.venue, b.venue):
         return False
     da, db = _days(a.schedule), _days(b.schedule)
     if not da or not db or not (da & db):
         return False
+    ta, tb = squash(a.title), squash(b.title)
+    ratio = SequenceMatcher(None, ta, tb).ratio() if ta and tb else 0.0
     org_a, org_b = squash(a.organizer), squash(b.organizer)
     if org_a and org_a == org_b:
-        return True
-    ta, tb = squash(a.title), squash(b.title)
-    return bool(ta and tb and SequenceMatcher(None, ta, tb).ratio() >= TITLE_SIMILARITY)
+        return ratio >= ORG_TITLE_SIMILARITY
+    return ratio >= TITLE_SIMILARITY
 
 
 def _group(obs: Sequence[Observation]) -> list[list[Observation]]:
@@ -197,10 +215,15 @@ def _entry(group: Sequence[Observation], *, now: datetime, verified_at: str,
     conflicts: list[dict] = []
     needs: list[str] = []
 
+    unresolved_fields: set[str] = set()
+
     def chosen(field: str, get: Callable[[Observation], object]):
         rec, val = _conflict(ordered, field, get)
         if rec:
             conflicts.append(rec)
+            if not rec["resolved"]:  # 해결되지 않은 충돌은 어느 쪽도 사실로 보여 주지 않는다
+                unresolved_fields.add(field)
+                return None
         return val
 
     start = chosen("start_date", lambda o: o.schedule.start_date)
@@ -224,7 +247,9 @@ def _entry(group: Sequence[Observation], *, now: datetime, verified_at: str,
                 "resolved": False, "chosen": "unknown"})
 
     venue = _pick(ordered, lambda o: o.venue if (o.venue.name or o.venue.address) else None, Venue())
-    if venue_name and venue.name != venue_name:
+    if "venue_name" in unresolved_fields:
+        venue = Venue()  # 장소가 출처마다 다르면 장소·대상 지역을 확정하지 않는다
+    elif venue_name and venue.name != venue_name:
         venue = next((o.venue for o in ordered if o.venue.name == venue_name), venue)
     schedule = Schedule(
         start_date=start, end_date=end, sessions=_sessions(ordered),
@@ -237,25 +262,26 @@ def _entry(group: Sequence[Observation], *, now: datetime, verified_at: str,
     price_text = _pick(ordered, lambda o: o.price.text if o.price.kind == price_kind or not price_kind
                        else None, "")
     price = Price(kind=price_kind or "unknown", text=price_text)
-    res_src = next((o.reservation for o in ordered if o.reservation.required == res_required
+    trusted = [o for o in ordered if evidence_rank(o) <= TRUSTED_RANK]
+    res_src = next((o.reservation for o in trusted if o.reservation.required == res_required
                     and res_required), None)
     reservation = Reservation(
         required=res_required or "unknown",
-        link=_pick(ordered, lambda o: o.reservation.link, ""),
-        deadline=_pick(ordered, lambda o: o.reservation.deadline, None),
-        status=(res_src.status if res_src else _pick(ordered, lambda o: o.reservation.status, "unknown")),
-        note=_pick(ordered, lambda o: o.reservation.note, ""),
+        link=_pick(trusted, lambda o: o.reservation.link, ""),
+        deadline=_pick(trusted, lambda o: o.reservation.deadline, None),
+        status=(res_src.status if res_src else _pick(trusted, lambda o: o.reservation.status, "unknown")),
+        note=_pick(trusted, lambda o: o.reservation.note, ""),
     )
-    elig_src = next((o.eligibility for o in ordered if o.eligibility.audience
+    elig_src = next((o.eligibility for o in trusted if o.eligibility.audience
                      or o.eligibility.restrictions), Eligibility())
-    restrictions = tuple({r["text"] + r["kind"]: r for o in ordered
+    restrictions = tuple({r["text"] + r["kind"]: r for o in trusted
                           for r in o.eligibility.restrictions}.values())
     eligibility = dataclasses.replace(elig_src, restrictions=restrictions)
     lang = Language(
-        languages=tuple(dict.fromkeys(x for o in ordered for x in o.language.languages)),
-        english_guidance=_pick(ordered, lambda o: o.language.english_guidance, "unknown"),
-        english_subtitles=_pick(ordered, lambda o: o.language.english_subtitles, "unknown"),
-        site_english_page=_pick(ordered, lambda o: o.language.site_english_page, "unknown"),
+        languages=tuple(dict.fromkeys(x for o in trusted for x in o.language.languages)),
+        english_guidance=_pick(trusted, lambda o: o.language.english_guidance, "unknown"),
+        english_subtitles=_pick(trusted, lambda o: o.language.english_subtitles, "unknown"),
+        site_english_page=_pick(trusted, lambda o: o.language.site_english_page, "unknown"),
     )
     evid = _evidence(group)
     entry = EventEntry(
@@ -276,7 +302,7 @@ def _entry(group: Sequence[Observation], *, now: datetime, verified_at: str,
         last_verified_at=max((seen_at[o.obs_id] for o in group if seen_at and o.obs_id in seen_at),
                              default=verified_at),
         lifecycle=life,
-        independent_sources=len({e.origin for e in evid}),
+        independent_sources=len({e.origin for e in evid if e.kind in (*_OFFICIAL, 'press', 'sns')}),
         demo=any(o.demo for o in group),
     )
     # 확인이 필요한 항목(값을 모를 때). 알려진 값만 보여 주고 나머지는 "확인 필요"로 둔다.
@@ -325,5 +351,11 @@ def build_entries(
     """
     vat = verified_at or now.strftime("%Y-%m-%dT%H:%M")
     out = [_entry(g, now=now, verified_at=vat, prior=prior, seen_at=seen_at) for g in _group(observations)]
+    seen_ids: set[str] = set()
+    for i, e in enumerate(out):  # 이전에 한 묶음이던 관찰이 나뉘면 같은 이전 id 를 이어받을 수 있다
+        if e.id in seen_ids:
+            fresh = "ev:" + hashlib.sha1("|".join(e.external_ids[:1]).encode()).hexdigest()[:12]
+            out[i] = dataclasses.replace(e, id=fresh if fresh not in seen_ids else f"{fresh}x{i}")
+        seen_ids.add(out[i].id)
     out.sort(key=lambda e: (e.schedule.start_date or "9999-99-99", e.id))
     return out

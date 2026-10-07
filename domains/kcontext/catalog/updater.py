@@ -60,26 +60,29 @@ def rebuild(store: CatalogStore, now: datetime) -> tuple[int, int]:
 def run_source(
     store: CatalogStore, source_id: str, fetch: Callable[[], list[Observation]], *, now: datetime
 ) -> RunResult:
-    runs = store.load_runs()
     try:
-        fetched = fetch()
+        fetched = fetch()  # 네트워크 호출은 잠금 밖에서 한다
     except Exception as e:  # noqa: BLE001 - 어떤 수집 오류든 기존 데이터를 지키고 기록만 한다
         err = _safe_error(e)
-        record_failure(runs, source_id, now, err)
-        store.save_runs(runs)
+        with store.lock():
+            runs = store.load_runs()
+            record_failure(runs, source_id, now, err)
+            store.save_runs(runs)
         return RunResult(source_id, False, error=err)
-    obs_store = store.load_observations()
-    stamp = _iso(now)
-    for o in fetched:
-        prev = obs_store.get(o.obs_id)
-        obs_store[o.obs_id] = {
-            "observation": o, "source_id": source_id,
-            "first_seen_at": prev["first_seen_at"] if prev else stamp, "last_seen_at": stamp,
-        }
-    store.save_observations(obs_store)
-    new, changed = rebuild(store, now)
-    record_success(runs, source_id, now, {"fetched": len(fetched), "new_entries": new, "changes": changed})
-    store.save_runs(runs)
+    with store.lock():
+        runs = store.load_runs()
+        obs_store = store.load_observations()
+        stamp = _iso(now)
+        for o in fetched:
+            prev = obs_store.get(o.obs_id)
+            obs_store[o.obs_id] = {
+                "observation": o, "source_id": source_id,
+                "first_seen_at": prev["first_seen_at"] if prev else stamp, "last_seen_at": stamp,
+            }
+        store.save_observations(obs_store)
+        new, changed = rebuild(store, now)
+        record_success(runs, source_id, now, {"fetched": len(fetched), "new_entries": new, "changes": changed})
+        store.save_runs(runs)
     return RunResult(source_id, True, len(fetched), new, changed)
 
 

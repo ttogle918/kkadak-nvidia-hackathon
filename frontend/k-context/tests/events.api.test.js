@@ -1,6 +1,6 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { createEventsApi, createHttpEventsApi, createMockEventsApi, defaultBase, EventsApiError } from '../src/events/api.js';
+import { createEventsApi, createHttpEventsApi, createMockEventsApi, defaultBase, EventsApiError, safeBase } from '../src/events/api.js';
 
 function fakeFetch(responder) {
   const calls = [];
@@ -52,14 +52,14 @@ test('http: 관리자 요청에만 토큰 헤더를 보내고, 결정 본문에 
   await api.admin.review('tok');
   await api.admin.reports('tok', 'pending');
   await api.admin.decide('tok', 'rpt_1', 'approve', '메모');
-  await api.admin.refresh('tok', 'seoul_openapi', true);
+  await api.admin.refresh('tok', 'seoul_openapi');
   await api.admin.linkCheck('tok', 'caci', '확인');
   await api.admin.sources('tok');
   assert.ok(f.calls.every((c) => c.headers['X-Admin-Token'] === 'tok'));
   assert.equal(f.calls[1].url, '/api/admin/reports?status=pending');
   assert.deepEqual(JSON.parse(f.calls[2].body), { decision: 'approve', note: '메모' });
   assert.equal('reviewer' in JSON.parse(f.calls[2].body), false);
-  assert.deepEqual(JSON.parse(f.calls[3].body), { sample: true });
+  assert.deepEqual(JSON.parse(f.calls[3].body), {}); // sample 키 수집은 서버 API 로 열지 않는다
 });
 
 test('http: 오류 응답은 code·status 를 가진 EventsApiError, 네트워크 실패는 network', async () => {
@@ -124,4 +124,17 @@ test('mock: 일정 추가는 한 번만, 취소는 행사 항목만, 관리자 A
   await assert.rejects(api.addToPlan({ entry_id: 'demo:9', date: 'x', start_time: 'y', itinerary: [] }), (e) => e.code === 'not_found');
   await assert.rejects(api.admin.review('t'), (e) => e.code === 'forbidden');
   assert.equal((await api.submitReport({ kind: 'other' })).report.status, 'pending');
+});
+
+
+test('safeBase: 같은 출처 경로와 루프백 주소만 받고, 외부 주소·userinfo·프로토콜 상대 주소는 버린다', () => {
+  const loc = { origin: 'http://app.invalid' };
+  assert.equal(safeBase('/api', loc), '/api');
+  assert.equal(safeBase('http://127.0.0.1:8000/api', loc), 'http://127.0.0.1:8000/api');
+  assert.equal(safeBase('http://localhost:8000/api/', loc), 'http://localhost:8000/api');
+  assert.equal(safeBase('http://app.invalid/api', loc), 'http://app.invalid/api'); // 같은 출처
+  for (const bad of ['https://evil.example/api', '//evil.example/api', 'http://evil.example@localhost/api',
+    'http://localhost@evil.example/api', 'javascript:alert(1)', 'file:///etc/passwd', 'http://localhost.evil.example/api', '', null, undefined, '/api/../../x\\y']) {
+    assert.equal(safeBase(bad, loc), undefined, String(bad));
+  }
 });

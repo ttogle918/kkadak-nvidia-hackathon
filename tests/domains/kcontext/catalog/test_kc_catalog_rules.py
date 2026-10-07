@@ -162,3 +162,68 @@ def test_reservation_status_rules():
     assert reservation_status(Reservation(required="yes", status="open", deadline="2026-10-07T11:00"),
                               NOW) == "closed"
     assert reservation_status(Reservation(required="yes", deadline="어제"), NOW) == "unknown"
+
+
+# ---- 2차 검토(reviewer) 재발 방지 ----------------------------------------------------------
+@pytest.mark.parametrize("text", [
+    "외국인 참여 가능 여부는 문의",
+    "외국인등록증 소지자 가능",
+    "외국인 가능 여부 확인",
+    "외국인 가능시 문의",
+])
+def test_foreigner_phrases_that_are_not_a_yes_stay_unknown(text):
+    assert parse_eligibility(text).foreigner == "unknown"
+
+
+@pytest.mark.parametrize("text", ["외국인 참여 가능", "외국인 관광객 환영", "외국인도 참가 가능"])
+def test_clear_foreigner_welcome_is_allowed(text):
+    assert parse_eligibility(text).foreigner == "allowed"
+
+
+@pytest.mark.parametrize("text", ["일반시민", "모든시민", "전체 시민 대상", "내외국인 구민"])
+def test_generic_citizen_words_are_not_a_residency_condition(text):
+    assert parse_eligibility(text).resident_only == "unknown"
+
+
+@pytest.mark.parametrize("text", ["서울 거주자", "서울시 거주자 누구나", "관내 주민", "중구민만", "중구민 한정"])
+def test_residency_conditions_and_exclusive_phrases_are_restrictions(text):
+    e = parse_eligibility(text)
+    assert e.resident_only == "yes" and e.stated_open == "unknown"
+
+
+@pytest.mark.parametrize("text", ["중구민 무료", "중구민 할인", "누구나 (중구민 우대)"])
+def test_resident_perks_are_not_restrictions(text):
+    e = parse_eligibility(text)
+    assert e.resident_only == "unknown" and any(r["kind"] == "perk" for r in e.restrictions)
+
+
+def test_membership_and_infant_age_conditions_block_open_to_all():
+    e = parse_eligibility("회원 누구나")
+    assert e.stated_open == "unknown" and any(r["kind"] == "other" for r in e.restrictions)
+    a = parse_eligibility("36개월 이상 누구나")
+    assert a.stated_open == "unknown" and a.age_limit
+
+
+def test_address_must_start_with_the_city_and_use_the_first_district():
+    assert classify_venue(address="부산 중구 ○○로 1 서울빌딩", region=REGION).in_target == "unknown"
+    assert classify_venue(address="대구광역시 중구 서울로 1", region=REGION).in_target == "unknown"
+    v = classify_venue(address="서울특별시 종로구 ○○로 1 중구빌딩", region=REGION)
+    assert v.in_target == "no" and v.district == "종로구"
+    assert classify_venue(address="서울 중구 ○○로 1", region=REGION).in_target == "yes"
+    assert classify_venue(address="대한민국 서울특별시 중구 ○○로 1", region=REGION).in_target == "yes"
+
+
+def test_source_district_that_disagrees_with_the_address_is_not_trusted():
+    v = classify_venue(gu="중구", address="서울특별시 종로구 ○○로 1", region=REGION)
+    assert v.in_target == "unknown"
+    assert classify_venue(gu="중구", address="서울특별시 중구 ○○로 1", region=REGION).in_target == "yes"
+    assert classify_venue(gu="중구", address="부산 사하구 ○○로 1", region=REGION).in_target == "yes"  # 서울 주소가 아니면 비교하지 않는다
+
+
+def test_start_date_alone_never_means_ended():
+    e = EventEntry(id="ev:x", title="○○", schedule=Schedule(start_date="2026-10-01"))
+    assert event_lifecycle(e, NOW) == "unknown"
+    today = EventEntry(id="ev:x", title="○○", schedule=Schedule(start_date="2026-10-07"))
+    assert event_lifecycle(today, NOW) == "ongoing"
+    future = EventEntry(id="ev:x", title="○○", schedule=Schedule(start_date="2026-10-20"))
+    assert event_lifecycle(future, NOW) == "scheduled"

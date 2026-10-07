@@ -223,3 +223,81 @@ def test_different_events_in_same_venue_and_dates_do_not_merge():
     a = obs("s:1", title="○○ 가을 음악회")
     b = obs("s:2", title="○○ 겨울 사진 전시회")
     assert not same_event(a, b) and len(build(a, b)) == 2
+
+
+# ---- 2차 검토(reviewer) 재발 방지 ----------------------------------------------------------
+def test_different_ids_of_the_same_scheme_never_merge_even_with_same_venue_dates_and_organizer():
+    a = obs("s:1", title="○○ 대극장 공연", organizer="○○문화재단", external_ids=("seoul_cult:1",), lat=37.5, lng=127.0)
+    b = obs("s:2", title="○○ 대극장 공연 2", organizer="○○문화재단", external_ids=("seoul_cult:2",), lat=37.5, lng=127.0)
+    assert not same_event(a, b) and len(build(a, b)) == 2
+
+
+def test_same_organizer_alone_does_not_merge():
+    a = obs("s:1", title="○○ 가을 음악회", organizer="○○문화재단", lat=37.5, lng=127.0)
+    b = obs("s:2", title="△△ 사진 전시", organizer="○○문화재단", lat=37.5, lng=127.0)
+    assert not same_event(a, b)
+
+
+def test_ids_from_different_schemes_do_not_block_a_match():
+    a = obs("s:1", external_ids=("seoul_cult:1",), organizer="○○문화재단")
+    b = obs("h:1", external_ids=("hanok:77",), organizer="○○문화재단", origin="o2")
+    assert same_event(a, b)
+
+
+def test_unresolved_conflict_values_are_not_shown_as_facts():
+    from dataclasses import replace
+
+    a = obs("s:1", external_ids=("k",), origin="o1", start="2026-10-16", end="2026-10-16", price_kind="free")
+    b = obs("s:2", external_ids=("k",), origin="o2", start="2026-10-17", end="2026-10-17", price_kind="paid")
+    b = replace(b, reservation=Reservation(required="no"))
+    a = replace(a, reservation=Reservation(required="yes"))
+    (e,) = build(a, b)
+    assert e.verification == "conflict"
+    assert e.schedule.start_date is None and e.schedule.end_date is None  # 후보는 conflicts 에만
+    assert e.price.kind == "unknown" and e.reservation.required == "unknown"
+    assert {c["field"] for c in e.conflicts} >= {"start_date", "price_kind", "reservation_required"}
+    assert {"dates"} <= set(e.needs_check) and "price" in e.needs_check
+
+
+def test_unresolved_venue_conflict_blanks_the_venue_and_hides_the_event_from_users():
+    from kc_catalog_helpers import NOW as N
+
+    from domains.kcontext.catalog.query import search_events
+
+    a = obs("s:1", external_ids=("k",), origin="o1", venue_name="○○ 홀")
+    b = obs("s:2", external_ids=("k",), origin="o2", venue_name="△△ 극장")
+    (e,) = build(a, b)
+    assert e.venue.name == "" and e.venue.in_target == "unknown"
+    r = search_events([e], {"trip": {"from": "2026-10-15", "to": "2026-10-18"}}, now=N)
+    assert r["events"] == []
+
+
+def test_reports_and_unofficial_sources_cannot_fill_reservation_language_or_eligibility():
+    from dataclasses import replace
+
+    from domains.kcontext.catalog.model import Language
+    from domains.kcontext.catalog.rules import parse_eligibility
+
+    rep = obs("r:1", external_ids=("k",), kind="report", origin="rep", eligibility=parse_eligibility("누구나 외국인 참여 가능"))
+    rep = replace(rep, reservation=Reservation(required="no", link="https://evil.invalid/x", status="open"),
+                  language=Language(languages=("English",), english_guidance="yes", site_english_page="yes"))
+    off = obs("s:1", external_ids=("k",))
+    (e,) = build(off, rep)
+    assert e.reservation.link == "" and e.reservation.status == "unknown"
+    assert e.language.languages == () and e.language.english_guidance == "unknown"
+    assert e.eligibility.stated_open == "unknown" and e.eligibility.foreigner == "unknown"
+    assert e.verification == "verified"  # 공식 출처가 확인한 사실은 그대로
+
+
+def test_independent_sources_do_not_count_reports():
+    off = obs("s:1", external_ids=("k",), origin="o1")
+    rep = obs("r:1", external_ids=("k",), kind="report", origin="rep", source_id="user_report")
+    (e,) = build(off, rep)
+    assert len(e.evidence) == 2 and e.independent_sources == 1
+
+
+def test_entry_ids_stay_unique_when_a_previous_group_splits():
+    a = obs("s:1", title="○○ 음악회", venue_name="○○ 홀", external_ids=("a:1",))
+    b = obs("s:2", title="△△ 전시", venue_name="□□ 관", external_ids=("a:2",))
+    ents = build(a, b, prior={"a:1": "ev:old", "a:2": "ev:old"})
+    assert len({e.id for e in ents}) == 2

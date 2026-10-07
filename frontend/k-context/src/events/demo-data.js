@@ -11,7 +11,7 @@ const base = {
   language: { languages: [], english_guidance: 'unknown', english_subtitles: 'unknown', site_english_page: 'unknown' },
   lifecycle: 'scheduled', verification: 'needs_check', needs_check: ['sessions', 'price', 'reservation', 'eligibility', 'language'],
   conflicts: [], independent_sources: 1, links: [DEMO_LINK],
-  published_at: null, modified_at: null, collected_at: '2026-10-07', last_verified_at: '2026-10-07T12:00', demo: true,
+  published_at: null, modified_at: null, collected_at: '2026-10-07', last_verified_at: '2026-10-07T12:00', demo: true, stale: false,
   interest_match: [],
 };
 const sched = (o) => ({ start_date: '2026-10-16', end_date: '2026-10-16', sessions: [], weekly_closed_days: [], closed_dates: [], holiday_rule: '', entry_cutoff: '', hours_text: '', timezone: 'Asia/Seoul', ...o });
@@ -24,7 +24,7 @@ export const DEMO_EVENTS = [
     reservation: { required: 'yes', link: 'https://example.invalid/demo-reserve', deadline: '2026-10-15', status: 'open', note: '' },
     eligibility: { audience: '누구나', age_limit: '', resident_only: 'unknown', foreigner: 'unknown', restrictions: [] },
     participation: { status: 'stated_open', reasons: ['출처가 누구나 참여할 수 있다고 적음'], foreigner: 'unknown', needs_check: true },
-    verification: 'verified', needs_check: ['foreigner', 'language'],
+    needs_check: ['foreigner', 'language'],  // 데모는 어느 것도 '공식 출처로 확인됨'으로 보이지 않는다
   },
   {
     ...base, id: 'demo:2', title: '(데모) 주민 대상 강좌', event_type: '교육',

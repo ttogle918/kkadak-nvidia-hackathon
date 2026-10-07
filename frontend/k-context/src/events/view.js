@@ -111,7 +111,7 @@ export function mountEvents(root, ctx) {
     return h('li', { class: ['ev-card', sel && 'is-selected'], dataset: { id: ev.id } },
       h('h3', null, ev.demo ? badge(t('common.demo'), 'warn') : null, ' ', ev.title),
       h('div', { class: 'ev-badges' },
-        badge(t(`avail.${ev.availability}`), ev.availability === 'session_match' ? 'ok' : 'warn'), badge(vb.text, vb.tone), ...pb.map((b) => badge(b.text, b.tone))),
+        badge(t(`avail.${ev.availability}`), ev.availability === 'session_match' ? 'ok' : 'warn'), badge(vb.text, vb.tone), ev.stale ? badge(t('verify.stale'), 'warn') : null, ...pb.map((b) => badge(b.text, b.tone))),
       h('p', { class: 'ev-meta' }, `${w.range}${w.sessions ? ` · ${w.sessions}` : ''}`),
       h('p', { class: 'ev-meta' }, ev.venue.name || t('common.unknown'), ' · ', pr.kind),
       ev.participation.status === 'restricted' ? h('p', { class: 'ev-restrict' }, ev.participation.reasons.join(' · ')) : null,
@@ -179,7 +179,7 @@ export function mountEvents(root, ctx) {
     const nodes = [
       h('div', { class: 'ev-detail-head' }, h('h2', { id: 'ev-detail-title' }, d.title), h('button', { type: 'button', class: 'ev-btn', dataset: { act: 'close' } }, t('detail.close'))),
       d.demo ? badge(t('common.demo'), 'warn') : null,
-      h('div', { class: 'ev-badges' }, badge(vb.text, vb.tone), badge(t(`life.${d.lifecycle}`), d.lifecycle === 'cancelled' ? 'bad' : 'warn')),
+      h('div', { class: 'ev-badges' }, badge(vb.text, vb.tone), d.stale ? badge(t('verify.stale'), 'warn') : null, badge(t(`life.${d.lifecycle}`), d.lifecycle === 'cancelled' ? 'bad' : 'warn')),
       h('dl', { class: 'ev-dl' },
         row(t('detail.when'), w.range, w.sessions ? h('div', null, w.sessions) : null, d.schedule.hours_text ? h('div', null, `${t('detail.hours')}: ${d.schedule.hours_text}`) : null,
           clos ? h('div', null, `${t('detail.closures')}: ${clos}`) : null, d.schedule.entry_cutoff ? h('div', null, `${t('detail.cutoff')}: ${d.schedule.entry_cutoff}`) : null,
@@ -198,7 +198,7 @@ export function mountEvents(root, ctx) {
         h('span', { class: 'ev-src-kind' }, `[${l.kind}] ${l.source_name}`), ' ', link(l.url, t('detail.original')), l.ai_extracted ? ` (${t('detail.ai')})` : '',
         l.quote ? h('blockquote', null, l.quote) : null, l.location ? h('div', { class: 'ev-meta' }, l.location) : null)))),
       suggestionBlock(s, t),
-      d.stories?.length ? h('div', { class: 'ev-stories' }, h('h3', null, t('detail.stories')), ...d.stories.map((st) => h('article', null, h('h4', null, st.title),
+      d.stories?.length ? h('div', { class: 'ev-stories' }, h('h3', null, t('detail.stories')), ...d.stories.map((st) => h('article', null, h('h4', null, st.synthetic ? badge(t('common.demo'), 'warn') : null, ' ', st.title),
         ...['facts', 'lore', 'inference'].flatMap((k) => st[k].map((cl) => h('p', null, badge(t(`story.${k === 'facts' ? 'fact' : k}`), k === 'facts' ? 'ok' : 'warn'), ' ', cl.text, ' ', ...cl.sources.map((sr) => h('span', { class: 'ev-meta' }, `[${sr.tier}] ${sr.name} · ${sr.locator} `))))),
         h('p', { class: 'ev-suggest' }, badge(t('story.suggestion'), 'warn'), ' ', st.experience.text, ' ', st.record_prompt.text)))) : null,
       h('div', { class: 'ev-history' }, h('h3', null, t('detail.history')),
@@ -302,6 +302,13 @@ export function mountEvents(root, ctx) {
     else if (act === 'ack') c.ackSaved(id);
     else if (act === 'check-saved') c.checkSaved();
   }));
+  const onMapKey = (e) => {
+    if (e.key !== 'Enter' && e.key !== ' ') return;
+    const el = e.target?.closest?.('[data-act="detail"]');
+    if (el && mapEl.contains(el)) { e.preventDefault?.(); c.openDetail(el.dataset.id); }
+  };
+  mapEl.addEventListener('keydown', onMapKey);
+  offs.push(() => mapEl.removeEventListener('keydown', onMapKey));
   const bindInput = (name) => {
     const el = form[name];
     const fn = () => c.setForm({ [name]: el.type === 'checkbox' ? !!el.checked : el.value });

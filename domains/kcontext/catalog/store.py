@@ -11,10 +11,12 @@
 
 from __future__ import annotations
 
+import fcntl
 import json
 import os
 import tempfile
-from collections.abc import Iterable
+from collections.abc import Iterable, Iterator
+from contextlib import contextmanager
 from pathlib import Path
 from typing import Any
 
@@ -33,6 +35,28 @@ def default_dir() -> Path:
 class CatalogStore:
     def __init__(self, directory: Path | None = None) -> None:
         self.dir = Path(directory) if directory is not None else default_dir()
+        self._depth = 0
+
+    @contextmanager
+    def lock(self) -> Iterator[None]:
+        """카탈로그 쓰기 구간의 프로세스 간 잠금(제보 제출·승인·재수집이 동시에 일어나도 갱신이 사라지지 않게).
+        같은 프로세스 안에서는 중첩해서 잡아도 된다."""
+        if self._depth:
+            self._depth += 1
+            try:
+                yield
+            finally:
+                self._depth -= 1
+            return
+        self.dir.mkdir(parents=True, exist_ok=True)
+        with (self.dir / ".lock").open("a+") as f:
+            fcntl.flock(f, fcntl.LOCK_EX)
+            self._depth = 1
+            try:
+                yield
+            finally:
+                self._depth = 0
+                fcntl.flock(f, fcntl.LOCK_UN)
 
     # ---- 공통 ----
     def _path(self, name: str) -> Path:

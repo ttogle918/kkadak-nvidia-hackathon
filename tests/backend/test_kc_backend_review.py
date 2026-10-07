@@ -111,7 +111,7 @@ def test_settings_from_env_rejects_agent_reviewer():
 
 def test_settings_from_env_defaults():
     s = Settings.from_env({})
-    assert s.reviewer_id == "human:demo" and s.cors_origins == ("http://localhost:8766",)
+    assert s.reviewer_id == "human:demo" and s.cors_origins == ("http://localhost:8766", "http://127.0.0.1:8766")
     assert s.hitl_db.name == "hitl.db"
     assert Settings.from_env({"KC_CORS_ORIGINS": "http://a, http://b"}).cors_origins == (
         "http://a",

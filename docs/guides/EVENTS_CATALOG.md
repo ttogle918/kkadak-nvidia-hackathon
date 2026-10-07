@@ -17,7 +17,8 @@ deploy/catalog/README.md   주기 수집(cron·systemd·loop)
 ```bash
 uv sync
 # 1) 수집 (키 없이 연결만 확인: sample 키 5행)
-uv run python -m domains.kcontext.catalog update --source seoul_openapi --sample
+uv run python -m domains.kcontext.catalog --dir /tmp/kc-sample update --source seoul_openapi --sample
+# (--sample 은 실제 카탈로그를 오염시키지 않도록 --dir <임시 폴더> 가 있어야만 돈다)
 # 키가 있으면 전체 수집
 uv run python -m domains.kcontext.catalog update --source seoul_openapi
 uv run python -m domains.kcontext.catalog status            # 출처별 성공·오류·재시도 시각
@@ -25,7 +26,8 @@ uv run python -m domains.kcontext.catalog status            # 출처별 성공·
 KC_ADMIN_TOKEN=$(openssl rand -hex 16) uv run uvicorn backend.app:app --port 8000
 # 3) 화면
 cd frontend/k-context && python3 -m http.server 8766
-#   http://127.0.0.1:8766/events.html            (서버 연결. 정적 서버 8766 이면 같은 호스트 8000 포트를 쓴다)
+#   http://127.0.0.1:8766/events.html            (서버 연결. 정적 서버 8766 이면 같은 호스트 8000 포트를 쓴다.
+#                                                  ?base= 는 같은 출처 경로나 localhost·127.0.0.1 주소만 받는다)
 #   http://127.0.0.1:8766/events.html?api=mock   (데모 데이터 — 배너로 표시, 실제 행사가 아님)
 #   http://127.0.0.1:8766/admin.html             (관리자 토큰 입력)
 ```
@@ -57,3 +59,13 @@ cd frontend/k-context && python3 -m http.server 8766
 - **공간의 이야기**: 구조·검증 규칙(`stories.py`)은 있으나 `data/stories/` 에 검증된 이야기가 아직 없다. 지어내지 않았다.
 - 남산골한옥마을·TourAPI 파서, 포스터 이미지 읽기(비전), 실제 브라우저·모바일 화면 확인(테스트는 가짜 DOM).
 - 전체 행사 수를 입증할 수 없으므로 화면에 "모든 행사"라고 쓰지 않고 수집 출처와 마지막 확인 시각을 보여 준다.
+
+## 검토 반영과 알려진 한계 (2026-10-07, reviewer)
+- 고친 것: `?base=` 로 관리자 토큰이 새는 경로(주소 검증 + CSP), 외국인 "가능"·거주·회원·연령 문구 오탐, 미해결 충돌 값을 사실처럼 보이던 것(이제 비움),
+  같은 체계 식별자가 다른 행사의 병합, 낮은 등급(제보·SNS·AI) 값의 사실 필드 유입, 제보 사유의 공개 노출, 시작일만으로 "종료" 단정,
+  주소 속 다른 도시의 같은 구 이름, 원자적 쓰기에 파일 잠금, 요청 크기 제한·입력 화이트리스트, 일정 localStorage 검증, 데모/실제 저장 키 분리 등.
+- **속도 제한은 없다**: 공개 API 는 요청마다 파이썬 서브프로세스를 띄운다. 공개 배포 전에 앞단(리버스 프록시)에서 제한해야 한다.
+- 관리자는 한 토큰·한 신원(`KC_REVIEWER_ID`)이다. 사람별 신원·감사(`core.audit`) 기록은 아직 없다.
+- 서울시 API 는 공식 가이드가 http 주소를 쓴다(키가 평문으로 간다). https 지원 여부는 확인하지 못했다.
+- 서울 API 의 `GUNAME` 이 개최 장소 기준인지는 데이터셋 페이지에 명시가 없다. 주소와 어긋나면 지역을 확정하지 않는다.
+- 사라진 행사는 취소가 아니라 "마지막 확인이 오래됨" 표시(72시간)로만 드러난다.

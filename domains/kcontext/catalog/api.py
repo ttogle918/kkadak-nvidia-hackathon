@@ -16,6 +16,10 @@ from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 
+from dotenv import dotenv_values
+
+from domains.kcontext.contract.errors import ContractError
+from domains.kcontext.paths import repo_root
 from domains.kcontext.regions import load_regions
 
 from . import reports as reports_mod
@@ -128,7 +132,10 @@ def handle(
             raise ApiError("not_found", "이 날짜·회차로 추가할 수 있는 행사가 아니다")
         if sug["status"] == "no_fit" and not args.get("force"):
             raise ApiError("conflict", "기존 일정과 맞지 않는다: " + "; ".join(r["ko"] for r in sug["reasons"]))
-        return {"itinerary": add_to_itinerary(args["itinerary"], sug, ev), "suggestion": sug}
+        try:
+            return {"itinerary": add_to_itinerary(args["itinerary"], sug, ev), "suggestion": sug}
+        except ValueError as e:
+            raise ApiError("bad_request", str(e)) from None
     if op == "itinerary_remove":
         return {"itinerary": remove_from_itinerary(args.get("itinerary") or [], str(args.get("item_id", "")))}
     if op == "saved_changes":
@@ -158,36 +165,49 @@ def handle(
         sid = str(args.get("source_id", ""))
         if sid not in {s["id"] for s in sources}:
             raise ApiError("not_found", "알 수 없는 출처")
-        checks = store.load_link_checks()
-        checks[sid] = {"checked_at": now.strftime("%Y-%m-%dT%H:%M"), "checked_by": actor,
-                       "note": str(args.get("note", ""))[:300]}
-        store.save_link_checks(checks)
+        with store.lock():
+            checks = store.load_link_checks()
+            checks[sid] = {"checked_at": now.strftime("%Y-%m-%dT%H:%M"), "checked_by": actor,
+                           "note": str(args.get("note", ""))[:300]}
+            store.save_link_checks(checks)
         return {"link_check": checks[sid]}
     if op == "admin_refresh":
         sid = str(args.get("source_id", ""))
         try:
-            fetch = make_fetcher(sid, region=region, now=now, env=env, sample=bool(args.get("sample")))
+            fetch = make_fetcher(sid, region=region, now=now, env=env)  # sample 키 수집은 CLI(--dir 지정) 전용
         except SourceError as e:
             raise ApiError("not_implemented", str(e)) from None
         return {"run": run_source(store, sid, fetch, now=now).__dict__}
     raise ApiError("bad_request", f"알 수 없는 op: {op}")
 
 
+def _env() -> dict[str, str]:
+    """셸 env 우선, 없는 키만 레포 .env 에서 보충한다(os.environ 은 바꾸지 않는다). 키는 이 프로세스 안에서만 쓴다."""
+    merged = dict(os.environ)
+    for k, v in dotenv_values(repo_root() / ".env").items():
+        if v and not merged.get(k):
+            merged[k] = v
+    return merged
+
+
 def main() -> int:
+    def out_error(code: str, message: str) -> int:
+        print(json.dumps({"error": {"code": code, "message": message}}, ensure_ascii=False))
+        return 0
+
     try:
         req = json.loads(sys.stdin.read())
         if not isinstance(req, dict) or not isinstance(req.get("op"), str):
             raise ApiError("bad_request", "{op, args, actor} 형식이어야 한다")
         store = CatalogStore(Path(os.environ["KC_CATALOG_DIR"]) if os.environ.get("KC_CATALOG_DIR") else None)
         out = handle(req["op"], req.get("args") or {}, store=store, now=datetime.now(KST),
-                     actor=req.get("actor"), env=dict(os.environ))
+                     actor=req.get("actor"), env=_env())
     except ApiError as e:
-        print(json.dumps({"error": {"code": e.code, "message": str(e)}}, ensure_ascii=False))
-        return 0
+        return out_error(e.code, str(e))
+    except ContractError:  # 저장된 파일이 손상됐다 — 요청 잘못이 아니라 서버 쪽 문제다
+        return out_error("internal_error", "저장된 카탈로그를 읽을 수 없다")
     except (ValueError, KeyError, TypeError) as e:
-        print(json.dumps({"error": {"code": "bad_request", "message": f"요청을 처리할 수 없다 ({type(e).__name__})"}},
-                         ensure_ascii=False))
-        return 0
+        return out_error("bad_request", f"요청을 처리할 수 없다 ({type(e).__name__})")
     print(json.dumps(out, ensure_ascii=False))
     return 0
 

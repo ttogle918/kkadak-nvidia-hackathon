@@ -200,3 +200,43 @@ def test_naive_now_is_treated_as_seoul_time(tmp_path):
     naive = datetime(2026, 10, 7, 12, 0)  # noqa: DTZ001
     run_source(st, "src", ok(obs("s:1")), now=naive)
     assert st.load_runs()["src"]["last_success_at"] == "2026-10-07T12:00"
+
+
+# ---- 2차 검토(reviewer) 재발 방지 ----------------------------------------------------------
+def test_sample_collection_requires_an_explicit_scratch_dir(tmp_path, capsys, monkeypatch):
+    monkeypatch.setattr("domains.kcontext.catalog.__main__._env", dict)
+    assert cli_main(["update", "--source", "seoul_openapi", "--sample"]) == 2
+    assert "--dir" in capsys.readouterr().err
+
+
+def test_concurrent_writers_do_not_lose_updates(tmp_path):
+    """제보 제출이 여러 프로세스에서 동시에 일어나도 한 건도 사라지지 않는다(파일 잠금)."""
+    import subprocess
+    import sys
+    from pathlib import Path
+
+    repo = Path(__file__).resolve().parents[4]
+    code = (
+        "import sys\n"
+        "from datetime import datetime\n"
+        "from domains.kcontext.catalog.reports import submit\n"
+        "from domains.kcontext.catalog.rules import KST\n"
+        "from domains.kcontext.catalog.store import CatalogStore\n"
+        "st = CatalogStore(sys.argv[1])\n"
+        "for i in range(5):\n"
+        "    submit(st, {'kind': 'other', 'official_link': 'https://a.invalid/x', "
+        "'reason': f'동시 제출 {sys.argv[2]}-{i} 사유입니다'}, now=datetime(2026, 10, 7, 12, i, tzinfo=KST))\n"
+    )
+    d = str(tmp_path / "cat")
+    procs = [subprocess.Popen([sys.executable, "-c", code, d, str(n)], cwd=repo,
+                              env={"PYTHONPATH": str(repo), "PATH": __import__("os").environ["PATH"]})
+             for n in range(6)]
+    assert all(p.wait(timeout=60) == 0 for p in procs)
+    assert len(CatalogStore(d).load_reports()) == 30
+
+
+def test_lock_is_reentrant_within_a_process(tmp_path):
+    st = store(tmp_path)
+    with st.lock(), st.lock():
+        st.save_runs({"a": {}})
+    assert st.load_runs() == {"a": {}}

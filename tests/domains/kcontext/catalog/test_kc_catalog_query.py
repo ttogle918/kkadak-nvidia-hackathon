@@ -175,3 +175,22 @@ def test_summary_keeps_unknowns_and_links_to_sources():
     assert e["language"]["english_guidance"] == "unknown" and e["language"]["languages"] == []
     assert e["links"][0]["url"] == "https://example.invalid/x" and e["links"][0]["quote"]
     assert e["last_verified_at"] == "2026-10-07T12:00" and "price" in e["needs_check"]
+
+
+def test_old_last_verified_time_is_flagged_as_stale_not_cancelled():
+    (e,) = entries(obs("s:1"))
+    fresh = search_events([e], {"trip": TRIP}, now=NOW)["events"][0]
+    assert fresh["stale"] is False
+    old = dataclasses.replace(e, last_verified_at="2026-10-01T12:00")
+    shown = search_events([old], {"trip": TRIP}, now=NOW)["events"][0]
+    assert shown["stale"] is True and shown["lifecycle"] != "cancelled"
+
+
+def test_age_only_conditions_are_shown_but_do_not_decide_eligibility():
+    from domains.kcontext.catalog.rules import parse_eligibility
+
+    r = search(obs("s:1", eligibility=parse_eligibility("만 7세 이상")))
+    p = r["events"][0]["participation"]
+    assert p["status"] == "unverified" and any("연령 조건" in x for x in p["reasons"])
+    r = search(obs("s:2", eligibility=parse_eligibility("회원 누구나")))
+    assert r["events"][0]["participation"]["status"] == "restricted"

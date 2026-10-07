@@ -12,7 +12,7 @@
 from __future__ import annotations
 
 from collections.abc import Mapping, Sequence
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 
 from domains.kcontext.contract.text import is_date
 
@@ -21,17 +21,26 @@ from .rules import date_range_days, event_lifecycle, is_operating_day, norm_text
 
 __all__ = ["participation", "search_events", "summarize_entry"]
 
+STALE_HOURS = 72
 _AVAIL_ORDER = {"session_match": 0, "date_range_unconfirmed": 1, "postponed": 2}
 
 
 def participation(e: EventEntry) -> dict:
-    """참여 가능 여부 표시. 확인되지 않은 것을 가능으로 확정하지 않는다."""
+    """참여 가능 여부 표시. 확인되지 않은 것을 가능으로 확정하지 않는다.
+
+    거주·외국인·대상(회원 등) 제한이 있으면 ``restricted``. 연령 조건만 있으면 제한으로 단정하지 않고(관광객이
+    해당될 수 있다) ``unverified`` 에 조건을 보여 준다.
+    """
     el = e.eligibility
-    hard = [r for r in el.restrictions if r.get("kind") in ("resident", "age", "foreigner")]
+    hard = [r for r in el.restrictions if r.get("kind") in ("resident", "foreigner", "other")]
+    ages = [r for r in el.restrictions if r.get("kind") == "age"]
     if el.foreigner == "excluded" or el.resident_only == "yes" or hard:
         reasons = [r["reason"] for r in hard] or ["참여 제한이 있다"]
         return {"status": "restricted", "reasons": reasons, "foreigner": el.foreigner,
                 "needs_check": False}
+    if ages:
+        return {"status": "unverified", "reasons": [r["reason"] for r in ages] + ["해당되는지 확인 필요"],
+                "foreigner": el.foreigner, "needs_check": True}
     if el.stated_open == "yes":
         return {"status": "stated_open", "reasons": ["출처가 누구나 참여할 수 있다고 적음"],
                 "foreigner": el.foreigner, "needs_check": el.foreigner == "unknown"}
@@ -84,6 +93,9 @@ def summarize_entry(e: EventEntry, now: datetime) -> dict:
         "independent_sources": e.independent_sources, "links": _links(e),
         "published_at": e.published_at, "modified_at": e.modified_at, "collected_at": e.collected_at,
         "last_verified_at": e.last_verified_at, "demo": e.demo,
+        # 출처가 마지막으로 확인된 지 STALE_HOURS 가 지났다 = 목록에서 빠졌거나 수집이 멈췄을 수 있다(취소는 아니다)
+        "stale": bool(e.last_verified_at) and e.last_verified_at < (to_kst(now) - timedelta(hours=STALE_HOURS)
+                                                                    ).strftime("%Y-%m-%dT%H:%M"),
     }
 
 

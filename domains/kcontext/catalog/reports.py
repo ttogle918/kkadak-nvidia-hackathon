@@ -75,14 +75,19 @@ def submit(store: CatalogStore, payload: Mapping, *, now: datetime) -> dict:
         raise ReportError("지시문으로 보이는 내용이 들어 있어 받을 수 없다")
     stamp = to_kst(now).strftime("%Y-%m-%dT%H:%M")
     rid = "rpt_" + hashlib.sha1(f"{stamp}|{link}|{reason}".encode()).hexdigest()[:10]
-    reports = store.load_reports()
-    if any(r["id"] == rid for r in reports):
-        return next(r for r in reports if r["id"] == rid)
-    rec = {"id": rid, "kind": kind, "status": "pending", "official_link": link, "reason": reason,
+    with store.lock():
+        reports = store.load_reports()
+        if any(r["id"] == rid for r in reports):
+            return next(r for r in reports if r["id"] == rid)
+        rec = _new_record(rid, kind, link, reason, fields, entry_id, stamp)
+        store.save_reports([*reports, rec])
+    return rec
+
+
+def _new_record(rid: str, kind: str, link: str, reason: str, fields: dict, entry_id: str, stamp: str) -> dict:
+    return {"id": rid, "kind": kind, "status": "pending", "official_link": link, "reason": reason,
            "fields": fields, "entry_id": entry_id or None, "submitted_at": stamp,
            "decided_at": None, "decided_by": None, "note": None, "applied_obs_id": None}
-    store.save_reports([*reports, rec])
-    return rec
 
 
 def list_reports(store: CatalogStore, status: str | None = None) -> list[dict]:
@@ -99,35 +104,36 @@ def decide(
     who = reviewer.strip() if isinstance(reviewer, str) else ""
     if not who or who.casefold().startswith("agent:"):
         raise ReportError("검토자 신원이 올바르지 않다 (agent: 신원은 승인할 수 없다)")
-    reports = store.load_reports()
-    rec = next((r for r in reports if r["id"] == report_id), None)
-    if rec is None:
-        raise ReportError("제보를 찾을 수 없다")
-    if rec["status"] != "pending":
-        raise ReportError("이미 검토한 제보다")
-    stamp = to_kst(now).strftime("%Y-%m-%dT%H:%M")
-    rec.update(status="accepted" if decision == "approve" else "rejected", decided_at=stamp,
-               decided_by=who, note=_clean(note, 300) or None)
-    if decision == "approve" and rec["kind"] == "new_event":
-        f = rec["fields"]
-        venue = classify_venue(name=f.get("venue_name", ""), address=f.get("venue_address", ""),
-                               region=region)
-        obs = Observation(
-            obs_id=f"report:{rec['id']}", title=f["title"],
-            venue=venue,
-            schedule=Schedule(start_date=f.get("start_date"), end_date=f.get("end_date") or f.get("start_date")),
-            description=f.get("note", ""),
-            evidence=Evidence(source_id="user_report", source_name="이용자 제보(검토 승인)", kind="report",
-                              url=rec["official_link"], quote=rec["reason"][:200],
-                              origin=f"report:{rec['id']}", collected_at=stamp[:10]),
-        )
-        obs_store = store.load_observations()
-        obs_store[obs.obs_id] = {"observation": obs, "source_id": "user_report",
-                                 "first_seen_at": stamp, "last_seen_at": stamp}
-        store.save_observations(obs_store)
-        rec["applied_obs_id"] = obs.obs_id
-        store.save_reports(reports)
-        rebuild(store, now)
-    else:
-        store.save_reports(reports)
-    return rec
+    with store.lock():
+        reports = store.load_reports()
+        rec = next((r for r in reports if r["id"] == report_id), None)
+        if rec is None:
+            raise ReportError("제보를 찾을 수 없다")
+        if rec["status"] != "pending":
+            raise ReportError("이미 검토한 제보다")
+        stamp = to_kst(now).strftime("%Y-%m-%dT%H:%M")
+        rec.update(status="accepted" if decision == "approve" else "rejected", decided_at=stamp,
+                   decided_by=who, note=_clean(note, 300) or None)
+        if decision == "approve" and rec["kind"] == "new_event":
+            f = rec["fields"]
+            venue = classify_venue(name=f.get("venue_name", ""), address=f.get("venue_address", ""),
+                                   region=region)
+            obs = Observation(
+                obs_id=f"report:{rec['id']}", title=f["title"],
+                venue=venue,
+                schedule=Schedule(start_date=f.get("start_date"), end_date=f.get("end_date")),
+                description=f.get("note", ""),
+                evidence=Evidence(source_id="user_report", source_name="이용자 제보(검토 승인)", kind="report",
+                                  url=rec["official_link"], quote=f"이용자 제보 — {f['title']}"[:200],
+                                  origin=f"report:{rec['id']}", collected_at=stamp[:10]),
+            )
+            obs_store = store.load_observations()
+            obs_store[obs.obs_id] = {"observation": obs, "source_id": "user_report",
+                                     "first_seen_at": stamp, "last_seen_at": stamp}
+            store.save_observations(obs_store)
+            rec["applied_obs_id"] = obs.obs_id
+            store.save_reports(reports)
+            rebuild(store, now)
+        else:
+            store.save_reports(reports)
+        return rec

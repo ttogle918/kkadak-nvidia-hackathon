@@ -11,7 +11,7 @@ const { mountEvents } = await import('../src/events/view.js');
 const mem = () => { const m = new Map(); return { getItem: (k) => m.get(k) ?? null, setItem: (k, v) => m.set(k, v) }; };
 function setup({ api = createMockEventsApi(), lang } = {}) {
   const storage = mem();
-  const store = createStore(initialState(storage, { today: '2026-10-16' }));
+  const store = createStore(initialState(storage, { today: '2026-10-16', demo: api.demo }));
   if (lang) store.setState({ lang });
   const controller = createController({ store, api, storage, now: () => new Date('2026-10-07T03:00:00Z') });
   const root = new El('div', 'html');

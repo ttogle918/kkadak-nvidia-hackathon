@@ -22,6 +22,9 @@ def _error(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
 
 
+MAX_BODY_BYTES = 256 * 1024
+
+
 def create_app(settings: Settings | None = None) -> FastAPI:
     s = settings or Settings.from_env()
     s.hitl_db.parent.mkdir(parents=True, exist_ok=True)
@@ -36,6 +39,13 @@ def create_app(settings: Settings | None = None) -> FastAPI:
         allow_headers=["Content-Type", "X-Admin-Token"],
         expose_headers=["X-Audit-Skipped"],
     )
+
+    @app.middleware("http")
+    async def _limit_body(request: Request, call_next):
+        size = request.headers.get("content-length")
+        if size and size.isdigit() and int(size) > MAX_BODY_BYTES:
+            return _error(413, "too_large", "요청이 너무 크다")
+        return await call_next(request)
 
     @app.exception_handler(RequestValidationError)
     async def _validation(_: Request, __: RequestValidationError) -> JSONResponse:

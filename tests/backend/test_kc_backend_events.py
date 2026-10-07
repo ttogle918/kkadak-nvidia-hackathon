@@ -215,22 +215,27 @@ def test_runner_failure_becomes_a_generic_500(client, monkeypatch):
     assert "내부 사정" not in r.text
 
 
-def test_runner_passes_public_data_keys_only_for_manual_refresh(monkeypatch, tmp_path):
-    seen = {}
+def test_runner_passes_only_that_sources_key_and_only_for_manual_refresh(monkeypatch, tmp_path):
+    seen = []
 
     def fake(cmd, **kw):
-        seen[kw["input"][:40]] = kw["env"]
+        seen.append(kw["env"])
         return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps({"ok": True}), stderr="")
 
     monkeypatch.setattr(catalog_runner.subprocess, "run", fake)
     monkeypatch.setenv("SEOUL_OPENAPI_KEY", "k" * 20)
+    monkeypatch.setenv("TAVILY_SEARCH_KEY", "t" * 20)
+    monkeypatch.setenv("DATA_GO_KR_SERVICE_KEY", "d" * 20)
     monkeypatch.setenv("NVIDIA_API_KEY", "n" * 20)
     run_catalog(tmp_path, "search", {})
-    run_catalog(tmp_path, "admin_refresh", {}, "human:demo")
-    envs = list(seen.values())
-    assert "SEOUL_OPENAPI_KEY" not in envs[0] and "SEOUL_OPENAPI_KEY" in envs[1]
-    assert all("NVIDIA_API_KEY" not in e for e in envs)  # 추론 키는 어느 쪽에도 넘기지 않는다
-    assert all(e["APP_PROCESS_ROLE"] == "agent" for e in envs)
+    run_catalog(tmp_path, "admin_refresh", {"source_id": "seoul_openapi"}, "human:demo")
+    run_catalog(tmp_path, "admin_refresh", {"source_id": "caci"}, "human:demo")
+    search_env, seoul_env, manual_env = seen
+    keys = {"SEOUL_OPENAPI_KEY", "TAVILY_SEARCH_KEY", "DATA_GO_KR_SERVICE_KEY", "NVIDIA_API_KEY"}
+    assert not keys & set(search_env)  # 일반 요청에는 어떤 키도 넘기지 않는다
+    assert keys & set(seoul_env) == {"SEOUL_OPENAPI_KEY"}  # 그 출처의 키 하나만
+    assert not keys & set(manual_env)  # 자동 수집이 없는 출처에는 키가 없다
+    assert all(e["APP_PROCESS_ROLE"] == "agent" for e in seen)
 
 
 def test_runner_error_messages_do_not_echo_output(monkeypatch, tmp_path):
@@ -248,3 +253,41 @@ def test_runner_error_messages_do_not_echo_output(monkeypatch, tmp_path):
     monkeypatch.setattr(catalog_runner.subprocess, "run", fake2)
     with pytest.raises(CatalogRunnerError):
         run_catalog(tmp_path, "search", {})
+
+
+# ---- 2차 검토(reviewer) 재발 방지 ----
+def test_oversized_request_bodies_are_refused(client):
+    big = {"trip": TRIP, "interests": ["x" * 40] * 20, "padding": "y" * (300 * 1024)}
+    r = client.post("/api/events/search", json=big)
+    assert r.status_code == 413 and r.json()["error"]["code"] == "too_large"
+
+
+def test_plan_items_drop_unknown_keys_and_report_fields_are_whitelisted(client):
+    plan = {"id": "p1", "title": "점심", "date": "2026-10-16", "start": "12:00", "end": "13:00",
+            "huge": "z" * 5000, "source": "user"}
+    assert client.post("/api/events/search", json={"trip": TRIP, "itinerary": [plan]}).status_code == 200
+    assert client.post("/api/events/search",
+                       json={"trip": TRIP, "itinerary": [{**plan, "source": "evil"}]}).status_code == 422
+    bad = {**REPORT, "fields": {"title": "○○", "weird": "x"}}
+    assert client.post("/api/reports", json=bad).status_code == 422
+    long_field = {**REPORT, "fields": {"title": "가" * 201}}
+    assert client.post("/api/reports", json=long_field).status_code == 422
+
+
+def test_refresh_body_has_no_sample_option(client):
+    assert client.post("/api/admin/refresh/seoul_openapi", headers=admin(), json={"sample": True}).status_code == 422
+
+
+def test_admin_token_must_be_long_enough(tmp_path):
+    with pytest.raises(ValueError, match="16자"):
+        Settings(hitl_db=tmp_path / "h", audit_dir=tmp_path / "a", output_dir=tmp_path / "o",
+                 reviewer_id="human:demo", admin_token="short")
+
+
+def test_corrupt_catalog_is_a_server_error_not_a_bad_request(tmp_path):
+    seed(tmp_path / "cat")
+    (tmp_path / "cat" / "entries.json").write_text('{"entries": [{"id": "x"}]}', encoding="utf-8")
+    s = Settings(hitl_db=tmp_path / "h.db", audit_dir=tmp_path / "a", output_dir=tmp_path / "o",
+                 reviewer_id="human:demo", catalog_dir=tmp_path / "cat", admin_token=TOKEN)
+    r = TestClient(create_app(s)).post("/api/events/search", json={"trip": TRIP})
+    assert r.status_code == 500 and r.json()["error"]["code"] == "internal_error"

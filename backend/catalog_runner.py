@@ -14,7 +14,12 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 _BASE_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "KC_TARGET_REGION", "KC_DATA_DIR")
-_KEY_ENV = ("SEOUL_OPENAPI_KEY", "DATA_GO_KR_SERVICE_KEY", "TAVILY_SEARCH_KEY")
+# 수동 재수집에는 그 출처가 쓰는 키 하나만 넘긴다(다른 출처의 키·추론 키는 넘기지 않는다).
+_SOURCE_KEYS = {
+    "seoul_openapi": ("SEOUL_OPENAPI_KEY",),
+    "tourapi_kto": ("DATA_GO_KR_SERVICE_KEY",),
+    "junggu_site": ("TAVILY_SEARCH_KEY",),
+}
 TIMEOUTS = {"admin_refresh": 180}
 DEFAULT_TIMEOUT = 60
 
@@ -29,7 +34,7 @@ def run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None
     if catalog_dir is not None:
         env["KC_CATALOG_DIR"] = str(catalog_dir)
     if op == "admin_refresh":
-        env.update({k: os.environ[k] for k in _KEY_ENV if k in os.environ})
+        env.update({k: os.environ[k] for k in _SOURCE_KEYS.get(str(args.get("source_id")), ()) if k in os.environ})
     try:
         p = subprocess.run(
             [sys.executable, "-m", "domains.kcontext.catalog.api"],

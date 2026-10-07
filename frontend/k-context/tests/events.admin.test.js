@@ -99,7 +99,7 @@ test('수동 재수집·수동 확인 기록', async () => {
   await x.admin.load();
   click(x.root, 'refresh', 'seoul_openapi');
   await tick(); await tick();
-  assert.deepEqual(x.api.calls.find((c) => c[0] === 'refresh'), ['refresh', 'tok', 'seoul_openapi', false]);
+  assert.deepEqual(x.api.calls.find((c) => c[0] === 'refresh'), ['refresh', 'tok', 'seoul_openapi']);
   assert.match(x.root.text, /수집 결과: seoul_openapi — ok \(3\)/);
   assert.equal(x.root.find((e) => e.dataset?.act === 'refresh').length, 1); // 자동 수집이 구현된 출처에만
   click(x.root, 'check', 'caci');

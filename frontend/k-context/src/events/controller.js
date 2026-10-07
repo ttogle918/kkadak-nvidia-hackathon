@@ -8,18 +8,34 @@ import {
 import { DEMO_PLANS } from './demo-data.js';
 
 const KEY = 'kc.events.v1';
+// 데모(mock)와 실제(http)의 일정·저장 목록은 섞이지 않게 키를 나눈다.
+export const storageKey = (demo) => (demo ? `${KEY}.demo` : KEY);
 
-export function initialState(storage, { today = seoulToday() } = {}) {
-  const saved = loadJson(storage, KEY, {});
+
+export function initialState(storage, { today = seoulToday(), demo = false } = {}) {
+  const saved = loadJson(storage, storageKey(demo), {});
   return {
     lang: saved.lang === 'en' ? 'en' : 'ko',
     form: { from: today, to: addDays(today, 3), originName: '', lat: '', lng: '', interests: '', maxExtra: '30', duration: '', requireInterest: false, ...(saved.form ?? {}) },
-    itinerary: Array.isArray(saved.itinerary) ? saved.itinerary : [],
-    saved: saved.saved && typeof saved.saved === 'object' ? saved.saved : {},
+    itinerary: cleanPlans(saved.itinerary),
+    saved: cleanSaved(saved.saved),
     result: null, loading: false, error: null, formErrors: {},
     selectedId: null, detail: null, detailLoading: false,
     planError: null, planFormError: false, reportStatus: null, reportError: null, checking: false, coverage: null,
   };
+}
+
+/** localStorage 에서 읽은 일정은 믿지 않는다 — 형식이 틀린 항목은 버린다(하나 때문에 검색이 막히지 않게). */
+function cleanPlans(v) {
+  if (!Array.isArray(v)) return [];
+  const ok = v.filter((p) => p && typeof p === 'object' && typeof p.id === 'string' && p.id && p.id.length <= 80
+    && validatePlan(p) && (p.lat == null || typeof p.lat === 'number') && (p.lng == null || typeof p.lng === 'number'));
+  return sortPlans(ok.slice(0, 60).map((p) => ({ ...p, title: String(p.title ?? '').slice(0, 120) })));
+}
+function cleanSaved(v) {
+  if (!v || typeof v !== 'object' || Array.isArray(v)) return {};
+  return Object.fromEntries(Object.entries(v).filter(([id, it]) => id.length <= 40 && it && typeof it === 'object'
+    && typeof it.title === 'string' && typeof it.seenAt === 'string').slice(0, 100));
 }
 
 const errKey = (e) => (e instanceof EventsApiError && e.code === 'network' ? 'error.network' : 'error.server');
@@ -27,9 +43,10 @@ const errKey = (e) => (e instanceof EventsApiError && e.code === 'network' ? 'er
 export function createController({ store, api, storage = null, now = () => new Date() }) {
   const get = store.getState;
   const set = store.setState;
+  let searchSeq = 0;
   const persist = () => {
     const s = get();
-    saveJson(storage, KEY, { lang: s.lang, form: s.form, itinerary: s.itinerary, saved: s.saved });
+    saveJson(storage, storageKey(!!api.demo), { lang: s.lang, form: s.form, itinerary: s.itinerary, saved: s.saved });
   };
 
   const c = {
@@ -41,15 +58,17 @@ export function createController({ store, api, storage = null, now = () => new D
       const v = validateForm(s0.form, s0.itinerary);
       if (!v.ok) { set({ formErrors: v.errors, error: null }); return null; }
       set({ loading: true, formErrors: {}, error: null });
+      const mine = ++searchSeq;
       try {
         const result = await api.search(v.request);
+        if (mine !== searchSeq) return null; // 더 나중에 시작한 검색이 있으면 이 응답은 버린다
         set({ result, loading: false, coverage: result.coverage ?? get().coverage });
         const sel = get().selectedId;
         if (sel && !result.events.some((e) => e.id === sel)) set({ selectedId: null, detail: null });
         c.checkSaved();
         return result;
       } catch (e) {
-        set({ loading: false, error: errKey(e) });
+        if (mine === searchSeq) set({ loading: false, error: errKey(e) });
         return null;
       }
     },

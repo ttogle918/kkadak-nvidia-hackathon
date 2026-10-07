@@ -92,8 +92,10 @@ def fit_event(
                 reasons.append(_reason("duration_unknown", "소요 시간을 알 수 없어 일정 겹침을 확인하지 못함",
                                        "Duration unknown, so overlap with your plans cannot be checked"))
             same_day = [i for i in items if i["date"] == day["date"]]
-            clash = [i for i in same_day if _m(i["start"]) < end and start < _m(i["end"])
-                     and (dur_known or _m(i["start"]) <= start < _m(i["end"]))]
+            if dur_known:
+                clash = [i for i in same_day if _m(i["start"]) < end and start < _m(i["end"])]
+            else:  # 끝을 모르면 행사 시작 시각에 이미 진행 중이거나 같은 시각에 시작하는 일정만 겹침으로 본다
+                clash = [i for i in same_day if _m(i["start"]) <= start < _m(i["end"])]
             prev = max((i for i in same_day if _m(i["end"]) <= start), key=lambda i: _m(i["end"]),
                        default=None)
             nxt = min((i for i in same_day if _m(i["start"]) >= end and i not in clash),
@@ -123,18 +125,19 @@ def fit_event(
             b = _leg(provider, venue, nxt_c)
             c = _leg(provider, before_c, nxt_c)
             extra: int | None = None
-            basis = None
-            if prev is not None and nxt is not None:
-                basis = "formula"
+            has_before = prev is not None or basis_prev == "origin"
+            if has_before and nxt is not None:
+                basis = "formula"  # 앞(앞 일정 또는 출발 위치) → 행사 → 뒤 − 앞 → 뒤
                 if None not in (a, b, c):
                     extra = max(a + b - c, 0)  # type: ignore[operator]
-            elif prev is not None or basis_prev == "origin":
+            elif has_before:
                 basis = "one_side_leg" if prev is not None else "origin_leg"
                 extra = a
             else:
                 basis = "none"
-            need_known = [a] + ([b, c] if prev is not None and nxt is not None else [])
-            if basis != "none" and None in need_known:
+            need_known = ([a] if has_before else []) + ([b] if nxt is not None else []) + (
+                [c] if has_before and nxt is not None else [])
+            if None in need_known:
                 if status == "fit":
                     status = "check_needed"
                 reasons.append(_reason("travel_unknown", "이동시간 확인 필요",
@@ -180,7 +183,9 @@ def fit_event(
             out.append({
                 "entry_id": event["id"], "title": event["title"], "date": day["date"],
                 "session": {"start_time": s["start_time"], "end_time": s.get("end_time"),
-                            "assumed_end": not (is_hhmm(s.get("end_time")) and _m(s["end_time"]) > start)},
+                            "assumed_end": not (is_hhmm(s.get("end_time")) and _m(s["end_time"]) > start),
+                            "assumed_minutes": (cfg.assumed_duration_min if not (
+                                is_hhmm(s.get("end_time")) and _m(s["end_time"]) > start) else None)},
                 "after_item_id": prev["id"] if prev else None,
                 "before_item_id": nxt["id"] if nxt else None,
                 "extra_minutes": extra, "extra_basis": basis,
@@ -203,9 +208,15 @@ def add_to_itinerary(itinerary: Sequence[Mapping], suggestion: Mapping, event: M
     item_id = f"evt:{suggestion['entry_id']}:{suggestion['date']}:{s['start_time']}"
     if any(i["id"] == item_id for i in items):
         return items
-    end = s.get("end_time") or s["start_time"]
-    if _m(end) <= _m(s["start_time"]):
-        end = f"{min(_m(s['start_time']) + 60, 23 * 60 + 59) // 60:02d}:{min(_m(s['start_time']) + 60, 23 * 60 + 59) % 60:02d}"
+    start = _m(s["start_time"])
+    if is_hhmm(s.get("end_time")) and _m(s["end_time"]) > start:
+        end_min = _m(s["end_time"])
+    else:  # 끝을 모르면 사용자가 정한 소요 시간, 없으면 60분으로 두고 end_assumed 로 표시한다
+        end_min = start + int(s.get("assumed_minutes") or 60)
+    end_min = min(end_min, 23 * 60 + 59)
+    if end_min <= start:
+        raise ValueError("종료 시각을 정할 수 없어 일정에 추가하지 못한다")
+    end = f"{end_min // 60:02d}:{end_min % 60:02d}"
     new = {"id": item_id, "title": event["title"], "date": suggestion["date"], "start": s["start_time"],
            "end": end, "lat": event["venue"]["lat"], "lng": event["venue"]["lng"],
            "source": "catalog", "entry_id": suggestion["entry_id"],

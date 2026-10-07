@@ -2,7 +2,7 @@
 // 토큰은 이 탭(sessionStorage)에만 둔다. 승인·반려의 신원은 서버가 정하고 요청에 싣지 않는다.
 import { createStore } from '../lib/store.js';
 import { h, on, render } from '../lib/dom.js';
-import { createEventsApi, EventsApiError } from './api.js';
+import { createEventsApi, EventsApiError, safeBase } from './api.js';
 import { makeT } from './i18n.js';
 import { describeChange, loadJson, safeHref, safeStorage, saveJson } from './logic.js';
 
@@ -42,7 +42,7 @@ export function createAdmin({ api, session = null }) {
     async refresh(sourceId) {
       set({ busy: sourceId, error: null });
       try {
-        const out = await api.admin.refresh(get().token, sourceId, false);
+        const out = await api.admin.refresh(get().token, sourceId);
         await a.load();
         set({ busy: null, message: { source: sourceId, run: out.run } });
         return out.run;
@@ -131,7 +131,7 @@ export function mountAdmin(root, { admin, api }) {
   const input = () => admin.setToken(tokenInput.value.trim());
   tokenInput.addEventListener('input', input);
   offs.push(() => tokenInput.removeEventListener('input', input));
-  const noteOf = (id) => body.find?.((e) => e.dataset?.note === id)?.[0]?.value ?? '';
+  const noteOf = (id) => [...(root.querySelectorAll?.('[data-note]') ?? [])].find((e) => e.dataset?.note === id)?.value ?? '';
   offs.push(on(root, 'click', '[data-act]', (_e, el) => {
     const { act, id, value } = el.dataset;
     if (act === 'load') admin.load();
@@ -147,12 +147,12 @@ export function mountAdmin(root, { admin, api }) {
 
 export async function boot(root = document.getElementById('app'), search = location.search) {
   const q = new URLSearchParams(search);
-  const api = createEventsApi({ mode: 'http', baseUrl: q.get('base') || undefined });
+  const api = createEventsApi({ mode: 'http', baseUrl: safeBase(q.get('base')) });
   const admin = createAdmin({ api, session: safeStorage('session') });
   if (q.get('lang') === 'en') admin.setLang('en');
   const view = mountAdmin(root, { admin, api });
   if (admin.store.getState().token) admin.load();
-  return { admin, view };
+  return { admin, view, api };
 }
 
 if (typeof document !== 'undefined' && document.body?.dataset?.page === 'admin') boot();
