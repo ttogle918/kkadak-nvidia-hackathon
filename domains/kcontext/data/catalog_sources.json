@@ -1,0 +1,104 @@
+[
+  {
+    "id": "seoul_openapi",
+    "name": "서울 열린데이터광장 · 서울시 문화행사 정보(서울문화포털)",
+    "url": "https://data.seoul.go.kr/dataList/OA-15486/A/1/datasetView.do",
+    "method": "api",
+    "status": "implemented",
+    "cadence_hours": 24,
+    "env_keys": ["SEOUL_OPENAPI_KEY"],
+    "verified_at": "2026-10-07",
+    "license": "공공누리 1유형(출처표시)",
+    "notes": "공식 가이드 확인: http://openapi.seoul.go.kr:8088/{키}/json/culturalEventInfo/{시작}/{끝}/, 1회 최대 1000행, sample 키는 5행까지. 갱신주기 '매일1회'. 일일 호출 한도는 데이터셋 페이지에 적혀 있지 않다 [확인 필요]. 행 필드의 GUNAME 은 출처가 준 자치구이며 개최 장소 판정의 근거로 쓴다."
+  },
+  {
+    "id": "tourapi_kto",
+    "name": "한국관광공사 국문 관광정보 서비스_GW (TourAPI)",
+    "url": "https://www.data.go.kr/data/15101578/openapi.do",
+    "method": "api",
+    "status": "configurable_unverified",
+    "cadence_hours": 24,
+    "env_keys": ["DATA_GO_KR_SERVICE_KEY"],
+    "verified_at": "2026-10-07",
+    "license": "이용허락범위 제한 없음(사진은 비방·상업 CI/BI 사용 금지), 공공누리 1·3유형",
+    "notes": "공공데이터포털 페이지에는 호출 작업·필수 파라미터·응답 필드가 없다(갱신 '실시간', 개발계정 트래픽 1,000건). 활용가이드를 키 없이 확인하지 못해 호출 주소·필드를 코드에 쓰지 않았다 [확인 필요]. 서비스키 발급과 활용가이드 확인 뒤에 field_map 으로 연결한다."
+  },
+  {
+    "id": "junggu_site",
+    "name": "서울 중구청 홈페이지(공지·보도자료·문화관광)",
+    "url": "https://www.junggu.seoul.kr/",
+    "method": "search",
+    "status": "partial",
+    "cadence_hours": 24,
+    "env_keys": ["TAVILY_SEARCH_KEY"],
+    "verified_at": "2026-10-07",
+    "license": "확인 필요",
+    "notes": "D12: Tavily 검색으로 공식 도메인에서 후보를 찾고 LLM 이 추출한다(출처 등급 C, 인용 검증). 보도자료 게시판은 /content.do?cmsid=14390. LLM 추출기 연결(T223)이 없어 자동으로는 레코드를 만들지 못한다. robots.txt 는 /content.do?cmsid=14232 와 /search 만 차단한다."
+  },
+  {
+    "id": "junggu_sns",
+    "name": "서울 중구청 공식 SNS(추가 행사·변경 공지 발견용)",
+    "url": "https://www.junggu.seoul.kr/content.do?cmsid=15920",
+    "method": "manual",
+    "status": "manual_only",
+    "cadence_hours": 24,
+    "env_keys": [],
+    "verified_at": "2026-10-07",
+    "license": "확인 필요",
+    "links": [
+      {"name": "카카오톡 채널", "url": "https://pf.kakao.com/_uJSbK"},
+      {"name": "네이버 블로그", "url": "https://blog.naver.com/junggu4u"},
+      {"name": "인스타그램", "url": "https://www.instagram.com/jungguseoul/"},
+      {"name": "페이스북", "url": "https://www.facebook.com/junggu4u"},
+      {"name": "문자 알림 서비스", "url": "https://ums.junggu.seoul.kr/m/jgnews/join"}
+    ],
+    "notes": "안내 페이지는 API·RSS 를 설명하지 않는다. 네이버 블로그 robots.txt 는 AI 학습·RAG 목적의 접근을 금지한다. 자동 수집하지 않고, 관리자가 공식 링크에서 새 행사·변경 공지를 확인해 제보 경로로 등록한다."
+  },
+  {
+    "id": "caci",
+    "name": "중구문화재단(충무아트센터)",
+    "url": "https://www.caci.or.kr/",
+    "method": "manual",
+    "status": "manual_only",
+    "cadence_hours": 24,
+    "env_keys": [],
+    "verified_at": "2026-10-07",
+    "license": "확인 필요",
+    "links": [
+      {"name": "공연·전시 월별일정", "url": "https://www.caci.or.kr/product/performance/month"},
+      {"name": "공지사항", "url": "https://www.caci.or.kr/community/notice"}
+    ],
+    "notes": "메인 페이지가 클라이언트 렌더링(템플릿 자리표시자 {{item.Title}})이고 데이터 호출 방식이 문서화돼 있지 않다 — 내부 호출을 추측해 쓰지 않았다. robots.txt 는 없다(404). 푸터에 이메일 무단 수집 거부 문구가 있다. 서울시 문화행사 API 에 같은 행사가 실리는지 확인한 뒤 직접 수집 여부를 정한다."
+  },
+  {
+    "id": "hanokmaeul",
+    "name": "남산골한옥마을",
+    "url": "https://www.hanokmaeul.co.kr/",
+    "method": "html",
+    "status": "candidate_not_implemented",
+    "cadence_hours": 24,
+    "env_keys": [],
+    "verified_at": "2026-10-07",
+    "license": "확인 필요",
+    "links": [
+      {"name": "진행 중 기획행사", "url": "https://www.hanokmaeul.co.kr/event-now"},
+      {"name": "지난 기획행사", "url": "https://www.hanokmaeul.co.kr/event-past"},
+      {"name": "이용안내·오시는 길", "url": "https://www.hanokmaeul.co.kr/guide"},
+      {"name": "영문 안내", "url": "https://www.hanokmaeul.co.kr/en-guide"}
+    ],
+    "notes": "서버 렌더링 HTML 이고 robots.txt 는 로그인·장바구니·관리자만 막으며 sitemap 이 있다. 메인에서 운영시간(하절기 09:00~21:00, 동절기 09:00~20:00)과 '매주 월요일 정기 휴관(월요일이 공휴일이면 정상 운영)' 문구를 확인했다. 행사 목록의 HTML 구조(제목·기간·신청 방법)는 확인하지 못해 파서를 만들지 않았다. 영어 페이지가 있다는 사실은 행사 진행 언어와 다르다."
+  },
+  {
+    "id": "jeongdong",
+    "name": "국립정동극장",
+    "url": "https://www.jeongdong.or.kr/",
+    "method": "manual",
+    "status": "manual_only",
+    "cadence_hours": 24,
+    "env_keys": [],
+    "verified_at": "2026-10-07",
+    "license": "확인 필요",
+    "links": [{"name": "공식 홈페이지", "url": "https://www.jeongdong.or.kr/"}],
+    "notes": "robots.txt 가 일반 크롤러 전체를 차단한다(Googlebot·Yeti 등 지정 에이전트만 허용). 자동 수집하지 않고 공식 링크만 등록한다. 서울시 문화행사 API 에 공연이 실리면 그쪽으로 확인한다."
+  }
+]
