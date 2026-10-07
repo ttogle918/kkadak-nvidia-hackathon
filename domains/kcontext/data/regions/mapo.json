@@ -1,27 +1,25 @@
 {
-  "id": "jongno",
+  "id": "mapo",
   "name": {
-    "ko": "종로구",
-    "en": "Jongno-gu"
+    "ko": "마포구",
+    "en": "Mapo-gu"
   },
   "gu": [
-    "종로구"
+    "마포구"
   ],
   "bbox": null,
   "center": null,
   "keywords": [
-    "종로구",
-    "종로"
+    "마포구",
+    "마포"
   ],
   "sillok_keywords": [
-    "鍾樓",
-    "鐘樓",
-    "雲從街",
-    "光化門",
-    "景福宮",
-    "昌德宮",
-    "昌慶宮",
-    "北村"
+    "麻浦",
+    "楊花渡",
+    "孔德里",
+    "望遠亭",
+    "蠶頭",
+    "西江"
   ],
   "note": "bbox·center 는 H7 에서 채운다 [확인 필요]. sillok_keywords 는 docs/spikes/sillok.md 의 구체 지명만(노이즈 키워드 제외), 구 경계 매핑은 검증 전 [확인 필요]"
 }

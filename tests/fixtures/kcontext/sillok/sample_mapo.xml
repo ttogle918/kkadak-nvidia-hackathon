@@ -1,0 +1,90 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 출처: 국사편찬위원회 조선왕조실록 정보_실록원문 (data.go.kr) · 내려받은 날짜: 2026-08-21 · 이용허락: 공공누리 1유형(출처표시) · 원본 2nd_wca_117.xml 의 기사 wca_11704016_001 발췌, 구조·내용 무수정 -->
+<!DOCTYPE level2 SYSTEM "history.dtd">
+<level2 id="wca_117">
+  <front>
+    <biblioData type="L">
+      <title>
+        <mainTitle>太宗實錄 十七年</mainTitle>
+      </title>
+      <date>
+        <dateOccured date="1417" type="서기"/>
+        <dateOccured type="간지">丁酉</dateOccured>
+        <dateOccured type="재위연도">태종 17</dateOccured>
+        <dateOccured type="개국연호">조선 개국(開國) 26</dateOccured>
+        <dateOccured type="중국연호">명 영락(永樂) 15</dateOccured>
+        <dateOccured type="단기">3750</dateOccured>
+        <dateOccured type="일본연호"/>
+        <dateOccured type="display">명 영락(永樂) 15</dateOccured>
+      </date>
+    </biblioData>
+  </front>
+  <text>
+    <content>
+      <paragraph align="center"> 十七年(1417)<annotation type="원주">
+          <noteContent>【<index num="0064223_0" sort="K" type="지명">大明</index>
+            <index num="0064224_0" type="연호">永樂</index>十五年】</noteContent>
+        </annotation>
+      </paragraph>
+    </content>
+  </text>
+  <level3 id="wca_117040">
+    <front>
+      <biblioData type="L">
+        <title>
+          <mainTitle>太宗實錄 十七年 夏四月</mainTitle>
+        </title>
+      </biblioData>
+    </front>
+    <text>
+      <content>
+        <paragraph align="center"> 十七年 夏四月</paragraph>
+      </content>
+    </text>
+    <level4 id="wca_11704016">
+      <front>
+        <biblioData type="L">
+          <title>
+            <mainTitle>太宗 17年 4月 16日</mainTitle>
+          </title>
+          <date>
+            <dateOccured date="1417-04-16L0" type="서기"/>
+            <dateOccured type="간지">壬申</dateOccured>
+            <dateOccured type="재위연도">태종 17년 4월 16일</dateOccured>
+            <dateOccured type="개국연호">조선 개국(開國) 26년 4월 16일</dateOccured>
+            <dateOccured type="중국연호">명 영락(永樂) 15년 4월 16일</dateOccured>
+            <dateOccured type="단기">3750년 4월 16일</dateOccured>
+            <dateOccured type="일본연호">년 4월 16일</dateOccured>
+            <dateOccured type="display">명 영락(永樂)15년 4월 16일</dateOccured>
+          </date>
+        </biblioData>
+      </front>
+      <level5 id="wca_11704016_001">
+        <front>
+          <biblioData type="T">
+            <title>
+              <mainTitle>세자를 꾀어 양화 나루를 건너게 한 이홍·이문관·변신귀·이지 등을 처벌하다</mainTitle>
+            </title>
+            <docNo level="n" name="titleno">001</docNo>
+            <date>
+              <dateOccured date="1417-04-16L0" type="서기"/>
+            </date>
+            <source>
+              <mainTitle type="태백산사고본">太宗實錄 15책 33권</mainTitle>
+              <page begin="29장 B면"/>
+            </source>
+            <source>
+              <mainTitle type="국편영인본">太宗實錄 2책</mainTitle>
+              <page begin="157면"/>
+            </source>
+            <subjectClass>사법-행형(行刑)</subjectClass>
+            <subjectClass>왕실-종친(宗親)</subjectClass>
+          </biblioData>
+        </front>
+        <text>
+          <content>
+            <paragraph align="center">○壬申/杖<index num="0065320_0" ref="M_0009312" sort="K" type="이름">李弘</index>一百, 籍沒家産; <index num="0065321_0" ref="M_0009310" sort="K" type="이름">李文貫</index>、<index num="0065322_0" ref="M_0065769" sort="K" type="이름">卞臣貴</index>贖杖一百; <index num="0065323_0" ref="M_0043576" sort="K" type="이름">李智</index>、<index num="0065324_0" ref="M_0009311" sort="K" type="이름">李彌</index>、<index num="0065325_0" ref="M_0009318" sort="K" type="이름">觀音奴</index>、<index num="0065326_0" ref="M_0055172" sort="K" type="이름">帝釋奴</index>、<index num="0065327_0" sort="K" type="이름">李先</index>等杖一百; 釋<index num="0065328_0" ref="M_0066414" sort="K" type="이름">徐思敏</index>及世子殿別監<index num="0065329_0" ref="M_0056182" sort="K" type="이름">鳥伊</index>。 義禁府鞫<index num="0065330_0" ref="M_0009310" sort="K" type="이름">文貫</index>等啓曰: "<index num="0065331_0" ref="M_0009310" sort="K" type="이름">李文貫</index>伏: ‘姪速毛赤<index num="0065332_0" ref="M_0009312" sort="K" type="이름">李弘</index>進退於世子殿日久, 故予謂<index num="0065333_0" ref="M_0009312" sort="K" type="이름">弘</index>曰: 「願薦吾二子<index num="0065334_0" ref="M_0043576" sort="K" type="이름">智</index>、<index num="0065335_0" ref="M_0009311" sort="K" type="이름">彌</index>於世子。」 其後世子至吾家宿焉, 以後日字孫蒙德之計不告。’ <index num="0065336_0" ref="M_0043576" sort="K" type="이름">李智</index>、<index num="0065337_0" ref="M_0009311" sort="K" type="이름">李彌</index>皆伏: ‘依托<index num="0065338_0" ref="M_0009312" sort="K" type="이름">李弘</index>, 欲蒙德於世子。 世子至父家及<index num="0065339_0" sort="K" type="지명">鐵串浦</index>之時, 進見支應。’ 前判事<index num="0065340_0" ref="M_0065769" sort="K" type="이름">卞臣貴</index>子<index num="0065341_0" ref="M_0009318" sort="K" type="이름">觀音奴</index>伏: ‘世子去年十月, 至<index num="0065342_0" sort="K" type="지명">鐵串浦</index>放鷹時, 蒙德爲意, 與<index num="0065343_0" ref="M_0043576" sort="K" type="이름">李智</index>兄弟及吾兄<index num="0065344_0" ref="M_0055172" sort="K" type="이름">帝釋奴</index>隨從。’ <index num="0065345_0" ref="M_0065769" sort="K" type="이름">臣貴</index>伏: "子<index num="0065346_0" ref="M_0055172" sort="K" type="이름">帝釋奴</index>、<index num="0065347_0" ref="M_0009318" sort="K" type="이름">觀音奴</index>等, 於世子<index num="0065348_0" sort="K" type="지명">富平</index>及<index num="0065349_0" sort="K" type="지명">鐵串浦</index>出入時隨從, 吾以爲不可叱之。’ <index num="0065350_0" sort="K" type="이름">李先</index>伏: ‘世子至<index num="0065351_0" ref="M_0009310" sort="K" type="이름">文貫</index>戶宿時, 隨從是實。’ <index num="0065352_0" ref="M_0009312" sort="K" type="이름">李弘</index>伏: ‘因叔父<index num="0065353_0" ref="M_0009310" sort="K" type="이름">文貫</index>之請, 率其二子, 薦於世子, 進見再三。 後世子到<index num="0065354_0" ref="M_0009310" sort="K" type="이름">文貫</index>戶宿焉, 及還京時, <index num="0065355_0" ref="M_0009310" sort="K" type="이름">文貫</index>三父子隨至<index num="0065356_0" sort="K" type="지명">楊花渡</index>。’"</paragraph>
+            <paragraph align="center">命義禁府照律以聞。 上謂知申事<index num="0065357_0" ref="M_0006022" sort="K" type="이름">趙末生</index>曰: "昔者以世子之故, 人多繫獄, 或至伏誅, 於予心今尙不平。 欲罪<index num="0065358_0" ref="M_0009310" sort="K" type="이름">文貫</index>等, 予所不忍, 除他事, 宜速贖杖。"</paragraph>
+          </content>
+        </text>
+      </level5></level4></level3></level2>
