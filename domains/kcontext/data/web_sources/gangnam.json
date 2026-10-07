@@ -1,0 +1,30 @@
+{
+  "region": "gangnam",
+  "gu": "강남구",
+  "domains": [
+    "www.gangnam.go.kr",
+    "visitgangnam.net"
+  ],
+  "allow_url_prefixes": [
+    "https://www.gangnam.go.kr/",
+    "https://visitgangnam.net/"
+  ],
+  "disallow_path_prefixes": [
+    "/assign/",
+    "/file/",
+    "/ceremony/",
+    "/backup/",
+    "/itmall/",
+    "/board/B_000057/",
+    "/admin",
+    "/set-locale/",
+    "/preview/",
+    "/search?"
+  ],
+  "queries": [
+    "{gu} 축제 행사 {month}",
+    "{gu} 문화행사 {month}"
+  ],
+  "status": "confirmed",
+  "note": "도메인·강남페스티벌(visitgangnam.net)은 사용자 승인(2026-10-07). visitgangnam.net 의 robots.txt(2026-10-07)는 User-agent: * 에 Allow: / 이고 /admin /set-locale/ /preview/ /search? 만 막는다. region 'gangnam' 은 regions/gangnam.json (T226)."
+}

@@ -141,3 +141,8 @@ def test_dict_key_position_secret_masked():
     sink = MemorySink()
     mk(sink).call("t", {"n": {NV: 2}})
     assert NV not in sink.events[0].to_json()
+
+
+def test_tavily_key_shape_is_redacted():
+    key = "tvly-" + "a" * 24
+    assert key not in redact_text(f"error for {key} here")

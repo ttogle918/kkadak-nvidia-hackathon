@@ -31,7 +31,7 @@ CLAIM_KINDS = ("fact", "lore", "inference")
 ALIGNMENTS = ("exact", "approx")
 EVENT_GEOMETRY_TYPES = ("point", "area", "approx")
 EVENT_STATUSES = ("scheduled", "cancelled", "changed", "unknown")
-FETCHED_FROM = ("tourapi", "seoul", "manual", "fixture")
+FETCHED_FROM = ("tourapi", "seoul", "manual", "web", "fixture")
 BLOCK_VERDICTS = ("injection", "suspicious")
 
 __all__ = [
@@ -237,7 +237,7 @@ class EventRecord:
     outdoor: bool | None
     description: str
     source: SourceRef
-    fetched_from: Literal["tourapi", "seoul", "manual", "fixture"]
+    fetched_from: Literal["tourapi", "seoul", "manual", "web", "fixture"]
     synthetic: bool = False
 
     @classmethod

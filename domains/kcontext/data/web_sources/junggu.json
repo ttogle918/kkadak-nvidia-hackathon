@@ -1,0 +1,20 @@
+{
+  "region": "euljiro",
+  "gu": "중구",
+  "domains": [
+    "www.junggu.seoul.kr"
+  ],
+  "allow_url_prefixes": [
+    "https://www.junggu.seoul.kr/"
+  ],
+  "disallow_path_prefixes": [
+    "/content.do?cmsid=14232",
+    "/search"
+  ],
+  "queries": [
+    "{gu} 축제 행사 {month}",
+    "{gu} 문화행사 {month}"
+  ],
+  "status": "confirmed",
+  "note": "도메인은 사용자 제시(2026-10-07), 메인 페이지에서 공식 사이트 확인. 공식 블로그 blog.naver.com/junggu4u 는 네이버 robots.txt 가 AI 학습·RAG 봇 접근을 금지해 사용자가 제외했다(2026-10-07). robots.txt 는 /content.do?cmsid=14232(고시공고)와 /search 만 막는다. 중구 지역은 euljiro(gu=중구)로 매칭. Tavily include_domains 가 www 호스트를 어떻게 받는지는 실호출 전 미확인."
+}

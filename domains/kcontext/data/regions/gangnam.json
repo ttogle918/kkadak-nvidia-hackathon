@@ -1,0 +1,18 @@
+{
+  "id": "gangnam",
+  "name": {
+    "ko": "강남",
+    "en": "Gangnam"
+  },
+  "gu": [
+    "강남구"
+  ],
+  "bbox": null,
+  "center": null,
+  "keywords": [
+    "강남구",
+    "강남"
+  ],
+  "sillok_keywords": [],
+  "note": "구청 행사 검색 수집(D12, T226)용. bbox·center 는 H7 에서 채운다 [확인 필요]"
+}
