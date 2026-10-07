@@ -51,3 +51,14 @@ network_policies: {}
 #   ② output 쓰기 → 성공(/tmp/hackathon/output/plan.md).
 #   ③ restricted·secrets → 업로드하지 않아 경로가 없다(`No such file`). find / 로 service_key.env·mail_token.txt 도 못 찾았다.
 #   확인: `openshell logs kcontext`
+#
+# 실측 2 (2026-10-07, 같은 샌드박스, 항목별 시도 22건 · 별도 에이전트가 수행):
+#   막힌 것(정책): 외부 HTTPS·HTTP·POST 업로드·pypi → CONNECT/HTTP 403 + 로그 `DENIED ... network connections not allowed by policy`.
+#                  /tmp 밖 쓰기(/etc /usr /sandbox /var/tmp) → Permission denied (소유자·모드가 맞는 /sandbox·/var/tmp 도 막혀 Landlock 으로 추정).
+#   열린 것(정책): inference.local 만 ALLOWED(로그 `NET:OPEN ALLOWED inference.local:443`). 환경변수에 키·토큰 0건(프록시 변수만).
+#   **정책이 아니라 chmod 로만 막힌 것: input 불변.** 에이전트가 같은 uid(1000)라 `chmod u+w` 후 파일 수정·새 파일 생성이 된다
+#       (시험 중 실제로 한 파일을 바꿨고 백업에서 복원해 cmp 로 확인). 정책으로 강제하려면 input 을 이미지에 포함해 빌드(안 2)해야 한다.
+#       → README·발표에서 "정책으로 읽기 전용"이라고 쓰지 않는다. 지금은 "업로드 후 chmod, 에이전트는 input 을 쓰지 않는 코드(`kculture_practice.py`)"다.
+#   우연히 막힌 것: DNS 해석 불가(SMTP 도 이름 해석에서 실패 — 외부 길은 프록시 하나뿐), `pip` 모듈·`sudo` 없음, /usr/local/bin/python3 를 exec 로 직접
+#       부르면 Permission denied(/usr/bin/python3 또는 쉘 경유는 OK). 파일시스템 거부는 `openshell logs` 에 남지 않는다(네트워크 거부만 남는다).
+#   미확인: 채팅 응답의 모델명이 게이트웨이 설정(nemotron-3-super)과 달라 보인 이유.
