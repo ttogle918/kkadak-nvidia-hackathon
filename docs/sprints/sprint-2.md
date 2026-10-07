@@ -442,7 +442,7 @@ uv run python eval/run_kcontext.py --check      # T220 을 했을 때만
                      geometry_type: Literal["point", "area", "approx"]; radius_m: int | None
                      status: Literal["scheduled", "cancelled", "changed", "unknown"]
                      outdoor: bool | None; description: str; source: SourceRef
-                     fetched_from: Literal["tourapi", "seoul", "manual", "fixture"]; synthetic: bool = False
+                     fetched_from: Literal["tourapi", "seoul", "manual", "web", "fixture"]; synthetic: bool = False  # "web" 추가: D12(구청 행사 검색 수집)
   # 판정 공통 출력 (T211a·T211b 가 함께 쓴다 — 같은 스테이지 병렬 import 충돌 방지용으로 여기에 둔다)
   @dataclass(frozen=True)
   class Rejection: target_id: str; claim: str; reason: str; detail: str   # reason ∈ REJECT_REASONS (__post_init__ 검사)
