@@ -5,12 +5,14 @@
 
 export const ITINERARY = {
   trip: { from: '2026-10-15', to: '2026-10-18' },
+  // anchors 의 lat/lng 는 실제 장소 좌표(카카오맵 MCP 길찾기 응답 sp/ep, 2026-10-07). 숙소는 실제 위치 데이터가 없어 종로3가역 1호선
+  // 좌표를 '대표 좌표(근사)'로 쓴다. 신촌은 현재 대상 구 밖이라 null. 카드·경로(예시)에는 좌표를 붙이지 않는다.
   anchors: [
-    { type: 'hotel', name: { ko: '숙소 · 종로3가', en: 'Hotel · Jongno 3-ga' }, lat: null, lng: null, xy: [110, 330], from: '2026-10-15T15:00', to: '2026-10-18T11:00' },
-    { type: 'visit', name: { ko: '창덕궁', en: 'Changdeokgung' }, day: 1, lat: null, lng: null, xy: [90, 70], from: '2026-10-15T10:00', to: '2026-10-15T12:30' },
-    { type: 'visit', name: { ko: '익선동', en: 'Ikseon-dong' }, day: 1, lat: null, lng: null, xy: [470, 230], from: '2026-10-15T14:00', to: '2026-10-15T17:00' },
-    { type: 'visit', name: { ko: '경복궁', en: 'Gyeongbokgung' }, day: 2, lat: null, lng: null, xy: null },
-    { type: 'visit', name: { ko: '광화문', en: 'Gwanghwamun' }, day: 2, lat: null, lng: null, xy: null },
+    { type: 'hotel', name: { ko: '숙소 · 종로3가', en: 'Hotel · Jongno 3-ga' }, lat: 37.570420844523, lng: 126.992153252476, xy: [110, 330], from: '2026-10-15T15:00', to: '2026-10-18T11:00' },
+    { type: 'visit', name: { ko: '창덕궁', en: 'Changdeokgung' }, day: 1, lat: 37.57964694739535, lng: 126.99099980677127, xy: [90, 70], from: '2026-10-15T10:00', to: '2026-10-15T12:30' },
+    { type: 'visit', name: { ko: '익선동', en: 'Ikseon-dong' }, day: 1, lat: 37.5734371942191, lng: 126.989775723896, xy: [470, 230], from: '2026-10-15T14:00', to: '2026-10-15T17:00' },
+    { type: 'visit', name: { ko: '경복궁', en: 'Gyeongbokgung' }, day: 2, lat: 37.577613288258206, lng: 126.97689786832184, xy: null },
+    { type: 'visit', name: { ko: '광화문', en: 'Gwanghwamun' }, day: 2, lat: 37.57596445980707, lng: 126.97685309595215, xy: null },
     { type: 'visit', name: { ko: '신촌', en: 'Sinchon' }, day: 3, lat: null, lng: null, xy: null },
   ],
   free_slots: [

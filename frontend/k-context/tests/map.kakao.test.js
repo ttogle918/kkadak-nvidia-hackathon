@@ -24,7 +24,7 @@ globalThis.document = {
 
 const { loadKakaoSdk, readKey, sdkUrl } = await import('../src/lib/kakao-sdk.js');
 const { selectRenderer } = await import('../src/components/map/renderer.js');
-const { collectGeo, createKakaoView, DEFAULT_CENTER, validLatLng } = await import('../src/components/map/kakao-view.js');
+const { collectGeo, computeBounds, createKakaoView, DEFAULT_CENTER, validLatLng, getMyLocation, MOCK_MY_LOCATION } = await import('../src/components/map/kakao-view.js');
 const map = await import('../src/components/map/index.js');
 const { createStore } = await import('../src/lib/store.js');
 const { createApi } = await import('../src/api/index.js');
@@ -44,15 +44,16 @@ function fakeEnv({ key = KEY, behavior = 'ok', hasGlobal = true } = {}) {
 }
 
 function makeKakao() {
-  const log = { markers: [], lines: [], infos: [], map: null };
+  const log = { markers: [], lines: [], infos: [], overlays: [], map: null };
   class LatLng { constructor(a, b) { this.lat = a; this.lng = b; } }
   class Map { constructor(host, o) { this.host = host; this.o = o; log.map = this; } relayout() {} setBounds(b) { this.bounds = b; } setCenter(c) { this.center = c; } setLevel() {} }
   class Marker { constructor(o) { this.o = o; log.markers.push(this); } setMap(m) { this.map = m; } }
   class Polyline { constructor(o) { this.o = o; log.lines.push(this); } setMap(m) { this.map = m; } }
   class InfoWindow { constructor(o) { this.o = o; log.infos.push(this); } open() {} close() {} }
+  class CustomOverlay { constructor(o) { this.o = o; log.overlays.push(this); } setMap(m) { this.map = m; } }
   class LatLngBounds { constructor() { this.pts = []; } extend(p) { this.pts.push(p); } }
   const handlers = [];
-  return { log, handlers, maps: { load: (cb) => cb(), LatLng, Map, Marker, Polyline, InfoWindow, LatLngBounds, event: { addListener: (target, type, fn) => handlers.push({ e: target, t: type, fn }) } } };
+  return { log, handlers, maps: { load: (cb) => cb(), LatLng, Map, Marker, Polyline, InfoWindow, LatLngBounds, CustomOverlay, event: { addListener: (target, type, fn) => handlers.push({ e: target, t: type, fn }) } } };
 }
 
 test('키 없음 -> SVG 폴백, 경고 한 줄, 스크립트 삽입 없음', async () => {
@@ -110,14 +111,16 @@ test('lat/lng null·범위 밖 항목은 건너뛴다 (mock 은 전부 null -> �
   assert.equal(validLatLng([null, 1]), false);
 });
 
-test('mock 데이터 -> 기본 중심만 + 좌표 없음 상태, 마커·선 없음', async () => {
+test('앵커 좌표가 모두 null 이면 기본 중심만 + 좌표 없음 상태, 마커·선 없음', async () => {
   const { win, doc } = fakeEnv();
   const r = await selectRenderer({ win, doc });
   const store = createStore(createInitialState());
   const api = createApi({ mode: 'mock', latencyMs: 0 });
   await createActions({ store, api }).loadAll();
   const view = createKakaoView(r.kakao, new El('div'), t);
-  view.update(store.getState());
+  const st0 = store.getState();
+  const noGeo = { ...st0, data: { ...st0.data, itinerary: { ...st0.data.itinerary, anchors: st0.data.itinerary.anchors.map((a) => ({ ...a, lat: null, lng: null })) } } };
+  view.update(noGeo);
   const log = r.kakao.log;
   assert.equal(log.markers.length + log.lines.length, 0);
   assert.equal(log.map.o.center.lat, DEFAULT_CENTER.lat);
@@ -163,4 +166,96 @@ test('map.mount: 카카오 선택 시 SVG 대신 카카오 호스트, 실패 시
     assert.equal(root.find((e) => e.attrs?.class === 'map-svg').length, ok ? 0 : 1);
     m.destroy();
   }
+});
+
+const ANC = (type, name, lat, lng, day) => ({ type, name: { ko: name, en: name }, lat, lng, day });
+const stAnc = (anchors, extra = {}) => ({ day: 1, selectedRoute: 'A', data: { cards: [], routes: [], itinerary: { anchors } }, ...extra });
+
+test('앵커 -> 마커 변환: [lat,lng] 순서, kind, title=t(name), null 앵커는 건너뜀', () => {
+  const g = collectGeo(stAnc([
+    ANC('hotel', '숙소', 37.5704, 126.9921), ANC('visit', '창덕궁', 37.5796, 126.991, 1), ANC('visit', '신촌', null, null, 1),
+  ]), t);
+  assert.deepEqual(g.markers, [
+    { lat: 37.5704, lng: 126.9921, title: '숙소', kind: 'hotel' },
+    { lat: 37.5796, lng: 126.991, title: '창덕궁', kind: 'visit' },
+  ]);
+  assert.ok(g.markers.every((m) => m.lat > 33 && m.lat < 39 && m.lng > 124 && m.lng < 132), '서울 위도/경도 순서');
+});
+
+test('day 필터: hotel 은 항상, visit 은 선택한 날만. 카드와 같은 자리는 중복 제외', () => {
+  const anchors = [ANC('hotel', '숙소', 37.57, 126.99), ANC('visit', 'D1', 37.58, 126.99, 1), ANC('visit', 'D2', 37.577, 126.976, 2)];
+  assert.deepEqual(collectGeo(stAnc(anchors, { day: 2 }), t).markers.map((m) => m.title), ['숙소', 'D2']);
+  assert.deepEqual(collectGeo(stAnc(anchors, { day: 3 }), t).markers.map((m) => m.title), ['숙소']);
+  const dup = collectGeo({ ...stAnc(anchors), data: { cards: [CARD('c', { place: { name: '카드', lat: 37.58, lng: 126.99 } })], routes: [], itinerary: { anchors } } }, t);
+  assert.deepEqual(dup.markers.map((m) => m.title), ['카드', '숙소']);
+});
+
+test('computeBounds: 순수, [lat,lng], 무효 점 무시, 빈 입력 null', () => {
+  assert.equal(computeBounds([]), null);
+  assert.equal(computeBounds([[null, 1]]), null);
+  assert.deepEqual(computeBounds([[37.5, 127.0], [37.6, 126.9], [999, 0]]), { sw: [37.5, 126.9], ne: [37.6, 127.0] });
+});
+
+test('mock 앵커: 5곳 마커 + setBounds, 좌표 없음 문구 숨김 / 1개면 중심만', async () => {
+  const { win, doc } = fakeEnv();
+  const r = await selectRenderer({ win, doc });
+  const store = createStore(createInitialState());
+  await createActions({ store, api: createApi({ mode: 'mock', latencyMs: 0 }) }).loadAll();
+  const view = createKakaoView(r.kakao, new El('div'), t);
+  view.update(store.getState()); // day 1: 숙소 + 창덕궁 + 익선동
+  assert.deepEqual(r.kakao.log.markers.map((m) => m.o.title), ['숙소 · 종로3가', '창덕궁', '익선동']);
+  assert.ok(r.kakao.log.map.bounds.pts.length >= 2);
+  assert.equal(view.status.text, '');
+  const one = makeKakao();
+  const v2 = createKakaoView(one, new El('div'), t);
+  v2.update(stAnc([ANC('hotel', '숙소', 37.57, 126.99)]));
+  assert.equal(one.log.markers.length, 1);
+  assert.ok(one.log.map.bounds, '일정 1개 + 내 위치 = 2점이라 setBounds');
+});
+
+test('내 위치(예시): 별도 레이어, [lat,lng], 예시 라벨, bounds 포함, day 무관, geolocation 미사용, textContent', async () => {
+  let geoTouched = 0;
+  Object.defineProperty(globalThis, 'navigator', { configurable: true, value: { get geolocation() { geoTouched += 1; return {}; } } });
+  const before = innerHtmlWrites;
+  assert.deepEqual(getMyLocation(), MOCK_MY_LOCATION);
+  assert.equal(MOCK_MY_LOCATION.lat, DEFAULT_CENTER.lat);
+  assert.equal(MOCK_MY_LOCATION.lng, DEFAULT_CENTER.lng);
+  assert.equal(collectGeo(stAnc([]), t).markers.length, 0, '내 위치는 collectGeo 결과에 섞이지 않음');
+  for (const day of [1, 2, 3]) {
+    const k = makeKakao();
+    const view = createKakaoView(k, new El('div'), t);
+    view.update(stAnc([ANC('visit', '창덕궁', 37.5796, 126.991, 1)], { day }));
+    assert.equal(k.log.overlays.length, 1, 'day ' + day + ' 에도 항상 표시');
+    const ov = k.log.overlays[0];
+    assert.equal(ov.o.position.lat, 37.56556);
+    assert.equal(ov.o.position.lng, 126.97489);
+    assert.equal(ov.o.content.attrs.title, '내 위치 (예시)');
+    assert.equal(ov.o.content.find((e) => e.attrs?.class === 'map-kakao__me-label')[0].text, '내 위치 (예시)', '텍스트 노드로만');
+    assert.ok(k.log.markers.every((m) => m.o.title !== '내 위치 (예시)'), '일반 마커와 별개');
+    if (day !== 1) assert.equal(k.log.markers.length, 0);
+    assert.ok(ov.map, 'setMap 됨');
+  }
+  const k = makeKakao();
+  createKakaoView(k, new El('div'), t).update(stAnc([ANC('visit', '창덕궁', 37.5796, 126.991, 1)]));
+  const pts = k.log.map.bounds.pts;
+  assert.ok(pts.some((p) => p.lat === 37.56556 && p.lng === 126.97489), 'bounds 에 내 위치 포함');
+  assert.ok(pts.some((p) => p.lat === 37.5796), 'bounds 에 일정 포함');
+  const en = createT(() => 'en');
+  const ke = makeKakao();
+  createKakaoView(ke, new El('div'), en).update(stAnc([]));
+  assert.equal(ke.log.overlays[0].o.content.attrs.title, 'My location (sample)');
+  // 일정 없음: 내 위치만 + 일정 좌표 없음 문구
+  const k0 = makeKakao();
+  const v0 = createKakaoView(k0, new El('div'), t);
+  v0.update(stAnc([]));
+  assert.match(v0.status.text, /일정 좌표 없음/);
+  assert.equal(k0.log.map.bounds, undefined, '점 하나면 중심만');
+  // CustomOverlay 없는 SDK: title 만 있는 Marker 로 대체
+  const kn = makeKakao();
+  delete kn.maps.CustomOverlay;
+  createKakaoView(kn, new El('div'), t).update(stAnc([]));
+  assert.equal(kn.log.markers[0].o.title, '내 위치 (예시)');
+  assert.equal(geoTouched, 0, 'navigator.geolocation 접근 없음');
+  assert.equal(innerHtmlWrites, before, 'innerHTML 미사용');
+  delete globalThis.navigator;
 });
