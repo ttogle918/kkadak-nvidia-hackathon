@@ -1,7 +1,7 @@
 """비밀 마스킹과 문자열 자르기. 표준 라이브러리만 쓴다.
 
 마스킹 정책(오탐보다 누출 방지 우선, 단 아래 경계는 지킨다):
-- 토큰 모양: nvapi-*, sk-*, Bearer *.
+- 토큰 모양: nvapi-*, sk-*, tvly-*, Bearer *.
 - `Authorization: (Basic|Bearer|Token) 값` 은 헤더 전체를 가린다.
 - key=value / key: value / repr 의 `'key': 'value'`: 키 이름이
   api[_-]?key|token|secret|password|passwd|authorization 으로 끝나는 식별자(접두 허용:
@@ -22,6 +22,7 @@ REDACTED = "***REDACTED***"
 SECRET_PATTERNS: tuple[re.Pattern[str], ...] = (
     re.compile(r"nvapi-[A-Za-z0-9_\-]{10,}"),
     re.compile(r"\bsk-[A-Za-z0-9_\-]{16,}"),
+    re.compile(r"\btvly-[A-Za-z0-9_\-]{10,}"),
     re.compile(r"(?i)\bbearer\s+[A-Za-z0-9._~+/\-]{10,}=*"),
 )
 _NAME = r"(?:api[_-]?key|token|secret|password|passwd|authorization)"

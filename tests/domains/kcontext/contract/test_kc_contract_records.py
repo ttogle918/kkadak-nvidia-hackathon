@@ -176,7 +176,7 @@ def test_event_roundtrip() -> None:
         lambda d: d.update(geometry_type="segment"),
         lambda d: d.update(status="open"),
         lambda d: d.update(outdoor="yes"),
-        lambda d: d.update(fetched_from="web"),
+        lambda d: d.update(fetched_from="crawl"),
         lambda d: d["source"].update(tier="Z"),
     ],
 )
@@ -233,3 +233,9 @@ def test_contract_package_has_no_region_literals_or_forbidden_imports() -> None:
                     p,
                     mod,
                 )
+
+
+def test_event_fetched_from_web_is_allowed() -> None:
+    d = event()
+    d.update(fetched_from="web")
+    assert event_from_dict(d).fetched_from == "web"
