@@ -1,10 +1,10 @@
 # K-Context — 검색하지 않으면 발견하지 못하는 “그날의 한국”
 
-팀 까딱이 · NVIDIA OpenShell · NemoClaw · Nemotron
+팀 까딱이 · NVIDIA OpenShell · NVIDIA 호스팅 추론 API(gpt-oss-20b) · Nemotron(샌드박스 경로)
 
 ![데모: 일정 문장 → 타임라인 · 지도 핀 · 실록 원문](docs/demo/01-schedule-flow.gif)
 
-> 위 GIF 는 실제 서버(백엔드 + Nemotron)와 화면을 연결해 캡처한 것이다. 응답이 15~60초 걸려서(이 촬영은 54초) 기다리는 구간은 짧게 압축했다. 화면의 **MOCK** 딱지는 가짜(예시) 데이터 표시다.
+> 위 GIF 는 실제 서버(백엔드 + NVIDIA 호스팅 추론 API 의 `openai/gpt-oss-20b`)와 화면을 연결해 캡처한 것이다. 응답이 15~60초 걸려서(이 촬영은 54초) 기다리는 구간은 짧게 압축했다. 화면의 **MOCK** 딱지는 가짜(예시) 데이터 표시다.
 
 ## 프로젝트 소개
 내 일정을 한 줄로 말하면 **일정을 정리**하고, 장소마다 **조선왕조실록에 언급된 기록**(한문 원문 그대로 + 원문 링크)과 **주변 행사**를 출처와 함께 붙이는 에이전트다.
@@ -41,6 +41,18 @@
 - **에이전트 파이프라인은 백엔드와 다른 프로세스**로 돌고 파일(`bundle.json`)로만 주고받는다. 외부 자료는 호스트 수집기가 미리 모아 색인에 두고 에이전트는 색인만 읽는다.
 - 샌드박스 경로(⑤)는 외부 접속이 전부 막히고 `inference.local` 만 열려 있다(22항목 실측).
 
+## 사용한 NVIDIA 기술
+| 기술 | 어디에 어떻게 | 확인 방법 |
+|---|---|---|
+| **OpenShell** (0.0.116) | 샌드박스 `kcontext`, 기본 전부 차단 정책, `inference.local` 게이트웨이, DENIED/ALLOWED 로그, 22항목 실측 | `openshell sandbox list`, `openshell logs kcontext` |
+| **NVIDIA 호스팅 추론 API** (`integrate.api.nvidia.com`) | 제품 코드의 LLM 호출 — 챗봇·일정 이해·행사 추출. 모델 **`openai/gpt-oss-20b`** | `deploy/llm.chat.yaml` (`CHAT_MODEL`·`SCHEDULE_MODEL` 로 덮어씀) |
+| **Nemotron** (`nvidia/nemotron-3-super-120b-a12b`) | **샌드박스 경로 한정**: 공통 테스트 에이전트가 `inference.local` 로 호출. 게이트웨이 provider `nvidia-prod` 에 설정 | `openshell inference get` · 샌드박스에서 호출한 응답의 `model` 필드로 확인 |
+| NVIDIA 문서 MCP · Agent Skills 카탈로그 | 개발 중 OpenShell·NemoClaw 동작을 문서로 확인(`.claude/skills/`, `nemoclaw-docs`) | 개발 도구로만 사용 — 제품 기능 아님 |
+
+**시험만 하고 제품에는 쓰지 않은 것**: Nemotron 임베딩 모델(`nemotron-3-embed-1b`, `llama-nemotron-embed-vl-1b-v2`) 비교 시험(`docs/spikes/sillok_embedding.md`) — 임베딩은 쓰지 않기로 했다.
+**쓰지 않은 것**: NemoClaw/OpenClaw 에이전트 런타임(CLI·문서만 확인, 샌드박스 안 에이전트는 표준 라이브러리 스크립트), 로컬 NIM·리랭커·NeMo Guardrails·GPU 가속(이 개발 PC 에 GPU 없음; 입력 가드는 자체 규칙 `core/guard`), 비전 모델.
+> 일정 이해·챗봇의 모델을 Nemotron 으로 바꾸는 것은 `CHAT_MODEL` 한 줄이지만, 결과 안정성을 다시 확인해야 해서 하지 않았다(현재 gpt-oss-20b 도 간헐적 실패가 있다).
+
 ## 환경 설치 방법 (Environment setup)
 요구: Python 3.12 + [uv](https://docs.astral.sh/uv/), Node 18+(프론트 테스트), 샌드박스 시연은 Docker + OpenShell 0.0.116(이 저장소는 0.0.116 에서 실측).
 ```bash
@@ -62,7 +74,7 @@ uv run uvicorn backend.app:app --port 8000                      # 백엔드
 ```
 
 ## 학습 방법 (Training instructions)
-**모델을 학습·파인튜닝하지 않는다.** NVIDIA 호스팅 모델(Nemotron 등)을 호출만 하고, 가중치는 바꾸지 않는다. “학습”에 해당하는 준비는 아래 둘이다.
+**모델을 학습·파인튜닝하지 않는다.** NVIDIA 호스팅 추론 API 의 모델(호스트: `openai/gpt-oss-20b`, 샌드박스: 게이트웨이의 Nemotron)을 호출만 하고, 가중치는 바꾸지 않는다. “학습”에 해당하는 준비는 아래 둘이다.
 1. **색인 구축**(위 `ingest.sillok` 명령): 실록 원문을 청크로 나눠 로컬 SQLite FTS5 색인에 적재한다. 벡터 임베딩은 쓰지 않는다(시험 결과 `docs/spikes/sillok_embedding.md`, 쓰지 않기로 결정).
 2. **프롬프트**(코드에 있다, 바꾸면 테스트로 확인):
    - 일반 챗봇: `backend/chat.py` `SYSTEM_PROMPT`
@@ -120,7 +132,8 @@ openshell sandbox exec -n kcontext -- sh -c 'cd /tmp/agent && python3 kculture_p
 ## 사용하는 외부 서비스와 허용 범위
 | 서비스 | 쓰는 곳 | 범위 |
 |---|---|---|
-| NVIDIA 추론(Nemotron 등) | 백엔드(호스트) · 샌드박스(`inference.local`) | 호스트는 `.env` 키, 샌드박스는 게이트웨이가 키 주입 |
+| NVIDIA 호스팅 추론 API — `openai/gpt-oss-20b` | 백엔드(호스트): 챗봇·일정 이해·행사 추출 | `.env` 의 `NVIDIA_API_KEY`, `deploy/llm.chat.yaml` |
+| NVIDIA 추론 — Nemotron(`nvidia/nemotron-3-super-120b-a12b`) | 샌드박스: 공통 테스트 에이전트 | `inference.local` 하나만, 게이트웨이가 키 주입 |
 | 조선왕조실록 원문(국사편찬위원회, 공공누리 1유형) | 호스트 수집기 | 로컬 색인에 적재 후 에이전트는 색인만 읽는다 |
 | 서울 열린데이터광장 문화행사 | 호스트 수집기 | 키는 호스트 환경변수. 현재 키 없음 → 데이터 0건 |
 | Tavily 검색(구청 행사) | 호스트 수집기 | 사람이 승인한 공식 도메인만, 호출 수 상한, 인용 검증 필수, “검색 수집 · 미확인” 표시 |
