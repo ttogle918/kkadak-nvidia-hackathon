@@ -3,6 +3,7 @@
 import { h, on, render } from '../../lib/dom.js';
 import { timelineView } from './logic.js';
 import { timelineRowNode, legendNode } from './timeline-row.js';
+import { bundleTimelineNode } from './bundle-view.js';
 
 /**
  * @param {HTMLElement} root app-shell 이 준 슬롯 div
@@ -16,6 +17,11 @@ export function mount(root, ctx) {
     const active = globalThis.document?.activeElement;
     const keep = active && root.contains?.(active) && active.dataset?.act ? { act: active.dataset.act, value: active.dataset.value } : null;
     const s = store.getState();
+    if (s.chatBundle) {
+      render(root, bundleTimelineNode(s.chatBundle, s.day, t));
+      restoreFocus(keep);
+      return;
+    }
     const v = timelineView(s);
     const it = s.data?.itinerary;
     const anchors = v.anchors.map((a) => t(a)).join(' → ');
@@ -37,21 +43,25 @@ export function mount(root, ctx) {
         : v.empty ? h('p', { class: 'timeline__empty', role: 'status' }, t('timeline.empty'))
           : h('ol', { class: 'timeline__rows' }, v.rows.map((r) => timelineRowNode(r, t))),
       legendNode(t)));
-    if (keep) {
-      const again = [...(root.querySelectorAll?.('[data-act]') ?? [])].find((e) => e.dataset.act === keep.act && e.dataset.value === keep.value);
-      again?.focus?.();
-    }
+    restoreFocus(keep);
+  }
+
+  function restoreFocus(keep) {
+    if (!keep) return;
+    const again = [...(root.querySelectorAll?.('[data-act]') ?? [])].find((e) => e.dataset.act === keep.act && e.dataset.value === keep.value);
+    again?.focus?.();
   }
 
   const offClick = on(root, 'click', '[data-act]', (_e, el) => {
     if (el.dataset.act === 'toggle-min') actions.toggleMinimize();
     else if (el.dataset.act === 'day') actions.setDay(Number(el.dataset.value));
+    else if (el.dataset.act === 'clear-bundle') actions.clearChatBundle();
   });
 
   draw();
   const eq = (a, b) => a.every((v, i) => v === b[i]);
   const off = store.select(
-    (s) => [s.day, s.added, s.skipped, s.selectedNow, s.minimizeChanges, s.lang, s.data.itinerary],
+    (s) => [s.day, s.added, s.skipped, s.selectedNow, s.minimizeChanges, s.lang, s.data.itinerary, s.chatBundle],
     draw, { equals: eq },
   );
   return { destroy() { off(); offClick(); root.replaceChildren(); } };

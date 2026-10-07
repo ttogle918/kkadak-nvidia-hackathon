@@ -99,6 +99,7 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 | `messages` | `[]` | 대화(Message[]) — `loadAll` 이 채움 | msgs |
 | `logs` | `[]` | 보안 로그(AuditEntry[]) | logs |
 | `sending` | `false` | `send` 진행 중 | — |
+| `chatBundle` | `null` | 챗봇이 정리한 일정(kc-chat-bundle/v1, `api/bundle.js` 가 검증한 것) \| null. 있으면 타임라인·지도(핀)·카드(실록 기록·행사)가 이것으로 바뀐다. 계약 `docs/chat-bundle.contract.md` | `send`·`trySend`(응답 bundle) · `clearChatBundle` |
 | `data` | `{itinerary,routes,cards,sources: null}` | api 로 받은 원본 | (SEG/TAGS 상수) |
 | `loaded` / `error` | `false` / `null` | 로드 상태 | — |
 | `settingsOpen` | `false` | 설정 패널(보안 로그·언어·테마·최소 변경) 열림 | — |
@@ -188,3 +189,8 @@ backend 연결 상태: `getMessages`·`sendMessage`·`getCards`·`getCard`·`get
 - `?api=mock` 은 데모 데이터(전부 합성, 배너·"(데모)" 표시)다. 실제 행사처럼 쓰지 않는다.
 - 일정·저장한 행사는 이 브라우저(localStorage)에만 저장된다. 관리자 토큰은 이 탭(sessionStorage)에만 둔다.
 - 코드: `src/events/{api,logic,controller,view,admin,main,i18n,demo-data}.js`. 테스트: `tests/events.*.test.js`.
+
+## 챗봇 일정 흐름 (kc-chat-bundle/v1)
+`sendMessage(text, context?)` 는 `context`(chat-context/v1: lang·trip)를 싣고 응답의 `bundle` 을 검증(`api/bundle.js`)해 `{reply, logs, bundle}` 로 돌려준다. 형식이 어긋나면 bundle 만 버린다.
+mock 은 `1일차 …` 같은 일정 문장에 고정 예시 bundle(`data/chat-bundle.js`, `sample:true` → "예시" 표시)을 돌려준다 — `?api=mock` 에서 "일정 붙여넣기 예시" 버튼으로 본다.
+외부 문자열은 전부 textContent, 링크는 http/https 만. 공용 조각: `lib/chat-bundle.js`(순수) · `lib/chat-bundle-view.js`(DOM).

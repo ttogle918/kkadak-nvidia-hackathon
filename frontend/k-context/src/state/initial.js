@@ -50,6 +50,8 @@ export function createInitialState(overrides = {}) {
     data: { itinerary: null, routes: null, cards: null, sources: null },
     loaded: false,
     error: null,
+    // --- 챗봇이 정리한 일정(kc-chat-bundle/v1, 검증된 것) — 없으면 null. 있으면 타임라인·지도·카드가 이것으로 바뀐다 ---
+    chatBundle: null,
     // --- 하단 패널 높이 단계 ---
     panelLevel: 'default', // 'collapsed' | 'default' | 'expanded'
     // --- 모바일 시트 ---

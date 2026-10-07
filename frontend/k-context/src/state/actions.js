@@ -3,11 +3,27 @@
 // (신원은 서버가 정하므로 인자로 받지 않는다).
 import { normalizeLang } from '../lib/i18n.js';
 import { isLevel, stepLevel } from '../lib/panel-level.js';
+import { buildChatContext } from '../api/bundle.js';
+import { bundleDays } from '../lib/chat-bundle.js';
 
 export function createActions({ store, api }) {
   const { getState, setState } = store;
   let seq = 0;
   const localId = (p) => `${p}_local_${++seq}`;
+
+  /** 요청에 실을 context(chat-context/v1): 화면 언어 + 화면이 들고 있는 trip(일정은 서버가 보관하지 않는다). */
+  const chatContext = () => {
+    const s = getState();
+    return buildChatContext({ lang: s.lang, trip: s.data?.itinerary?.trip });
+  };
+  /**
+   * 응답 bundle 을 상태에 반영하는 패치. 앵커가 있는 새 일정이 오면 chatBundle 과 첫 날짜로 바뀌고,
+   * bundle 이 없거나(일반 대화) 앵커가 없으면 기존 화면을 그대로 둔다.
+   */
+  const bundlePatch = (bundle) => {
+    if (!bundle || !bundle.itinerary?.anchors?.length) return {};
+    return { chatBundle: bundle, day: bundleDays(bundle)[0] ?? getState().day };
+  };
 
   return {
     /** api 에서 원본을 한 번에 받아 store 에 넣는다. main.js 가 부팅할 때 부른다. */
@@ -61,8 +77,8 @@ export function createActions({ store, api }) {
       if (!t || s0.sending) return null;
       setState((s) => ({ messages: [...s.messages, { id: localId('msg'), role: 'user', text: t }], input: '', sending: true }));
       try {
-        const { reply, logs } = await api.sendMessage(t);
-        setState((s) => ({ messages: [...s.messages, reply], logs: [...s.logs, ...logs], sending: false }));
+        const { reply, logs, bundle } = await api.sendMessage(t, chatContext());
+        setState((s) => ({ messages: [...s.messages, reply], logs: [...s.logs, ...logs], sending: false, ...bundlePatch(bundle) }));
         return reply;
       } catch (e) {
         setState({ sending: false, error: String(e?.message ?? e) });
@@ -86,14 +102,17 @@ export function createActions({ store, api }) {
         sending: true,
       }));
       try {
-        const { reply, logs } = await api.sendMessage(t);
-        setState((s) => ({ messages: [...s.messages, reply], logs: [...s.logs, ...logs], sending: false }));
+        const { reply, logs, bundle } = await api.sendMessage(t, chatContext());
+        setState((s) => ({ messages: [...s.messages, reply], logs: [...s.logs, ...logs], sending: false, ...bundlePatch(bundle) }));
         return { ok: true, reply };
       } catch (e) {
         setState({ sending: false });
         return { ok: false, reason: 'error', error: String(e?.message ?? e) };
       }
     },
+
+    /** 챗봇이 정리한 일정을 닫고 기본(샘플) 화면으로 돌아간다. 읽기 전용 화면 상태만 바꾼다. */
+    clearChatBundle: () => setState({ chatBundle: null, day: 1 }),
 
     /** 사람 승인/거절 버튼의 핸들러. decision: 'approve' | 'reject'. */
     async decide(id, decision) {

@@ -3,6 +3,7 @@
 // 구현할 때: ENDPOINTS 표(제안)를 확정하고 request() 로 채운다. 신원(요청자·승인자)은 클라이언트가 보내지 않는다 — 서버가 세션에서 정한다.
 
 import { validateCard, validateSource } from './schema.js';
+import { buildChatContext, validateChatBundle } from './bundle.js';
 
 export class ApiNotImplementedError extends Error {
   constructor(method, baseUrl) {
@@ -21,7 +22,7 @@ export const ENDPOINTS = {
   getSources: 'GET /sources',
   getRationale: 'GET /cards/{id}/rationale',
   getMessages: 'GET /messages',
-  sendMessage: 'POST /messages  {text}',
+  sendMessage: 'POST /messages  {text, context?}  -> {reply, logs, bundle?}',
   getAuditLog: 'GET /audit',
   decideAudit: 'POST /audit/{id}/decision  {decision}  — 사람 전용 승인 API',
 };
@@ -129,11 +130,22 @@ export function createHttpApi({ baseUrl = '/api' } = {}) {
       if (!Array.isArray(data)) throw apiError('bad_response');
       return data;
     },
-    /** POST /messages {text} -> {reply, logs}. reply.text 는 문자열(정상) 또는 {ko,en}(차단). 신원은 보내지 않는다. */
-    async sendMessage(text) {
-      const data = await requestJson(baseUrl, '/messages', { method: 'POST', body: { text } });
+    /**
+     * POST /messages {text, context?} -> {reply, logs, bundle}. reply.text 는 문자열(정상) 또는 {ko,en}(차단/일정). 신원은 보내지 않는다.
+     * context(chat-context/v1: lang·trip)는 허용 키만 골라 싣는다. bundle(kc-chat-bundle/v1)은 형태를 검증해
+     * 어긋나면 bundle 만 null 로 버리고 reply 는 그대로 보인다(bad_response 로 대화를 죽이지 않는다).
+     */
+    async sendMessage(text, context) {
+      const body = context == null ? { text } : { text, context: buildChatContext(context) };
+      const data = await requestJson(baseUrl, '/messages', { method: 'POST', body });
       if (!data || typeof data.reply !== 'object' || data.reply === null) throw apiError('bad_response');
-      return { reply: data.reply, logs: Array.isArray(data.logs) ? data.logs : [] };
+      let bundle = null;
+      if (data.bundle != null) {
+        const v = validateChatBundle(data.bundle);
+        if (v.ok) bundle = v.bundle;
+        else console.warn(`[api] bundle 형식 불일치 — 묶음만 버림: ${v.reason}`);
+      }
+      return { reply: data.reply, logs: Array.isArray(data.logs) ? data.logs : [], bundle };
     },
     getAuditLog: nope('getAuditLog'),
     async decideAudit(id, decision) { // eslint-disable-line no-unused-vars

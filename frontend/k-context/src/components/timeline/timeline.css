@@ -37,3 +37,9 @@
   .timeline-days__btn, .timeline-min { min-height: var(--tap); }
   .timeline-row__time { width: 78px; }
 }
+
+/* 챗봇이 정리한 일정(chatBundle) */
+.timeline--bundle .timeline-row { flex-wrap: wrap; }
+.timeline-row__note { flex: 1 0 100%; font-size: var(--fs-sm); color: var(--c-text-2); font-weight: 400; overflow-wrap: anywhere; }
+.timeline-problems { list-style: none; margin: var(--sp-3) 0 0; padding: var(--sp-2) var(--sp-3); border: 1px dashed var(--c-line-strong); border-radius: var(--r-md); font-size: var(--fs-sm); color: var(--c-text-2); display: flex; flex-direction: column; gap: var(--sp-1); }
+.timeline-problems__item { overflow-wrap: anywhere; }

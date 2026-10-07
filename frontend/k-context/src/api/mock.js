@@ -8,6 +8,8 @@ import { ITINERARY } from '../data/itinerary.js';
 import { MESSAGES } from '../data/messages.js';
 import { AUDIT_LOG } from '../data/auditlog.js';
 import { NOW_RATIONALE, storyRationale } from '../data/rationale.js';
+import { CHAT_BUNDLE_SAMPLE, CHAT_REPLY_SAMPLE, LOOKS_LIKE_ITINERARY } from '../data/chat-bundle.js';
+import { validateChatBundle } from './bundle.js';
 
 const clone = (v) => structuredClone(v);
 const hhmmss = (d = new Date()) => d.toTimeString().slice(0, 8);
@@ -72,9 +74,11 @@ export function createMockApi({ latencyMs = 60 } = {}) {
     },
     /**
      * 사용자 메시지 1건을 보내고 답을 받는다. 공격 프롬프트(파일 경로 읽기 요청 등)는 거부하고 deny 로그를 남긴다.
-     * @returns {{reply:{id:string,role:'agent',text:object,blocked:boolean}, logs:object[]}}
+     * 일정 같은 문장(예: "1일차 … 2일차 …")이면 고정 샘플 묶음(예시 표시 포함)을 bundle 로 돌려준다(backend 없이 화면 확인용).
+     * context 는 선택(chat-context/v1) — trip 이 있으면 샘플 묶음의 trip 을 그것으로 바꾼다.
+     * @returns {{reply:{id:string,role:'agent',text:object,blocked:boolean}, logs:object[], bundle:object|null}}
      */
-    async sendMessage(text) {
+    async sendMessage(text, context) {
       await wait();
       const t = String(text ?? '').trim();
       if (!t) throw new Error('빈 메시지');
@@ -86,9 +90,17 @@ export function createMockApi({ latencyMs = 60 } = {}) {
       const entry = { id: `log_${String(++seq).padStart(3, '0')}`, time: hhmmss(), decided_by: null, ...log };
       audit.push(entry);
       messages.push({ id: `msg_${String(++mseq).padStart(3, '0')}`, role: 'user', text: t });
-      const reply = { id: `msg_${String(++mseq).padStart(3, '0')}`, role: 'agent', text: atk ? REPLY_BLOCKED : REPLY_OK, blocked: atk };
+      const wantsBundle = !atk && LOOKS_LIKE_ITINERARY.test(t);
+      const reply = { id: `msg_${String(++mseq).padStart(3, '0')}`, role: 'agent', text: atk ? REPLY_BLOCKED : wantsBundle ? CHAT_REPLY_SAMPLE : REPLY_OK, blocked: atk };
       messages.push(reply);
-      return clone({ reply, logs: [entry] });
+      let bundle = null;
+      if (wantsBundle) {
+        const raw = clone(CHAT_BUNDLE_SAMPLE);
+        if (context?.trip?.from && context?.trip?.to) raw.trip = { from: context.trip.from, to: context.trip.to };
+        const v = validateChatBundle(raw);
+        bundle = v.ok ? v.bundle : null;
+      }
+      return clone({ reply, logs: [entry], bundle });
     },
     async getAuditLog() {
       await wait();

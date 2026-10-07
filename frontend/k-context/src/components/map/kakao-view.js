@@ -2,6 +2,8 @@
 // 텍스트는 textContent(h() 의 문자열 자식)와 Marker.title(속성) 로만 넣는다 — innerHTML 금지.
 // 일정 앵커(itinerary.anchors)의 유효 좌표도 마커가 된다. lat/lng 가 null·비수치·범위 밖인 항목은 건너뛴다. 하나도 없으면 기본 중심만 보이고 '좌표 없음'을 표시한다.
 import { h } from '../../lib/dom.js';
+import { bundlePins, pinInfo } from '../../lib/chat-bundle.js';
+import { pinInfoNode } from '../../lib/chat-bundle-view.js';
 
 // 기본 중심: 덕수궁 37.56556, 126.97489 (인접: 정동제일교회 37.56541, 126.97273).
 // 근거: 카카오맵 MCP 응답의 길찾기 링크 안 좌표, 2026-10-07 확인. level 은 카카오맵의 확대 단계(작을수록 확대).
@@ -102,12 +104,47 @@ export function createKakaoView(kakao, host, t) {
     overlays = [];
   }
 
+  /** 챗봇이 정리한 일정: 좌표가 있는 앵커에만 핀(옛길 선·내 위치 없음). 누르면 정보창(DOM 노드 + textContent). */
+  function updateBundle(bundle) {
+    const pins = bundlePins(bundle);
+    for (const p of pins) {
+      const pos = new maps.LatLng(p.lat, p.lng);
+      const mk = new maps.Marker({ position: pos, title: p.name });
+      mk.setMap(map);
+      overlays.push(mk);
+      if (maps.event?.addListener && maps.InfoWindow) {
+        maps.event.addListener(mk, 'click', () => {
+          info?.close?.();
+          info = new maps.InfoWindow({ position: pos, content: pinInfoNode(pinInfo(p), t), removable: true });
+          info.open(map, mk);
+        });
+      }
+    }
+    const bb = computeBounds(pins.map((p) => [p.lat, p.lng]));
+    if (!bb) {
+      map.setCenter?.(center());
+      map.setLevel?.(DEFAULT_LEVEL);
+      status.replaceChildren(t('map.bundle.no_pins'));
+    } else if (pins.length === 1) {
+      map.setCenter?.(new maps.LatLng(pins[0].lat, pins[0].lng));
+      map.setLevel?.(DEFAULT_LEVEL);
+      status.replaceChildren();
+    } else {
+      const bounds = new maps.LatLngBounds();
+      bounds.extend(new maps.LatLng(bb.sw[0], bb.sw[1]));
+      bounds.extend(new maps.LatLng(bb.ne[0], bb.ne[1]));
+      map.setBounds?.(bounds);
+      status.replaceChildren();
+    }
+  }
+
   return {
     status,
     update(state) {
       map ??= new maps.Map(host, { center: center(), level: DEFAULT_LEVEL });
       map.relayout?.();
       clear();
+      if (state.chatBundle) { updateBundle(state.chatBundle); return; }
       const { markers, lines } = collectGeo(state, t);
       for (const l of lines) {
         const pl = new maps.Polyline({

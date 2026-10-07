@@ -47,3 +47,16 @@ code { font-family: var(--font-mono); }
 
 /* 접근성: 시각적으로만 숨김 */
 .sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }
+
+/* 챗봇 묶음(lib/chat-bundle-view.js) 공용 조각: 카드·정보창·딱지. 출처 태그는 작게(.cb-srctag). */
+.cb-flag { display: inline-block; margin-left: var(--sp-2); border: 1px dashed var(--c-now); color: var(--c-now-ink); border-radius: var(--r-sm); padding: 0 5px; font-size: var(--fs-xs); font-weight: 700; vertical-align: 1px; }
+.cb-srctag { padding: 1px 4px; font-size: 10px; line-height: 1.2; max-width: 100%; overflow-wrap: anywhere; }
+.cb-link { font-size: var(--fs-xs); }
+.cb-note { display: inline-block; border: 1px solid var(--c-line-ctl); border-radius: var(--r-sm); padding: 0 4px; font-size: var(--fs-xs); color: var(--c-muted); font-weight: 600; }
+.cb-mention__when { font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 600; overflow-wrap: anywhere; }
+.cb-mention__summary, .cb-mention__quote { margin: var(--sp-1) 0; font-size: var(--fs-sm); overflow-wrap: anywhere; }
+.cb-mention__quote { color: var(--c-text-2); }
+.cb-mention__foot { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin-top: var(--sp-1); }
+.cb-info { display: flex; flex-direction: column; gap: var(--sp-1); max-width: 300px; padding: var(--sp-2); font-size: var(--fs-sm); }
+.cb-info__name { font-size: var(--fs-md); }
+.cb-info__count { color: var(--c-text-2); }

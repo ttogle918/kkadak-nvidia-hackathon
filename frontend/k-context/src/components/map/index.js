@@ -11,8 +11,9 @@ import {
 import { buildRouteCards, buildStepList } from './route-list.js';
 import { createKakaoView } from './kakao-view.js';
 import { sharedRenderer } from './renderer.js';
+import { buildBundleSvg, buildPinPanel, bundleHasPins } from './chat-layer.js';
 
-const WATCH = (s) => [s.mode, s.day, s.selectedSeg, s.selectedRoute, s.selectedNow, s.lang, s.data, s.loaded];
+const WATCH = (s) => [s.mode, s.day, s.selectedSeg, s.selectedRoute, s.selectedNow, s.lang, s.data, s.loaded, s.chatBundle];
 const same = (a, b) => a.every((v, i) => Object.is(v, b[i]));
 
 /** 지도 SVG. state 와 t 만으로 만드는 순수 렌더(노드 반환). */
@@ -150,6 +151,8 @@ export function mount(root, ctx) {
   // 지도가 메인이므로 구간 목록은 접힌 채로 시작한다(데스크톱·모바일 공통)
   let stepsOpen = false;
   let destroyed = false;
+  let pinKey = null; // SVG 지도에서 정보창을 연 핀(챗봇 일정). 카카오는 InfoWindow 가 따로 관리한다.
+  let lastBundle = null;
   // 렌더러 선택: 기본은 SVG. 카카오 키·SDK 가 준비되면(비동기) 카카오 뷰로 바꾼다. 실패는 SVG 유지(사유는 selectRenderer 가 경고).
   let kview = null;
   const kakaoHost = h('div', { class: 'map-kakao', role: 'group', 'aria-label': t({ ko: '지도 (카카오맵)', en: 'Map (Kakao Maps)' }) });
@@ -165,6 +168,20 @@ export function mount(root, ctx) {
     const active = globalThis.document?.activeElement;
     const focusKey = active && root.contains(active) ? active.dataset?.fk : null;
     const s = store.getState();
+    if (s.chatBundle !== lastBundle) { lastBundle = s.chatBundle; pinKey = null; }
+    if (s.chatBundle) { // 챗봇이 정리한 일정: 좌표 있는 앵커의 핀만(옛길 선·샘플 경로 없음)
+      const b = s.chatBundle;
+      render(root, h('div', { class: 'map', dataset: { module: 'map', source: 'chat-bundle' } },
+        h('div', { class: 'map-bundle-head' },
+          h('span', { class: 'map-bundle-head__title' }, t('map.bundle.title')),
+          b.sample ? h('span', { class: 'cb-flag', dataset: { flag: 'sample' } }, t('bundle.sample')) : null,
+          bundleHasPins(b) ? null : h('span', { role: 'status' }, t('map.bundle.no_pins'))),
+        h('div', { class: 'map-stage' }, kview ? [kakaoHost, kview.status] : [buildBundleSvg(b, t, pinKey), buildPinPanel(b, pinKey, t)])));
+      if (kview) { try { kview.update(s); } catch { console.warn('[map] 카카오 지도 갱신 실패'); } }
+      const fk = focusKey && root.querySelectorAll ? [...root.querySelectorAll('[data-fk]')].find((e) => e.dataset.fk === focusKey) : null;
+      fk?.focus?.({ preventScroll: true });
+      return;
+    }
     const ready = s.loaded && s.data.itinerary && s.data.routes?.length && s.data.cards;
     if (!ready) {
       render(root, h('div', { class: 'map' }, buildSkeleton(t)));
@@ -191,6 +208,8 @@ export function mount(root, ctx) {
     else if (d.act === 'route') actions.selectRoute(d.id);
     else if (d.act === 'now') actions.selectNow(d.card);
     else if (d.act === 'toggle-steps') { stepsOpen = !stepsOpen; draw(); }
+    else if (d.act === 'pin') { pinKey = pinKey === d.key ? null : d.key; draw(); }
+    else if (d.act === 'pin-close') { pinKey = null; draw(); }
   }
 
   const offClick = on(root, 'click', '[data-act]', (_e, el) => act(el));

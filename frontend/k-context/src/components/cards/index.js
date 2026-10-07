@@ -4,9 +4,10 @@ import { h, on, render } from '../../lib/dom.js';
 import { renderOldCard } from './old-card.js';
 import { renderNowCard } from './now-card.js';
 import { renderSourcePopover } from './source-popover.js';
+import { bundleCardNodes } from './bundle-view.js';
 import { createLatestGuard, findSource, nowButtons, supportingFacts, visibleCards } from './logic.js';
 
-const BODY_KEYS = ['lang', 'mode', 'selectedSeg', 'selectedNow', 'immersion', 'expandedTags', 'added', 'skipped', 'data', 'loaded', 'selectedTag'];
+const BODY_KEYS = ['lang', 'mode', 'selectedSeg', 'selectedNow', 'immersion', 'expandedTags', 'added', 'skipped', 'data', 'loaded', 'selectedTag', 'chatBundle'];
 const POP_KEYS = ['lang', 'selectedTag', 'data', 'selectedSeg'];
 
 const changed = (a, b, keys) => keys.some((k) => !Object.is(a[k], b[k]));
@@ -53,6 +54,10 @@ export function mount(root, ctx) {
 
   function drawBody() {
     const s = store.getState();
+    if (s.chatBundle) { // 챗봇이 정리한 일정이 있으면 그 기록·행사 카드를 보인다(샘플 카드 대신)
+      render(body, bundleCardNodes(s.chatBundle, t));
+      return;
+    }
     // 다시 그리면 포커스가 사라지므로 fk 를 기억했다가 되돌린다
     const ae = doc()?.activeElement;
     const keepFk = ae && body.contains?.(ae) ? ae.dataset?.fk : null;

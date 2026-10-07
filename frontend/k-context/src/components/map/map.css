@@ -119,3 +119,18 @@
 .map-kakao__me-dot { position: absolute; left: -8px; top: -8px; width: 16px; height: 16px; border-radius: 50%; background: #2176ff; border: 3px solid #fff; box-sizing: border-box; box-shadow: 0 0 3px rgba(0, 0, 0, 0.5); }
 .map-kakao__me-label { position: absolute; left: 14px; top: -10px; white-space: nowrap; padding: 1px var(--sp-1); border-radius: var(--r-md); background: var(--c-surface); color: var(--c-text-2); font-size: var(--fs-xs); border: 1px solid var(--c-line); }
 .map-kakao__info { padding: var(--sp-1) var(--sp-2); font-size: var(--fs-sm); }
+
+/* 챗봇이 정리한 일정의 핀 */
+.map-pin { cursor: pointer; }
+.map-pin__hit { fill: transparent; }
+.map-pin__shape { fill: var(--c-now); stroke: var(--c-surface); stroke-width: 2; }
+.map-pin--hotel .map-pin__shape { fill: var(--c-ink); }
+.map-pin__dot { fill: var(--c-surface); }
+.map-pin.is-selected .map-pin__shape { stroke: var(--c-ink); stroke-width: 3; }
+.map-pin:focus-visible { outline: none; }
+.map-pin:focus-visible .map-pin__shape { stroke: var(--c-ink); stroke-width: 3; }
+.map-bundle-head { flex: none; display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); padding: var(--sp-1) var(--sp-3); background: var(--c-bg-app); border-bottom: 1px solid var(--c-line); font-size: var(--fs-sm); }
+.map-bundle-head__title { font-weight: 700; }
+.map-pinpanel { position: absolute; left: var(--sp-2); right: var(--sp-2); bottom: var(--sp-2); z-index: 6; max-height: 60%; overflow-y: auto; padding-right: var(--sp-5); background: var(--c-surface); border: 1px solid var(--c-line-strong); border-radius: var(--r-md); box-shadow: var(--shadow); }
+.map-pinpanel .cb-info { max-width: none; }
+.map-pinpanel__close { position: absolute; top: 2px; right: 4px; border: 0; background: none; font-size: var(--fs-xl); line-height: 1; min-width: 28px; min-height: 28px; }
