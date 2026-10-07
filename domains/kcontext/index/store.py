@@ -7,10 +7,12 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 import sqlite3
+import struct
 import unicodedata
-from collections.abc import Collection, Iterable, Mapping
+from collections.abc import Collection, Iterable, Mapping, Sequence
 from dataclasses import dataclass, field
 from datetime import date
 from pathlib import Path
@@ -32,6 +34,16 @@ CREATE TABLE IF NOT EXISTS chunks(
 );
 CREATE TABLE IF NOT EXISTS chunk_regions(chunk_id TEXT NOT NULL, region TEXT NOT NULL);
 CREATE INDEX IF NOT EXISTS idx_chunk_regions ON chunk_regions(region, chunk_id);
+CREATE TABLE IF NOT EXISTS place_alias(
+  alias TEXT NOT NULL, place TEXT NOT NULL, lang TEXT NOT NULL,
+  region TEXT NOT NULL DEFAULT '', source TEXT NOT NULL DEFAULT '',
+  PRIMARY KEY(alias, place)
+);
+CREATE INDEX IF NOT EXISTS idx_place_alias_place ON place_alias(place);
+CREATE TABLE IF NOT EXISTS chunk_embeddings(
+  chunk_id TEXT NOT NULL, model TEXT NOT NULL, dim INTEGER NOT NULL, vec BLOB NOT NULL,
+  PRIMARY KEY(chunk_id, model)
+);
 """
 _FTS = (
     "CREATE VIRTUAL TABLE IF NOT EXISTS chunks_fts USING "
@@ -70,6 +82,17 @@ class Chunk:
     quote: str
     regions: tuple[str, ...] = ()
     meta: Mapping[str, str] = field(default_factory=dict)
+
+
+@dataclass(frozen=True)
+class PlaceAlias:
+    """지명 사전 한 줄. alias 와 place 는 같은 곳을 가리키는 서로 다른 표기(한글·한자·옛 이름 등)다."""
+
+    alias: str
+    place: str
+    lang: str  # "ko" | "hanja" | "en" 같은 표기 언어
+    region: str = ""  # 지역 id(없으면 빈 문자열)
+    source: str = ""  # 이 줄의 출처(예: "sillok:index", "manual")
 
 
 @dataclass(frozen=True)
@@ -128,6 +151,29 @@ def _validate(chunk: Chunk) -> Chunk:
     if quote == chunk.quote:
         return chunk
     return Chunk(**{**chunk.__dict__, "quote": quote})
+
+
+def _norm_name(value: str) -> str:
+    return unicodedata.normalize("NFKC", value).strip()
+
+
+def _validate_alias(a: PlaceAlias) -> PlaceAlias:
+    for name in ("alias", "place", "lang"):
+        v = getattr(a, name)
+        if _blank(v) or len(v) > 100:
+            raise ChunkValidationError(f"place_alias {name} 는 1~100자 문자열이어야 한다")
+    for name in ("region", "source"):
+        if not isinstance(getattr(a, name), str):
+            raise ChunkValidationError(f"place_alias {name} 는 문자열이어야 한다")
+    return PlaceAlias(_norm_name(a.alias), _norm_name(a.place), a.lang.strip(), a.region, a.source)
+
+
+def _pack(vec: Sequence[float]) -> bytes:
+    return struct.pack(f"<{len(vec)}f", *vec)
+
+
+def _unpack(blob: bytes) -> tuple[float, ...]:
+    return struct.unpack(f"<{len(blob) // 4}f", blob)
 
 
 def _like_escape(value: str) -> str:
@@ -252,5 +298,127 @@ class LocalIndex:
             ).fetchall()
             needle = q.lower()
             hits = [Hit(_row_to_chunk(r), float(r[8].lower().count(needle) or 1)) for r in rows]
+        hits.sort(key=lambda h: (-h.score, _TIER_RANK[h.chunk.tier], h.chunk.chunk_id))
+        return hits[:limit]
+
+    # ---- 지명 사전 -------------------------------------------------------------------------
+    def add_place_aliases(self, rows: Iterable[PlaceAlias]) -> int:
+        """(alias, place) 기준 upsert. 하나라도 검증에 실패하면 배치 전체를 거부한다."""
+        valid = [_validate_alias(r) for r in rows]
+        with self._conn:
+            self._conn.executemany(
+                "INSERT OR REPLACE INTO place_alias(alias, place, lang, region, source) VALUES (?,?,?,?,?)",
+                [(r.alias, r.place, r.lang, r.region, r.source) for r in valid],
+            )
+        return len(valid)
+
+    def aliases_for(self, term: str) -> list[PlaceAlias]:
+        """term 이 alias 또는 place 인 줄. 정렬해 돌려준다(결정적)."""
+        t = _norm_name(term)
+        if not t:
+            return []
+        rows = self._conn.execute(
+            "SELECT alias, place, lang, region, source FROM place_alias "
+            "WHERE alias=? OR place=? ORDER BY place, alias",
+            (t, t),
+        ).fetchall()
+        return [PlaceAlias(*r) for r in rows]
+
+    def expand_place(self, term: str) -> tuple[str, ...]:
+        """term 과 같은 곳을 가리키는 모든 표기(term 포함, 중복 없음, 사전 순서). 사전에 없으면 (term,)."""
+        t = _norm_name(term)
+        if not t:
+            return ()
+        names = {t}
+        for a in self.aliases_for(t):
+            names.update((a.alias, a.place))
+        # 한 단계 더: place 를 공유하는 다른 alias 까지(ko→place→hanja)
+        for a in [x for n in list(names) for x in self.aliases_for(n)]:
+            names.update((a.alias, a.place))
+        return (t, *sorted(names - {t}))
+
+    # ---- 임베딩 ----------------------------------------------------------------------------
+    def put_embeddings(self, model: str, vectors: Mapping[str, Sequence[float]]) -> int:
+        """chunk_id → 벡터 upsert. 없는 chunk_id·비유한 값·모델 내 차원 불일치가 있으면 배치 전체를 거부한다."""
+        if _blank(model) or len(model) > 200:
+            raise ChunkValidationError("model 은 1~200자 문자열이어야 한다")
+        dim = self._embedding_dim(model)
+        packed: list[tuple[str, str, int, bytes]] = []
+        for cid, vec in vectors.items():
+            if self._conn.execute("SELECT 1 FROM chunks WHERE chunk_id=?", (cid,)).fetchone() is None:
+                raise ChunkNotFound(cid)
+            if not vec or any(
+                isinstance(x, bool) or not isinstance(x, (int, float)) or not math.isfinite(x) or abs(x) > 3.0e38
+                for x in vec
+            ):
+                raise ChunkValidationError(f"embedding {cid!r}: 유한한 숫자 벡터여야 한다")
+            if dim is None:
+                dim = len(vec)
+            if len(vec) != dim:
+                raise ChunkValidationError(f"embedding {cid!r}: 차원 {len(vec)} != 모델 {model} 의 {dim}")
+            packed.append((cid, model, dim, _pack(vec)))
+        with self._conn:
+            self._conn.executemany(
+                "INSERT OR REPLACE INTO chunk_embeddings(chunk_id, model, dim, vec) VALUES (?,?,?,?)", packed
+            )
+        return len(packed)
+
+    def _embedding_dim(self, model: str) -> int | None:
+        row = self._conn.execute("SELECT dim FROM chunk_embeddings WHERE model=? LIMIT 1", (model,)).fetchone()
+        return None if row is None else int(row[0])
+
+    def get_embedding(self, chunk_id: str, model: str) -> tuple[float, ...] | None:
+        row = self._conn.execute(
+            "SELECT vec FROM chunk_embeddings WHERE chunk_id=? AND model=?", (chunk_id, model)
+        ).fetchone()
+        return None if row is None else _unpack(row[0])
+
+    def missing_embeddings(self, model: str, *, limit: int = 1000) -> list[str]:
+        """model 의 벡터가 아직 없는 chunk_id(정렬). 배치로 채울 때 쓴다."""
+        if not 1 <= limit <= 100_000:
+            raise ValueError("limit 은 1..100000 이어야 한다")
+        rows = self._conn.execute(
+            "SELECT c.chunk_id FROM chunks c WHERE NOT EXISTS "
+            "(SELECT 1 FROM chunk_embeddings e WHERE e.chunk_id=c.chunk_id AND e.model=?) "
+            "ORDER BY c.chunk_id LIMIT ?",
+            (model, limit),
+        ).fetchall()
+        return [r[0] for r in rows]
+
+    def search_vector(
+        self,
+        query_vec: Sequence[float],
+        model: str,
+        *,
+        regions: Collection[str] | None = None,
+        tiers: Collection[str] | None = None,
+        limit: int = 20,
+    ) -> list[Hit]:
+        """코사인 유사도 전수 비교(SQLite 한 파일 규모용). 점수는 -1..1. 같은 모델의 벡터끼리만 비교한다."""
+        if not 1 <= limit <= 200:
+            raise ValueError("limit 은 1..200 이어야 한다")
+        if (regions is not None and not regions) or (tiers is not None and not tiers):
+            return []
+        dim = self._embedding_dim(model)
+        if dim is None:
+            return []
+        if len(query_vec) != dim or any(not math.isfinite(x) for x in query_vec):
+            raise ValueError(f"query_vec 은 유한한 {dim}차원 벡터여야 한다")
+        qn = math.sqrt(sum(x * x for x in query_vec))
+        if qn == 0:
+            raise ValueError("query_vec 의 크기가 0 이다")
+        where, params = self._filters(regions, tiers)
+        cols = ", ".join(f"c.{n.strip()}" for n in _COLS.split(","))
+        rows = self._conn.execute(
+            f"SELECT {cols}, e.vec FROM chunk_embeddings e JOIN chunks c ON c.chunk_id=e.chunk_id "
+            f"WHERE e.model=?{where}",
+            [model, *params],
+        ).fetchall()
+        hits = []
+        for r in rows:
+            v = _unpack(r[12])
+            vn = math.sqrt(sum(x * x for x in v))
+            score = sum(a * b for a, b in zip(query_vec, v)) / (qn * vn) if vn else 0.0
+            hits.append(Hit(_row_to_chunk(r[:12]), score))
         hits.sort(key=lambda h: (-h.score, _TIER_RANK[h.chunk.tier], h.chunk.chunk_id))
         return hits[:limit]
