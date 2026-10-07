@@ -12,7 +12,6 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
@@ -20,16 +19,15 @@ from pathlib import Path
 import httpx
 
 from core.llm import LlmError
-from core.llm.envfile import load_allowed_keys
+from domains.kcontext.catalog.envkeys import resolve_catalog_env
 from domains.kcontext.contract.text import is_date
 from domains.kcontext.index.store import LocalIndex
-from domains.kcontext.paths import repo_root
 from domains.kcontext.regions import load_regions
 
 from .extract import Extractor, ScreenFn, extract_events
 from .store import to_chunks, write_jsonl
 from .web import (
-    KEY_ENVS,
+    KEY_ENV,
     Candidate,
     KeyMissing,
     SourceUnconfirmed,
@@ -48,13 +46,10 @@ def _fail(msg: str) -> int:
 
 
 def _env_with_dotenv(env: Mapping[str, str] | None) -> Mapping[str, str]:
-    """셸 env 우선, 없으면 레포 .env 의 TAVILY 키(허용 이름만)를 보충한다(os.environ 은 바꾸지 않는다)."""
+    """env 가 주어지면 그대로, 아니면 Tavily 키 하나만(셸 우선, 없으면 `.env` 의 허용 목록 이름)."""
     if env is not None:
         return env
-    merged = {k: v for k, v in os.environ.items() if k in KEY_ENVS}
-    if not any(merged.get(k, "").strip() for k in KEY_ENVS):
-        merged.update(load_allowed_keys(repo_root() / ".env", KEY_ENVS))
-    return merged
+    return resolve_catalog_env((KEY_ENV,))
 
 
 def _default_screen() -> ScreenFn | None:

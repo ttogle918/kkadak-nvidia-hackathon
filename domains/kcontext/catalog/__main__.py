@@ -21,11 +21,9 @@ from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import dotenv_values
-
-from domains.kcontext.paths import repo_root
 from domains.kcontext.regions import load_regions
 
+from .envkeys import CATALOG_KEY_NAMES, key_origin, resolve_catalog_env
 from .rules import KST
 from .sources import SourceError, load_sources, make_fetcher
 from .store import CatalogStore
@@ -35,12 +33,8 @@ TARGET_REGION = os.environ.get("KC_TARGET_REGION", "jung")  # data/regions/<id>.
 
 
 def _env() -> dict[str, str]:
-    """셸 env 우선, 없는 키만 레포 .env 에서 보충한다(os.environ 은 바꾸지 않는다)."""
-    merged = dict(os.environ)
-    for k, v in dotenv_values(repo_root() / ".env").items():
-        if v and not merged.get(k):
-            merged[k] = v
-    return merged
+    """수집기가 쓰는 키만(셸 env 우선, 없으면 `.env` 의 허용 목록 이름). 다른 비밀은 읽지 않는다."""
+    return resolve_catalog_env()
 
 
 def _setup(args: argparse.Namespace):
@@ -69,6 +63,7 @@ def status(store: CatalogStore, sources: list[dict]) -> dict:
         "built_at": store.entries_built_at(),
         "entries": len(store.load_entries()),
         "sources": [{**{k: s[k] for k in ("id", "name", "method", "status", "url")},
+                     "keys": {k: key_origin(k) for k in s["env_keys"] if k in CATALOG_KEY_NAMES},  # 값이 아니라 위치만
                      "run": runs.get(s["id"]), "link_check": checks.get(s["id"])} for s in sources],
     }
 

@@ -2,6 +2,8 @@
 
 이 모듈에는 일부러 거리 기반 추정 공급자를 두지 않았다. 경로 서비스가 연결되지 않았으면 ``NullRouteProvider`` 가
 ``None`` 을 돌려주고, 호출한 쪽은 "이동시간 확인 필요"로 표시한다.
+직선 추정은 ``domains.kcontext.geo`` 에 따로 있고, 환경 설정(``KC_ROUTE_PROVIDER``)으로 켠 때만 쓰이며
+``estimated=True`` 로 표시된다(fit 은 추정값만으로 "넣을 수 있음"을 내지 않는다).
 """
 
 from __future__ import annotations

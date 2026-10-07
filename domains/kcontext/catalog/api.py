@@ -17,13 +17,15 @@ from datetime import datetime
 from pathlib import Path
 
 from domains.kcontext.contract.errors import ContractError
+from domains.kcontext.geo.chain import make_route_provider
 from domains.kcontext.regions import load_regions
 
 from . import reports as reports_mod
+from .cards import build_now_cards
 from .fit import FitConfig, add_to_itinerary, fit_event, remove_from_itinerary, validate_itinerary
 from .query import search_events, summarize_entry
 from .review import review_queue
-from .routes import NullRouteProvider, RouteProvider
+from .routes import RouteProvider
 from .rules import KST, to_kst
 from .sources import SourceError, load_sources, make_fetcher
 from .store import CatalogStore
@@ -97,7 +99,7 @@ def handle(
 ) -> dict:
     now = to_kst(now)
     sources = load_sources()
-    provider = provider or NullRouteProvider()
+    provider = provider or make_route_provider(os.environ)
     region_id = os.environ.get("KC_TARGET_REGION", "jung")
     region = load_regions()[region_id]
     if op in ADMIN_OPS:
@@ -106,6 +108,12 @@ def handle(
             raise ApiError("forbidden", "관리자 작업은 사람 신원이 필요하다")
     if op == "search":
         return _search(args, store, sources, now, provider)
+    if op == "cards":
+        res = _search(args, store, sources, now, provider)
+        out = build_now_cards(res, args, null_unknown_time_cost=True,
+                             include_demo=bool(args.get("include_demo")))
+        out["coverage"], out["problems"] = res["coverage"], res["problems"]
+        return out
     if op == "detail":
         entry = next((e for e in store.load_entries() if e.id == args.get("entry_id")), None)
         if entry is None:

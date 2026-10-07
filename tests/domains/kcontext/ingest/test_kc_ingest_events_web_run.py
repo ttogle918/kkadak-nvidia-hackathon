@@ -129,3 +129,14 @@ def test_invalid_collected_at_exits_2(bad, capsys):
     rc = web_run.run(["--source", "junggu", "--month", "2026-10", "--fixture", str(FIXTURE),
                       "--collected-at", bad], screen=fake_screen)
     assert rc == 2 and "--collected-at" in capsys.readouterr().err
+
+
+def test_env_loader_returns_only_tavily_key(monkeypatch):
+    """env 를 안 주면 카탈로그 공용 로더로 Tavily 키 하나만 얻는다(병합 중 임포트가 사라져 NameError 가 났던 경로)."""
+    from domains.kcontext.ingest.events import web_run
+
+    monkeypatch.setenv("TAVILY_SEARCH_KEY", "k-test")
+    monkeypatch.setenv("APP_PROCESS_ROLE", "agent")  # 에이전트 역할은 .env 를 읽지 않는다
+    monkeypatch.setenv("UNRELATED_SECRET", "x")
+    env = web_run._env_with_dotenv(None)
+    assert env == {"TAVILY_SEARCH_KEY": "k-test"}

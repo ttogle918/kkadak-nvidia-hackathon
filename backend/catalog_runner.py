@@ -12,10 +12,11 @@ import subprocess
 import sys
 from pathlib import Path
 
-from dotenv import dotenv_values
+from core.llm.envfile import load_allowed_keys
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-_BASE_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "KC_TARGET_REGION", "KC_DATA_DIR")
+_BASE_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "KC_TARGET_REGION", "KC_DATA_DIR",
+             "KC_ROUTE_PROVIDER", "KC_OSM_ROUTER_URL")  # 마지막 둘은 비밀이 아닌 경로 설정
 # 수동 재수집에는 그 출처가 쓰는 키 하나만 넘긴다(다른 출처의 키·추론 키는 넘기지 않는다).
 _SOURCE_KEYS = {
     "seoul_openapi": ("SEOUL_OPENAPI_KEY",),
@@ -36,12 +37,13 @@ def run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None
     if catalog_dir is not None:
         env["KC_CATALOG_DIR"] = str(catalog_dir)
     if op == "admin_refresh":
-        # 그 출처의 키 하나만, 이 프로세스(backend)가 셸 env 에서 — 없으면 .env 에서 — 골라 넘긴다.
-        # 자식(APP_PROCESS_ROLE=agent)은 .env 를 읽지 않는다.
+        # 그 출처의 키 하나만, 이 프로세스(backend)가 셸 env 에서 — 없으면 `.env` 의 허용 목록 이름에서 — 골라 넘긴다.
+        # 자식(APP_PROCESS_ROLE=agent)은 `.env` 를 읽지 않는다. 허용 밖 이름은 읽지도 않는다.
         wanted = _SOURCE_KEYS.get(str(args.get("source_id")), ())
-        dotenv = dotenv_values(REPO_ROOT / ".env") if wanted else {}
+        missing = [k for k in wanted if not os.environ.get(k, "").strip()]
+        dotenv = load_allowed_keys(REPO_ROOT / ".env", allowed=missing) if missing else {}
         for k in wanted:
-            v = os.environ.get(k) or dotenv.get(k)
+            v = os.environ.get(k, "").strip() and os.environ[k] or dotenv.get(k)
             if v:
                 env[k] = v
     try:
