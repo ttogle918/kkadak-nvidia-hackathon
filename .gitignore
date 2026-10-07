@@ -21,3 +21,8 @@ docs/private/
 
 # Windows 다운로드 메타데이터
 *:Zone.Identifier
+
+# K-Context 실행 산출물·원자료 (Sprint 2 §0.3)
+var/
+domains/kcontext/data/raw/*
+!domains/kcontext/data/raw/.gitkeep

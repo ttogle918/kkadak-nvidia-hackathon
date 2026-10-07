@@ -1,0 +1,21 @@
+{
+  "note": "합성 데모 상황. 시간은 예시, 좌표는 H7 에서 채운다 [확인 필요]",
+  "synthetic": true,
+  "trip": {"from": "2026-10-15", "to": "2026-10-18"},
+  "anchors": [
+    {"type": "hotel", "name": "숙소 · 종로3가", "lat": null, "lng": null, "from": "2026-10-15T15:00", "to": "2026-10-18T11:00"},
+    {"type": "visit", "name": "창덕궁", "day": 1, "lat": null, "lng": null, "from": "2026-10-15T10:00", "to": "2026-10-15T12:30", "note": "시간은 예시"},
+    {"type": "visit", "name": "익선동", "day": 1, "lat": null, "lng": null, "from": "2026-10-15T14:00", "to": "2026-10-15T17:00", "note": "시간은 예시"},
+    {"type": "visit", "name": "경복궁", "day": 2, "lat": null, "lng": null},
+    {"type": "visit", "name": "광화문", "day": 2, "lat": null, "lng": null},
+    {"type": "visit", "name": "신촌", "day": 3, "lat": null, "lng": null}
+  ],
+  "free_slots": [
+    {"day": 1, "from": "2026-10-15T19:00", "to": "2026-10-15T23:00", "near": "익선동", "inferred": true}
+  ],
+  "now": {"time": "2026-10-15T18:20", "lat": null, "lng": null},
+  "party": {"size": 2, "kids": false, "mobility_limited": false, "luggage": false},
+  "language": "ko",
+  "interests": ["한국 음식", "로컬 문화"],
+  "minimize_changes": true
+}
