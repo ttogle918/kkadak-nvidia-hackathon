@@ -16,8 +16,9 @@ domains/kcontext/
   contract/            공통 계약 타입
   index/               로컬 색인(검색)
   regions              지역 정의 (data/regions/*.json)
-  ingest/              [계획 sprint-2] 호스트에서 도는 오프라인 수집기 (D7)
-  judge/               [계획 sprint-2] 판정
+  ingest/              호스트에서 도는 오프라인 수집기 (D7) — events(행사), sillok(실록) 있음
+  judge/               판정 — now(현재 한국), inject(주입 차단) 있음. 이야기 쪽 판정은 아직 없음
+  catalog/             공개 행사 카탈로그(D13) — 팀원 영역
   geo/                 [계획 sprint-2] 좌표·경로
   pipeline/            [계획 sprint-2] 별도 프로세스(APP_PROCESS_ROLE=agent). kc-bundle/v1 파일을 쓴다
   data/                regions · stories · situations · raw
@@ -28,7 +29,7 @@ scripts/ eval/ tests/  스크립트 · 평가셋 · pytest(소스 구조를 따�
 docs/                  이 문서들
 ```
 
-- 아래 트리 중 현재 레포에 있는 것은 `core/`, `backend/`, `domains/kcontext/{contract, index, regions, data}`, `mcp_server/`(빈 `tools/` 패키지)뿐이다. `ingest/`·`judge/`·`geo/`·`pipeline/` 와 `mcp_server/tools/` 의 도구 파일은 **계획(sprint-2)** 이다.
+- 현황(2026-10-07 확인): 레포에 있는 것은 `core/`, `backend/`(채팅·감사·행사 카탈로그·승인 라우터), `domains/kcontext/{contract, index, regions, data, ingest(events·sillok), judge(now·inject), catalog}`, `scripts/kculture_practice.py`, `deploy/openshell/{policy.yaml, policy.kculture.yaml}` 이다. **아직 없는 것**: `domains/kcontext/geo/`, `domains/kcontext/pipeline/`, `mcp_server/tools/` 의 도구 파일(빈 패키지), `eval/` 평가셋(README 만), Dockerfile.
 - `backend` 와 파이프라인은 `kc-bundle/v1` 파일, audit JSONL, hitl draft 로만 주고받는다(D10).
 - 상태 전이(승인·반려)는 `backend` 의 review 라우터에만 둔다(D2).
 
@@ -42,29 +43,31 @@ docs/                  이 문서들
 
 키 발급과 확인에 시간이 걸리는 것들이다. 가장 먼저 시작한다.
 
-- [ ] 공공데이터포털 TourAPI 활용 신청, 서울 열린데이터광장 인증키, SK open API(TMAP) 키, NVIDIA API 키
+- [ ] 공공데이터포털 TourAPI 활용 신청, 서울 열린데이터광장 인증키, ~~SK open API(TMAP) 키~~(D9: TMAP 대신 카카오맵 MCP·직선 추정으로 결정), NVIDIA API 키
+  - 현황: NVIDIA·Tavily 키는 있다(`.env` 변수 이름으로 확인). TourAPI·서울 열린데이터광장 키 변수는 `.env` 에 없다 `[확인 필요]`
 - [ ] Brev 인스턴스 단가 확인, 크레딧으로 쓸 수 있는 시간 계산
-- [ ] OpenShell 설치, 버전 확인, 빈 샌드박스 하나 띄워 보기
-- [ ] 샌드박스 안에서 Nemotron 한 번 불러 보기 ⚠ 미해결 충돌: D1 과 어긋남(`inference.local` 로만) — 사람 결정 대기
+- [x] OpenShell 설치, 버전 확인, 빈 샌드박스 하나 띄워 보기 — openshell 0.0.116, 샌드박스 `kcontext`(2026-10-07)
+- [x] 샌드박스 안에서 Nemotron 한 번 불러 보기 — `https://inference.local/v1/chat/completions` 로 확인(D1 과 일치, 샌드박스 환경변수에 키 0건). reasoning 모델이라 `max_tokens` 가 작으면 `content` 가 빈다
 - [ ] 공통 계약(`AGENT_CONTEXT.md` 3.3) 두 사람이 읽고 확정
 - [ ] `policy.yaml` 관리자 한 명 지정
 
-**끝:** 샌드박스 안의 코드가 프로바이더를 통해 Nemotron의 답을 받는다.
+**끝:** 샌드박스 안의 코드가 프로바이더를 통해 Nemotron의 답을 받는다. ✅ 달성(`scripts/kculture_practice.py` 가 샌드박스에서 초안을 만들었다)
 
 ### 1단계. 뼈대
 
-- [ ] 저장소, Dockerfile, DDL로 빈 DB 두 개 만들기
-- [ ] FastAPI 뼈대(`backend/`)와 메시지 경로, 이벤트 스트림 ⚠ 미해결 충돌: D10 과 어긋남(세션·SSE) — 사람 결정 대기
-- [ ] 화면 뼈대: 대화창, 지도, 카드 자리. Claude Design 결과물을 옮긴다
-- [ ] **가짜 데이터로 끝에서 끝까지**: 고정된 카드와 경로를 돌려주는 백엔드에 화면을 붙인다
+- [ ] 저장소, Dockerfile, DDL로 빈 DB 두 개 만들기 — 저장소 ✓, Dockerfile 없음, DB 는 `var/hitl.db`(승인 초안) 하나뿐
+- [x] FastAPI 뼈대(`backend/`)와 메시지 경로 — `/api/messages`·`/api/audit`·`/api/events/*`·`/api/admin/*` 동작 확인(2026-10-07)
+- [ ] 이벤트 스트림(SSE) 미구현 ⚠ 미해결 충돌: D10 과 어긋남(세션·SSE) — 사람 결정 대기
+- [x] 화면 뼈대: 대화창, 지도, 카드 자리. Claude Design 결과물을 옮긴다 — 프론트 261 테스트 통과, 카카오맵 렌더러(키 없으면 SVG 폴백)
+- [ ] **가짜 데이터로 끝에서 끝까지**: 고정된 카드와 경로를 돌려주는 백엔드에 화면을 붙인다 — 화면은 mock 으로 돈다. 백엔드에 `/api/itinerary`·`routes`·`cards`·`sources`·`cards/{id}/rationale` 가 없다(404 확인)
 
 **끝:** 가짜 데이터로 데모 흐름 전체가 화면에서 돈다. 이후에는 가짜를 하나씩 진짜로 바꾼다.
 
 ### 2단계. 일정 이해와 지도 (공통)
 
-- [ ] 일정 이해 단계: 자유형 글 → `anchors`, `free_slots`
-- [ ] `geocode`, `walk_route` 도구와 정책·프로바이더 ⚠ 미해결 충돌: D9 와 어긋남 — 사람 결정 대기
-- [ ] 일정 타임라인, 지도에 고정 일정과 동선
+- [ ] 일정 이해 단계: 자유형 글 → `anchors`, `free_slots` — 미구현
+- [ ] `geocode`, `walk_route` 도구와 정책·프로바이더 — 미구현(`mcp_server/tools/` 비어 있음, `geo/` 없음). 정책의 카카오맵 MCP 항목은 미실측 ⚠ 미해결 충돌: D9 와 어긋남 — 사람 결정 대기
+- [x] 일정 타임라인, 지도에 고정 일정과 동선 — 화면은 있고 데이터는 mock 일정(`data/itinerary.js`)이다. 자유형 글 입력은 없다
 
 **끝:** 예시 일정을 붙여 넣으면 타임라인과 지도가 맞게 나온다.
 
@@ -72,38 +75,39 @@ docs/                  이 문서들
 
 **이야기 길 (본인)**
 
-- [ ] 이야기 씨앗 검증: 데모 구간의 이야기 6~8개에 출처, 쪽수·날짜, 원문 구절, 좌표와 근거
+- [ ] 이야기 씨앗 검증: 데모 구간의 이야기 6~8개에 출처, 쪽수·날짜, 원문 구절, 좌표와 근거 — `data/stories/` 에 README 뿐. 실록 원문 색인(4개 구 청크 7,713)은 됐다
 - [ ] 주제 분류, 구간 좌표
-- [ ] 검색 → 판정 → 경로 구성 → 작성
-- [ ] 경로 A·B·C 화면, 구간 이름표 지도, 옛날 카드, 출처 태그
+- [ ] 검색 → 판정 → 경로 구성 → 작성 — 검색 재료(실록 적재 `ingest/sillok.py`, `place_alias`, `chunk_embeddings` 저장·검색)만 됐다. 판정·경로 구성·작성(`pipeline/`)은 미구현
+- [x] 경로 A·B·C 화면, 구간 이름표 지도, 옛날 카드, 출처 태그 — 화면만(mock 데이터). 서버 연결 없음
 
 **지금의 한국 (오빠)**
 
-- [ ] 공식 API 어댑터 하나(서울시 문화행사 또는 TourAPI) → 정규화 → 상태 판정
-- [ ] 검색 → 판정 → 일정에 맞추기 → 작성
+- [ ] 공식 API 어댑터 하나(서울시 문화행사 또는 TourAPI) → 정규화 → 상태 판정 — 코드(`catalog/seoul.py` 등)는 있다. 카탈로그가 비어 있다(`/api/events/coverage` 의 `entries_built_at: null`, 검색 결과 0건) → 실데이터 적재 확인 필요
+- [ ] 검색 → 판정 → 일정에 맞추기 → 작성 — `/api/events/search`·`fit.py` 동작(요청 형식 `trip` 필수). 데이터가 없어 결과 0건. `작성` 단계는 확인 못 함
 - [ ] 지금 카드, 지도의 핀·구역·대략 원, 일정에 추가
-- [ ] 구청 게시판 수집과 포스터 읽기 (비전 모델)
+- [ ] 구청 게시판 수집과 포스터 읽기 (비전 모델) — 구청 행사는 D12(Tavily 검색+LLM 추출)로 대체해 코드는 있다. 포스터 비전은 후속(D12 대안에서 제외)
 
 **함께**
 
-- [ ] 판단 근거 패널: 두 기능이 같은 `decision_log` 형식으로 쓴다 ⚠ 미해결 충돌: D10 과 어긋남(판단 기록은 사용자 DB 의 `decision_log` 가 아니라 출력 묶음의 `rationale.json`) — 사람 결정 대기
-- [ ] 같은 지도에 옛날과 지금이 함께 뜨는 화면
+- [ ] 판단 근거 패널: 두 기능이 같은 `decision_log` 형식으로 쓴다 — 패널 화면은 mock 만, 서버 라우트 없음 ⚠ 미해결 충돌: D10 과 어긋남(판단 기록은 사용자 DB 의 `decision_log` 가 아니라 출력 묶음의 `rationale.json`) — 사람 결정 대기
+- [x] 같은 지도에 옛날과 지금이 함께 뜨는 화면 — `mode=both`(mock 데이터)
 
 **끝:** 데모 시나리오(`CONTEXT_STORY_ROUTE.md` 7장, `CONTEXT_NOW_KOREA.md` 7장)가 진짜 데이터로 돈다.
 
 ### 4단계. NVIDIA 기술을 깊게
 
 - [ ] L40S에 로컬 NIM 올리기: 임베딩, 리랭커, 비전, 가드, 경량 ⚠ 미해결 충돌: D1·D6 와 어긋남 — 사람 결정 대기
-- [ ] 검색을 로컬 임베딩·리랭커로 바꾸기 ⚠ 미해결 충돌: D8 과 어긋남 — 사람 결정 대기
-- [ ] 보안 로그 화면, 공격 프롬프트 시연, 새 출처 승인 시연
-- [ ] 키가 보이지 않는 것, 지식 DB에 쓸 수 없는 것 확인
+- [ ] 검색을 로컬 임베딩·리랭커로 바꾸기 — 임베딩 시험(예비, `docs/spikes/sillok_embedding.md`: 제목+본문 권장)과 벡터 저장·검색(`chunk_embeddings`)까지. 임베딩 호출 클라이언트·색인 채우기는 미구현. 이 PC 는 GPU 없음 ⚠ 미해결 충돌: D8 과 어긋남 — 사람 결정 대기
+- [x] 보안 로그 화면(`/api/audit`, 프론트 `securitylog`), 공격 프롬프트 차단(챗봇이 주입 질문에 거부 응답·audit `deny` 확인)
+- [ ] 새 출처 승인 시연 — 프론트 `decideAudit` 이 `ApiNotImplementedError`(백엔드 `/api/audit/{id}/decision` 는 있다)
+- [x] 키가 보이지 않는 것 — 샌드박스 환경변수에 키·토큰·시크릿 0건, 외부 접속 DENIED, `/tmp` 밖 쓰기 불가(`policy.kculture.yaml` 실측). 지식 DB 쓰기 금지는 미확인
 - [ ] 단계별 소요 시간과 모델 기록 → 구조도에 반영
 
 **끝:** `08_OPENSHELL_POLICY.md` 7장의 시연 네 가지가 모두 된다.
 
 ### 5단계. 평가와 다듬기
 
-- [ ] 평가 세트 실행: 충돌, 낡은 정보, 근거 없는 이야기, 주입, 공격
+- [ ] 평가 세트 실행: 충돌, 낡은 정보, 근거 없는 이야기, 주입, 공격 — `eval/` 에 README 뿐. 공통 테스트(연습 요청)는 수동 1회 실행만 했다
 - [ ] 끝난 행사 제안 0건, 출처 없는 문장 0건, 우회 한도 위반 0건 확인
 - [ ] 영어 출력, 빈 상태, 실패 처리
 - [ ] 여행 기록 `[제안]` — **이번 범위 밖.** 마지막에 별도 agent 하나로 붙인다
@@ -174,7 +178,7 @@ docs/                  이 문서들
 - [ ] 제출 마감과 심사 기간
 - [ ] 이름 확정(K-Context는 가칭), 로고 선택
 - [ ] 3장의 `[정해야 함]` 담당
-- [ ] 도보 경로 서비스 최종 선택
+- [x] 도보 경로 서비스 최종 선택 — D9(카카오맵 MCP 우선, 직선 추정 폴백). 서버 호출 가능 여부는 미확인
 - [ ] 에이전트를 여러 개로 나눌지 한 오케스트레이터의 단계로 둘지 (여행 기록은 별도 agent 하나로 붙인다)
 - [ ] 수집을 별도 샌드박스로 나눌지
-- [ ] NemoClaw를 출발점으로 쓸지
+- [ ] NemoClaw를 출발점으로 쓸지 — 현재 샌드박스는 OpenShell `base` 이미지에 표준 라이브러리 스크립트를 올려 돌린다. NemoClaw/OpenClaw 에이전트 연결은 안 했다
