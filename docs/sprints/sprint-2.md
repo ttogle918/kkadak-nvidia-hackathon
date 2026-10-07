@@ -1190,6 +1190,8 @@ uv run python eval/run_kcontext.py --check      # T220 을 했을 때만
 ## 완료 기록
 (스테이지마다 `/stage` 가 기록한다)
 - 초안 Stage 2 의 T213·T214·T215 — 완료(미커밋, 사람 선행 #5 에서 커밋). `node --test` 129건·ruff 통과(dev 보고). 잔여 4건 → T219.
+- Stage 1 (2026-10-07) — T203·T202·T207 `63c8972`, T201 `1e8a71c`, T204 `c982df5`. T204: `docs/spikes/sillok.md`(상태 확정, 국역 없음·원문만), `tests/fixtures/kcontext/sillok/{README.md,sample.xml,sample_jongno.xml,sample_euljiro.xml}`. 실록 원본 673개는 `domains/kcontext/data/raw/sillok/`(gitignore). 회귀 pytest 859 passed · ruff 통과 · reviewer PASS(경고 6건 중 4건 반영, 나머지는 사람 몫). T205·T206·T208 은 하지 않음(선택)
+  - **T209 착수 전 수정 필요**: 실제 파일 전부가 `<!DOCTYPE level2 SYSTEM "history.dtd">` 를 가져 T209 의 "DOCTYPE 이면 건너뜀"(§8 T209 1단계)과 DoD 가 충족 불가. 외부 SYSTEM 선언만 허용하고 `<!ENTITY`·내부 서브셋은 거부하도록 바꾸고(D12 후보), 날짜 경로는 `재위연도` 가 level4 에 있음을 반영한다
 
 ---
 
