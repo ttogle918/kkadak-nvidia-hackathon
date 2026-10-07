@@ -528,3 +528,10 @@ def test_invalid_collected_at_is_not_a_crash_in_verified_posted():
 def test_prompt_warns_that_durations_are_not_dates():
     msg = build_messages("본문")[0]["content"]
     assert "3일간" in msg and "날짜가 아니다" in msg
+
+
+@pytest.mark.parametrize("quote_char", ["'", "\u2018", "\u2019", "`", "\u2032", "\uff07"])
+def test_two_digit_year_abbreviation_with_any_apostrophe_blocks_a_different_year(quote_char):
+    text = f"{quote_char}25년 10월 15일 개최"
+    assert basis(text, "2026-10-15", posted=None) is None
+    assert basis(text, "2025-10-15", posted=None) == "explicit"
