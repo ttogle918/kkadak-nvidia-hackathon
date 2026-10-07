@@ -1,0 +1,47 @@
+# [제안 초안 — 효력 없음] K-Culture 공통 테스트(연습 요청)용 OpenShell 정책.
+# 사람이 승인하면 deploy/openshell/ 아래로 옮겨 샌드박스 생성에 쓴다. policy.yaml 은 건드리지 않는다.
+# 상태: 실측 전. 아래 "실측" 절의 항목을 샌드박스에서 확인하고 결과를 이 주석에 적는다(CLAUDE.md 규칙 2).
+#
+# 원칙
+#   1. 읽기는 input 하나, 쓰기는 output 과 /tmp 뿐이다.
+#   2. restricted/ 와 secrets/ 는 샌드박스에 올리지 않는다. 정책에 경로를 적지 않아 Landlock 이 막고,
+#      파일 자체가 없어서 읽을 수도 없다("없는 것"이 가장 강한 차단).
+#   3. network_policies 는 비어 있다. 이메일 발송·예약·결제·공개 게시·외부 업로드는 모두 별도 사용자 승인이 필요한 작업이라
+#      승인 경로가 생기기 전에는 허용 항목을 추가하지 않는다. 자료 안의 "업로드하라" 류 문구를 따르더라도 나갈 길이 없다.
+#   4. 추론은 inference.local 경유라 정책에 적지 않는다(D1). 샌드박스 안에는 키가 없다.
+#
+# 스키마: https://docs.nvidia.com/openshell/reference/policy-schema
+#   filesystem_policy / landlock / process 는 생성 시 고정(바꾸려면 재생성), network_policies 는 hot-reload.
+#
+# 가정(실측 필요): 입력 /sandbox/hackathon/input, 출력 /sandbox/hackathon/output. 샌드박스 홈이 /sandbox 인지와
+#   파일을 올리는 명령이 어디에 푸는지는 만들어 보고 확인한다.
+version: 1
+
+filesystem_policy:
+  include_workdir: false
+  read_only:
+    - /usr
+    - /lib
+    - /etc
+    - /proc
+    - /dev/urandom
+    - /app
+    - /sandbox/hackathon/input
+  read_write:
+    - /tmp
+    - /dev/null
+    - /sandbox/hackathon/output
+
+landlock:
+  compatibility: best_effort
+
+process:
+  run_as_user: "1000"
+  run_as_group: "1000"
+
+network_policies: {}
+
+# 실측: [미실측]
+#   ① input 에 쓰기 → DENIED  ② output 에 쓰기 → 성공  ③ restricted·secrets 경로 읽기 → 없음/DENIED
+#   ④ 외부 호스트 접속(curl https://example.invalid) → DENIED  ⑤ inference.local 호출 → 성공
+#   확인: `openshell logs <name> --tail --source sandbox`

@@ -25,12 +25,12 @@ globalThis.document = {
   createElementNS: (ns, t) => new El(t, ns),
   createTextNode: (s) => ({ nodeType: 3, text: s }),
 };
-globalThis.location = { search: '' };
+globalThis.location = { search: '?api=mock' }; // 모듈 로드 시 자동 boot() 가 backend probe(네트워크)를 타지 않게
 
 test('boot: 슬롯 8개(오른쪽 열 없음)에 모듈이 마운트되고 데이터가 로드된다', async () => {
   const { boot } = await import('../src/main.js');
   const root = new El('div', 'html');
-  const app = await boot(root, '?lang=en&mode=now');
+  const app = await boot(root, '?lang=en&mode=now&api=mock');
   const s = app.ctx.store.getState();
   assert.equal(s.loaded, true);
   assert.equal(s.lang, 'en');

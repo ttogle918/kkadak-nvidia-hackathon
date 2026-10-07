@@ -1,0 +1,53 @@
+# K-Culture 공통 테스트(연습 요청)용 OpenShell 정책. 사람 승인 2026-10-07(초안: docs/openshell-kculture-policy.draft.yaml).
+# policy.yaml 은 건드리지 않는다. 실측 결과는 맨 아래 주석에 기록한다(CLAUDE.md 규칙 2).
+#
+# 원칙
+#   1. 읽기는 input(+시스템 경로), 쓰기는 /tmp(그 아래 output)뿐이다.
+#   2. restricted/ 와 secrets/ 는 샌드박스에 올리지 않는다. 정책에 경로를 적지 않아 Landlock 이 막고,
+#      파일 자체가 없어서 읽을 수도 없다("없는 것"이 가장 강한 차단).
+#   3. network_policies 는 비어 있다. 이메일 발송·예약·결제·공개 게시·외부 업로드는 모두 별도 사용자 승인이 필요한 작업이라
+#      승인 경로가 생기기 전에는 허용 항목을 추가하지 않는다. 자료 안의 "업로드하라" 류 문구를 따르더라도 나갈 길이 없다.
+#   4. 추론은 inference.local 경유라 정책에 적지 않는다(D1). 샌드박스 안에는 키가 없다.
+#
+# 스키마: https://docs.nvidia.com/openshell/reference/policy-schema
+#   filesystem_policy / landlock / process 는 생성 시 고정(바꾸려면 재생성), network_policies 는 hot-reload.
+#
+# 경로(2026-10-07 사람 승인, 안 1): 입력 /tmp/hackathon/input, 출력 /tmp/hackathon/output — /tmp 하나만 쓰기 허용이다.
+#   /sandbox 는 쓰기 불가라 업로드가 실패해 옮겼다. 대가: input 도 정책상 쓰기 가능하다 → 업로드 직후 chmod -R a-w 로 보완한다(정책 강제 아님).
+# (이전 가정: /sandbox/hackathon/{input,output}) 샌드박스 홈이 /sandbox 인지와
+#   파일을 올리는 명령이 어디에 푸는지는 만들어 보고 확인한다.
+version: 1
+
+filesystem_policy:
+  include_workdir: false
+  read_only:
+    - /usr
+    - /lib
+    - /etc
+    - /proc
+    - /dev/urandom
+    - /app
+  read_write:
+    - /tmp
+    - /dev/null
+
+landlock:
+  compatibility: best_effort
+
+process:
+  run_as_user: "1000"
+  run_as_group: "1000"
+
+network_policies: {}
+
+# 실측 (2026-10-07, 샌드박스 kcontext, openshell 0.0.116, 이미지 openshell-community/sandboxes/base):
+#   정책 로드        OK (ReportPolicyStatus). 처음 만들 때 `-- echo` 로 끝나는 명령을 주면 메인 프로세스 종료로 Error 가 된다 → 상주 명령(`sleep infinity`) 필요.
+#   ④ 외부 접속      DENIED — `NET:OPEN [MED] DENIED /usr/bin/curl -> example.invalid:443 [reason:network connections not allowed by policy]`, curl 은 CONNECT 403.
+#   ⑤ inference.local  ALLOWED — https://inference.local/v1/models 가 모델 목록을 돌려줌(게이트웨이 라우팅, 샌드박스에 키 없음).
+#   쓰기 /tmp        성공.   쓰기 /sandbox (정책 밖)  Permission denied.
+#   (경로 변경 후 재생성, 같은 날) 업로드: `openshell sandbox upload kcontext input /tmp/hackathon` — 대상에 디렉터리 이름이 붙어
+#        input/input 으로 중첩되므로 /tmp/hackathon/input 에 맞추려면 부모 경로를 대상으로 주거나 올린 뒤 한 겹 올려야 한다.
+#   ① input 쓰기·삭제·수정 → 모두 Permission denied. 단 이것은 정책이 아니라 업로드 직후의 chmod -R a-w 가 막은 것이다(/tmp 는 쓰기 허용 경로).
+#   ② output 쓰기 → 성공(/tmp/hackathon/output/plan.md).
+#   ③ restricted·secrets → 업로드하지 않아 경로가 없다(`No such file`). find / 로 service_key.env·mail_token.txt 도 못 찾았다.
+#   확인: `openshell logs kcontext`

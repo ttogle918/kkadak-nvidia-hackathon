@@ -1,10 +1,10 @@
 // 부트: store 생성 → 레이아웃 마운트 → 모듈 마운트 → 데이터 로드.
-// URL 파라미터: ?lang=en · ?theme=dark · ?api=mock|http|chat(&base=/api) · ?mode=old|now|both · ?day=1..3
+// URL 파라미터: ?lang=en · ?theme=dark · ?api=auto(기본)|mock|http|chat(&base=/api) · ?mode=old|now|both · ?day=1..3
 import { createStore } from './lib/store.js';
 import { createT, bindDocumentLang, normalizeLang } from './lib/i18n.js';
 import { bindDocumentTheme } from './lib/theme.js';
 import { h } from './lib/dom.js';
-import { createApi } from './api/index.js';
+import { resolveApi } from './api/index.js';
 import { safeBase } from './events/api.js';
 import { createInitialState } from './state/initial.js';
 import { createActions } from './state/actions.js';
@@ -36,10 +36,10 @@ export function mountSafely(name, mod, slotEl, ctx) {
 export async function boot(rootEl = document.getElementById('app'), search = location.search) {
   const q = new URLSearchParams(search);
   const store = createStore(createInitialState(initialFromUrl(search)));
-  const apiMode = ['http', 'chat'].includes(q.get('api')) ? q.get('api') : 'mock';
-  // chat(챗봇만 backend)의 기본 주소: uvicorn 기본 포트. backend CORS 기본 허용 origin 은 http://localhost:8766.
-  const baseUrl = safeBase(q.get('base')) || (apiMode === 'chat' ? 'http://localhost:8000/api' : undefined);
-  const api = createApi({ mode: apiMode, baseUrl });
+  // 기본 auto: backend(챗봇)가 떠 있으면 chat, 아니면 mock. 명시(?api=mock|http|chat)하면 그대로 따른다.
+  // ?base= 는 safeBase 로 검증한다(검증 실패 시 undefined → 기본 주소).
+  const apiMode = ['mock', 'http', 'chat'].includes(q.get('api')) ? q.get('api') : 'auto';
+  const api = await resolveApi({ mode: apiMode, baseUrl: safeBase(q.get('base')) || undefined });
   const t = createT(() => store.getState().lang);
   const actions = createActions({ store, api });
   const ctx = { store, api, t, actions };
