@@ -22,6 +22,8 @@ class Settings:
     reviewer_id: str
     reviewer_auth_source: str = "backend-local-demo"
     cors_origins: tuple[str, ...] = ("http://localhost:8766",)
+    catalog_dir: Path | None = None  # 행사 카탈로그(수집 프로세스가 쓰고 이 프로세스는 별도 프로세스로 읽는다)
+    admin_token: str = ""  # 관리자 화면·API 용. 비어 있으면 관리자 API 는 닫혀 있다
 
     def __post_init__(self) -> None:
         rid = self.reviewer_id.strip() if isinstance(self.reviewer_id, str) else ""
@@ -45,4 +47,6 @@ class Settings:
             reviewer_id=e.get("KC_REVIEWER_ID") or "human:demo",
             reviewer_auth_source="backend-local-demo",
             cors_origins=origins,
+            catalog_dir=Path(e["KC_CATALOG_DIR"]) if e.get("KC_CATALOG_DIR") else var / "catalog",
+            admin_token=e.get("KC_ADMIN_TOKEN", ""),
         )
