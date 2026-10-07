@@ -9,6 +9,7 @@ import { createInitialState } from './state/initial.js';
 import { createActions } from './state/actions.js';
 import { mountAppShell } from './components/layout/app-shell.js';
 import * as topbar from './components/layout/topbar.js';
+import * as settings from './components/layout/settings.js';
 import { MODULES } from './modules.js';
 
 function initialFromUrl(search) {
@@ -43,7 +44,7 @@ export async function boot(rootEl = document.getElementById('app'), search = loc
   bindDocumentTheme(store);
 
   const shell = mountAppShell(rootEl, ctx);
-  const mounted = [{ destroy: shell.destroy }, mountSafely('topbar', topbar, shell.slots.topbar, ctx)];
+  const mounted = [{ destroy: shell.destroy }, mountSafely('topbar', topbar, shell.slots.topbar, ctx), mountSafely('settings', settings, shell.slots.settings, ctx)];
   for (const [name, mod] of Object.entries(MODULES)) mounted.push(mountSafely(name, mod, shell.slots[name], ctx));
 
   await actions.loadAll();

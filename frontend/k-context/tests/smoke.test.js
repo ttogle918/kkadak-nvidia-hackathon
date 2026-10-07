@@ -27,7 +27,7 @@ globalThis.document = {
 };
 globalThis.location = { search: '' };
 
-test('boot: 슬롯 7개에 모듈이 마운트되고 데이터가 로드된다', async () => {
+test('boot: 슬롯 8개(오른쪽 열 없음)에 모듈이 마운트되고 데이터가 로드된다', async () => {
   const { boot } = await import('../src/main.js');
   const root = new El('div', 'html');
   const app = await boot(root, '?lang=en&mode=now');
@@ -37,8 +37,9 @@ test('boot: 슬롯 7개에 모듈이 마운트되고 데이터가 로드된다',
   assert.equal(s.mode, 'now');
   assert.equal(documentElement.lang, 'en');
   const slots = root.find((e) => e.dataset?.slot);
-  assert.deepEqual(slots.map((e) => e.dataset.slot).sort(), ['cards', 'chat', 'map', 'rationale', 'securitylog', 'timeline', 'topbar']);
-  for (const name of ['chat', 'timeline', 'map', 'cards', 'rationale', 'securitylog']) {
+  assert.deepEqual(slots.map((e) => e.dataset.slot).sort(), ['cards', 'chat', 'map', 'rationale', 'securitylog', 'settings', 'timeline', 'topbar']);
+  assert.equal(root.find((e) => /col-right/.test(e.attrs?.class ?? '')).length, 0, '오른쪽 열이 없다');
+  for (const name of ['chat', 'timeline', 'map', 'cards', 'rationale', 'securitylog', 'settings']) {
     const slot = slots.find((e) => e.dataset.slot === name);
     // 실제 모듈이 무언가를 그렸는지(플레이스홀더든 실제 렌더든)만 본다
     assert.equal(slot.find((e) => e !== slot).length > 0, true, `${name} 렌더`);
@@ -49,12 +50,27 @@ test('boot: 슬롯 7개에 모듈이 마운트되고 데이터가 로드된다',
   top.find((e) => e.listeners?.click)[0].listeners.click[0]({ target: btn });
   assert.equal(app.ctx.store.getState().mode, 'old');
   // 모바일 탭 -> 시트
-  const tab = root.find((e) => e.dataset?.act === 'mtab' && e.dataset.value === 'rationale')[0];
+  const tab = root.find((e) => e.dataset?.act === 'mtab' && e.dataset.value === 'timeline')[0];
   const nav = root.find((e) => e.attrs?.class === 'mtabs')[0];
   nav.listeners.click[0]({ target: tab });
-  assert.deepEqual([app.ctx.store.getState().mobileTab, app.ctx.store.getState().sheetOpen], ['rationale', true]);
-  nav.listeners.click[0]({ target: root.find((e) => e.dataset?.act === 'mtab' && e.dataset.value === 'rationale')[0] });
+  assert.deepEqual([app.ctx.store.getState().mobileTab, app.ctx.store.getState().sheetOpen], ['timeline', true]);
+  nav.listeners.click[0]({ target: root.find((e) => e.dataset?.act === 'mtab' && e.dataset.value === 'timeline')[0] });
   assert.equal(app.ctx.store.getState().sheetOpen, false);
+  // 모바일 탭은 대화·일정 두 개뿐(근거·보안은 카드 안 태그·설정 패널로 옮겼다)
+  assert.deepEqual(root.find((e) => e.dataset?.act === 'mtab').map((e) => e.dataset.value), ['chat', 'timeline']);
+  // 기어 버튼 -> 설정 패널 열림(data-open) -> 바깥(backdrop) 클릭으로 닫힘
+  const layer = root.find((e) => e.attrs?.class === 'settings-layer')[0];
+  assert.equal(layer.dataset.open, 'false');
+  const gear = root.find((e) => e.dataset?.act === 'open-settings')[0];
+  const top2 = root.find((e) => e.dataset?.slot === 'topbar')[0];
+  top2.find((e) => e.listeners?.click)[0].listeners.click[0]({ target: gear });
+  assert.equal(app.ctx.store.getState().settingsOpen, true);
+  assert.equal(layer.dataset.open, 'true');
+  assert.equal(layer.find((e) => e.dataset?.slot === 'securitylog').length, 1, '보안 로그는 설정 패널 안');
+  const backdrop = root.find((e) => e.dataset?.act === 'settings-backdrop')[0];
+  layer.listeners.click[0]({ target: backdrop });
+  assert.equal(app.ctx.store.getState().settingsOpen, false);
+  assert.equal(layer.dataset.open, 'false');
   app.destroy();
 });
 

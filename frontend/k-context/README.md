@@ -32,9 +32,9 @@ src/
   api/                     index(createApi) · mock · http(스텁) · schema(계약 검증기)
   data/                    sources · cards · routes · itinerary · messages · auditlog · rationale (계약 형식 샘플)
   components/
-    layout/                app-shell(슬롯 배치) · topbar(보기·날짜·언어·테마·최소 변경)
+    layout/                app-shell(슬롯 배치·설정 패널 틀) · topbar(보기·날짜·설정 기어) · settings(설정 패널 머리말·언어·테마·최소 변경) · seg(공용 세그먼트)
     map/ cards/ chat/ securitylog/ rationale/ timeline/    각 index.js(스텁) + <이름>.css(빈 파일)
-  styles/                  tokens(변수·다크) · base(공통 원자) · layout(3열/모바일) · index(@import 목록)
+  styles/                  tokens(변수·다크) · base(공통 원자) · layout(2열/모바일/설정 패널) · index(@import 목록)
 tests/                     node --test
 ```
 
@@ -64,8 +64,8 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 | `cards` | 옛날 카드(사실 층·몰입 층·이설 병기)와 지금 카드(+분·체류·왜 맞나·확인 항목·포스터), 출처 태그와 상세 | `mode` `selectedSeg` `selectedNow` `immersion` `selectedTag` `hoverFact` `expandedTags` `added` `skipped` `lang` | `toggleImmersion` `openTag` `closeTag` `expandTags` `setHoverFact` `addSelected` `skipSelected` `openLocalContext` `openEvidence` |
 | `chat` | 대화, 입력, 데모 버튼(공격 프롬프트·첫날 저녁) | `messages` `input` `sending` | `setInput` `send` |
 | `timeline` | 날짜별 일정(원래/제안/추가/빈 시간) | `day` `added` `skipped` `selectedNow` `data.itinerary` | (읽기 위주) |
-| `rationale` | 판단 근거 칩과 상세(채택·탈락·충돌 해결) | `openEvidence` `selectedSeg` `selectedNow` `mode` | `openEvidence` `closeEvidence` |
-| `securitylog` | 허용/거부/승인 대기 로그, 사람 승인·거절 버튼 | `logs` `securityOpen` | `decide` `setSecurityOpen` |
+| `rationale` | 카드 위 작은 pill 태그 줄 + 누르면 뜨는 작은 팝오버(채택·탈락·충돌 해결·깔때기엔 걸러낸 것) | `openEvidence` `selectedSeg` `selectedNow` `mode` | `openEvidence` `closeEvidence` |
+| `securitylog` | 허용/거부/승인 대기 로그, 사람 승인·거절 버튼 — **설정 패널 안**에 마운트 | `logs` `securityOpen` | `decide` `setSecurityOpen` |
 
 ## store 상태 키 (`src/state/initial.js`)
 | 키 | 기본값 | 의미 | 목업 state |
@@ -91,20 +91,21 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 | `sending` | `false` | `send` 진행 중 | — |
 | `data` | `{itinerary,routes,cards,sources: null}` | api 로 받은 원본 | (SEG/TAGS 상수) |
 | `loaded` / `error` | `false` / `null` | 로드 상태 | — |
-| `mobileTab` / `sheetOpen` | `'chat'` / `false` | 모바일 시트 탭(`chat`\|`timeline`\|`rationale`\|`securitylog`)과 열림 | — |
+| `settingsOpen` | `false` | 설정 패널(보안 로그·언어·테마·최소 변경) 열림 | — |
+| `mobileTab` / `sheetOpen` | `'chat'` / `false` | 모바일 시트 탭(`chat`\|`timeline`)과 열림 | — |
 
 규칙: 상태는 불변 갱신(`setState({k: 새 값})` 또는 `setState(s => patch)`). 배열·객체는 새 참조로 넣는다. 같은 값이면 알림이 가지 않는다.
 `lib/store.js`: `getState()` · `setState(patch|fn)` · `subscribe(fn(state, prev))` · `select(selector, listener, {equals, fire})`.
 
 ### 공유 액션 (`ctx.actions`, `src/state/actions.js`)
-`loadAll` · `setLang` · `setTheme` · `setMode` · `setDay` · `toggleMinimize` · `toggleImmersion` · `setSecurityOpen` ·
+`loadAll` · `setLang` · `setTheme` · `setMode` · `setDay` · `toggleMinimize` · `toggleImmersion` · `setSecurityOpen` · `setSettingsOpen` ·
 `selectSeg(cardId|null)` · `selectRoute(id)` · `selectNow(cardId)` · `openLocalContext(storyCardId)` · `openTag(sourceId)` · `closeTag` · `expandTags(cardId)` ·
 `openEvidence(key)` · `closeEvidence` · `setHoverFact(n|null)` · `addSelected` · `skipSelected` · `setInput` · `send(text?)` · `decide(id,'approve'|'reject')` · `setMobileTab` · `setSheetOpen`.
 필요한 전이가 없으면 `actions.js` 에 한 줄 추가하되, 기존 함수의 동작은 바꾸지 않는다(다른 모듈이 의존한다).
 
 ### 파생값 (`src/state/selectors.js`) · 표시 규칙 (`src/lib/format.js`)
 `cardById` · `routeById` · `nowCardsForDay` · `timelineFor(itinerary, day, state)` · `showsOld(mode)` · `showsNow(mode)` /
-`sourceLabel(src)` = `[등급] 이름 · 위치` · `numberedSourceLabel(src, i)` · `circled(n)` · `badgeKind(badge)` · `BADGE_KEY`(딱지 → `data-badge` 값).
+`pendingCount(logs)`(승인 대기 수 — 기어 알림) · `sourceLabel(src)` = `[등급] 이름 · 위치` · `numberedSourceLabel(src, i)` · `circled(n)` · `badgeKind(badge)` · `BADGE_KEY`(딱지 → `data-badge` 값).
 
 ## API (`ctx.api`) — mock 과 http 의 이름·시그니처가 같다
 모두 Promise. `createApi({mode:'mock'|'http', baseUrl, latencyMs})`.
@@ -139,10 +140,16 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 딱지는 `t('badge.' + card.badge)`, 경로 딱지는 `t('route.badge.' + b)`.
 
 ## 레이아웃 (app-shell)
-- **데스크톱(≥900px)** 3열: 왼쪽 `chat`+`timeline` / 가운데 `map`+`cards` / 오른쪽 `rationale`+`securitylog`.
-- **모바일(<900px)**: `map` 이 바탕(전체 화면), `cards` 는 지도 위에 겹침(바닥), 나머지 4개는 아래 시트이며 하단 탭(대화·일정·근거·보안 로그)으로 전환한다. 시트 열림은 `sheetOpen`/`mobileTab`.
-  모듈은 화면 크기를 몰라도 된다 — 슬롯 안에서 가로로 유연하게만 그린다. 모바일 터치 크기는 `--tap`(40px) 이상.
-- 슬롯 높이 배분은 `styles/layout.css` 에 있다. 슬롯 비율을 바꿔야 하면 그 파일의 해당 슬롯 한 줄만 고친다.
+슬롯: `topbar` `chat` `timeline` `map` `rationale` `cards` `settings` `securitylog` (`SLOT_NAMES`). 오른쪽 열은 없다.
+- **데스크톱(≥900px)** 2열: 왼쪽 `chat`+`timeline` / 가운데 `map` + 카드 영역(`.cards-zone` = `rationale` 태그 줄 위, `cards` 아래).
+  `rationale` 슬롯은 overflow 를 자르지 않아 태그 팝오버가 카드 위로 뜬다.
+- **모바일(<900px)**: `map` 이 바탕, 카드 영역은 지도 위에 겹침(바닥, 팝오버는 위로 열림), `chat`·`timeline` 은 아래 시트이며 하단 탭(대화·일정)으로 전환한다.
+- **설정 패널**: 톱바 기어 버튼 → `settingsOpen`. 데스크톱은 톱바 아래 우측 드로어, 모바일은 바닥 시트. 안에 `settings`(머리말·닫기·최소 변경·테마·언어)와 `securitylog` 슬롯이 있다.
+  Esc·바깥(backdrop) 클릭·닫기 버튼으로 닫고 포커스는 기어로 돌아간다. 승인 대기(pend) 로그가 있으면 기어에 점+숫자(aria-label 에도 개수).
+- 판단 근거 태그는 pill(높이 22px·글자 11px), 터치 영역은 `::after` 투명 패딩으로 확장. `openEvidence` 로 팝오버가 열린다(같은 태그 재클릭·Esc·바깥 클릭·✕ 로 닫음).
+  카드의 "왜 이걸 골랐나요?" 링크도 첫 태그의 팝오버를 연다.
+- 모듈은 화면 크기를 몰라도 된다 — 슬롯 안에서 가로로 유연하게만 그린다. 모바일 터치 크기는 `--tap`(40px) 이상.
+- 슬롯 높이 배분은 `styles/layout.css` 에 있다.
 
 ## API 연결 방법 (mock → 실제 backend)
 1. `src/api/http.js` 의 `ENDPOINTS`(제안 표)를 backend 와 확정한다. 계약이 바뀌면 AGENT_CONTEXT 3.3 을 먼저 고친다.

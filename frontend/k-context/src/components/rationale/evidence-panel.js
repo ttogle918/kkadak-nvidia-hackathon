@@ -1,4 +1,5 @@
-// 선택한 근거 항목 패널: 제목 · 설명 · 행(rows). 깔때기(채택/탈락 수)와 충돌 해결(채택/버림)은 표시를 더한다.
+// 근거 팝오버의 내용: 제목 · 설명 · 행(rows). 깔때기(채택/탈락 수)와 충돌 해결(채택/버림)은 표시를 더한다.
+// 깔때기 항목에는 걸러낸 주장(rejected)도 함께 보여 준다(index.js).
 import { h } from '../../lib/dom.js';
 import { conflictMarks, funnelRows } from './logic.js';
 
@@ -19,14 +20,15 @@ function renderRows(item, t) {
     h('dd', null, t(r.v), marks[i] && h('span', { class: `rationale-mark is-${marks[i]}` }, ` ${marks[i] === 'adopted' ? '✓' : '✕'} ${t(markText[marks[i]])}`)))));
 }
 
-export function renderEvidencePanel(item, { t }) {
+export function renderEvidencePanel(item, { t, extra = null }) {
   const funnel = item.key === 'funnel' ? funnelRows(item.rows) : null;
-  return h('section', { class: 'rationale-panel', role: 'region', 'aria-live': 'polite', 'aria-label': t('rationale.title') },
+  return h('section', { class: 'rationale-panel rationale-pop', role: 'dialog', 'aria-live': 'polite', 'aria-label': t(item.title), dataset: { key: item.key } },
     h('header', { class: 'rationale-panel__head' },
       h('b', { class: 'rationale-panel__title' }, t(item.title)),
       h('button', { type: 'button', class: 'rationale-close', dataset: { act: 'close', fk: 'close' }, 'aria-label': t('rationale.close') }, '✕')),
     h('p', { class: 'rationale-panel__text' }, t(item.text)),
-    funnel ? renderFunnel(funnel, t) : item.rows?.length > 0 && renderRows(item, t));
+    funnel ? renderFunnel(funnel, t) : item.rows?.length > 0 && renderRows(item, t),
+    extra);
 }
 
 /** 걸러낸 주장 + 이유(지금 카드의 rejected). */

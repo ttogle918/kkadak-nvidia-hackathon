@@ -19,6 +19,12 @@ export default {
   'topbar.theme.auto': 'Auto',
   'topbar.theme.light': 'Light',
   'topbar.theme.dark': 'Dark',
+  'topbar.settings': 'Settings',
+  'topbar.settings_pending': 'Settings · {n} awaiting approval',
+  'settings.title': 'Settings',
+  'settings.close': 'Close settings',
+  'settings.on': 'On',
+  'settings.off': 'Off',
 
   'module.map': 'Map',
   'module.cards': 'Cards',
@@ -31,8 +37,6 @@ export default {
 
   'tab.chat': 'Chat',
   'tab.timeline': 'Plan',
-  'tab.rationale': 'Why',
-  'tab.securitylog': 'Security',
 
   'badge.기록': '◆ RECORD',
   'badge.전승': '◇ LORE',

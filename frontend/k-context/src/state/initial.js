@@ -16,7 +16,7 @@
 //   input / msgs / logs -> input / messages / logs
 //
 // 이 프로젝트에서 새로 생긴 키: data(api 로 받은 원본), loaded/error, sending, selectedRoute, selectedNow,
-//   mobileTab/sheetOpen(모바일 시트), theme.
+//   mobileTab/sheetOpen(모바일 시트), theme, settingsOpen.
 
 /** @param {object} overrides 테스트·URL 파라미터로 덮어쓸 값 */
 export function createInitialState(overrides = {}) {
@@ -37,6 +37,7 @@ export function createInitialState(overrides = {}) {
     openEvidence: null,
     hoverFact: null,
     securityOpen: true,
+    settingsOpen: false, // 설정 패널(보안 로그·언어·테마·최소 변경) 열림
     // --- 일정 결정(selectedNow 카드에 대한 것) ---
     added: false,
     skipped: false,
@@ -50,7 +51,7 @@ export function createInitialState(overrides = {}) {
     loaded: false,
     error: null,
     // --- 모바일 시트 ---
-    mobileTab: 'chat', // 'chat' | 'timeline' | 'rationale' | 'securitylog'
+    mobileTab: 'chat', // 'chat' | 'timeline'
     sheetOpen: false,
     ...overrides,
   };

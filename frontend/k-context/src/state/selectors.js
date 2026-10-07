@@ -36,3 +36,8 @@ export function timelineFor(itinerary, day, { added, skipped, selectedNow }) {
       return { ...it, status };
     });
 }
+
+/** 승인 대기(pend) 보안 로그 개수 — 설정 버튼의 알림 표시에 쓴다. */
+export function pendingCount(logs) {
+  return (logs ?? []).filter((l) => l.kind === 'pend').length;
+}

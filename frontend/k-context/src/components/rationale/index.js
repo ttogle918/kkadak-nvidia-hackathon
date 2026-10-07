@@ -1,4 +1,4 @@
-// rationale 모듈: 판단 근거 칩 줄 + 선택한 근거 패널 + 걸러낸 것. 데이터는 api.getRationale(cardId).
+// rationale 모듈: 판단 근거 태그 줄(작은 pill) + 태그를 누르면 뜨는 작은 팝오버(깔때기엔 걸러낸 것 포함). 데이터는 api.getRationale(cardId).
 // 계약: mount(root, ctx) -> {destroy()}. 다른 components/* 를 import 하지 않는다.
 import { h, on, render } from '../../lib/dom.js';
 import { renderChips } from './chips.js';
@@ -16,27 +16,27 @@ export function mount(root, ctx) {
   // status: 'idle'(카드 없음) | 'loading' | 'ready' | 'error'
   let model = { status: 'idle', ids: '', merged: { chips: [], items: {} } };
 
+  let focusAfter = null; // 닫은 뒤 포커스를 돌려줄 태그의 fk
+
   function draw() {
     const s = store.getState();
     const ids = activeCardIds(s);
     const item = openItem(model.merged, s.openEvidence);
     const ae = globalThis.document?.activeElement;
-    const keepFk = ae && root.contains?.(ae) ? ae.dataset?.fk : null;
+    const keepFk = focusAfter ?? (ae && root.contains?.(ae) ? ae.dataset?.fk : null);
+    focusAfter = null;
 
-    let content;
+    let content = null;
     if (model.status === 'loading') content = h('div', { class: 'rationale-note' }, t('app.loading'));
     else if (model.status === 'error') content = h('div', { class: 'rationale-note is-error', role: 'alert' }, t('rationale.error'));
-    else if (!model.merged.chips.length) content = h('div', { class: 'rationale-note' }, t('rationale.no_card'));
-    else {
+    else if (model.merged.chips.length) {
       content = [
-        h('div', { class: 'rationale-label' }, t('rationale.chips_label')),
         renderChips(model.merged.chips, { t, openKey: item ? item.key : null }),
-        item ? renderEvidencePanel(item, { t }) : h('div', { class: 'rationale-note' }, t('rationale.empty')),
-        renderRejected(rejectedFor(s.data?.cards, ids), { t }),
+        // 깔때기 팝오버에는 걸러낸 주장과 이유를 함께 둔다
+        item ? renderEvidencePanel(item, { t, extra: item.key === 'funnel' ? renderRejected(rejectedFor(s.data?.cards, ids), { t }) : null }) : null,
       ];
     }
-    render(root, h('div', { class: 'rationale', dataset: { status: model.status } },
-      h('h2', { class: 'rationale-title' }, t('rationale.title')), content));
+    render(root, h('div', { class: 'rationale', dataset: { status: model.status } }, content));
     if (keepFk) {
       const find = (el) => {
         for (const c of el.children ?? []) {
@@ -72,24 +72,42 @@ export function mount(root, ctx) {
     draw();
   }
 
+  const closeFrom = (fk) => {
+    focusAfter = fk;
+    actions.closeEvidence();
+  };
   const offClick = on(root, 'click', '[data-act]', (_e, el) => {
     if (el.dataset.act === 'chip') {
-      // 열려 있는 칩을 다시 누르면 닫는다
-      if (store.getState().openEvidence === el.dataset.key) actions.closeEvidence();
+      // 열려 있는 태그를 다시 누르면 닫는다
+      if (store.getState().openEvidence === el.dataset.key) closeFrom(el.dataset.fk);
       else actions.openEvidence(el.dataset.key);
     } else if (el.dataset.act === 'close') {
-      actions.closeEvidence();
+      closeFrom(`chip:${store.getState().openEvidence}`);
     }
   });
 
+  // Esc · 바깥 클릭으로 닫기(포커스가 어디 있든 먹도록 document 에 건다. 없으면 root)
+  const doc = globalThis.document?.addEventListener ? globalThis.document : root;
   const onKey = (e) => {
-    if (e.key === 'Escape' && store.getState().openEvidence != null && root.contains?.(e.target)) actions.closeEvidence();
+    const k = store.getState().openEvidence;
+    if (e.key === 'Escape' && k != null) closeFrom(`chip:${k}`);
   };
-  root.addEventListener('keydown', onKey);
+  let justOpened = false; // 다른 모듈의 버튼("왜 이걸 골랐나요?")이 같은 클릭에서 연 팝오버를 바로 닫지 않게 한다
+  const onOutside = (e) => {
+    if (justOpened || store.getState().openEvidence == null) return;
+    if (root.contains?.(e.target)) return;
+    actions.closeEvidence();
+  };
+  doc.addEventListener('keydown', onKey);
+  doc.addEventListener('click', onOutside);
 
   const idsOf = (s) => activeCardIds(s).join(',');
   load();
   const offStore = store.subscribe((s, prev) => {
+    if (s.openEvidence != null && s.openEvidence !== prev.openEvidence) {
+      justOpened = true;
+      setTimeout(() => { justOpened = false; }, 0);
+    }
     if (idsOf(s) !== idsOf(prev)) load();
     else if (s.openEvidence !== prev.openEvidence || s.lang !== prev.lang || s.data !== prev.data) draw();
   });
@@ -99,7 +117,8 @@ export function mount(root, ctx) {
       guard.invalidate();
       offStore();
       offClick();
-      root.removeEventListener('keydown', onKey);
+      doc.removeEventListener('keydown', onKey);
+      doc.removeEventListener('click', onOutside);
       root.replaceChildren();
     },
   };

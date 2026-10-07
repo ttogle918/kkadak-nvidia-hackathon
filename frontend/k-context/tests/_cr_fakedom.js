@@ -13,6 +13,8 @@ export class El {
   contains(n) { for (let x = n; x; x = x.parent) if (x === this) return true; return false; }
   closest(sel) { for (let x = this; x; x = x.parent) if (x.matches?.(sel)) return x; return null; }
   matches(sel) { const m = /^\[data-([\w-]+)(?:="([^"]*)")?\]$/.exec(sel); return !!m && m[1] in this.dataset && (m[2] == null || this.dataset[m[1]] === m[2]); }
+  querySelector(sel) { return this.find((e) => e !== this && e.matches(sel))[0] ?? null; }
+  querySelectorAll(sel) { return this.find((e) => e !== this && e.matches(sel)); }
   focus() { globalThis.document.activeElement = this; }
   get text() { return this.children.map((c) => c.text).join(''); }
   find(pred, out = []) { if (pred(this)) out.push(this); this.children.forEach((c) => c.find?.(pred, out)); return out; }

@@ -57,7 +57,7 @@
   /* 레이아웃 */
   --topbar-h: 52px;
   --col-left: 340px;
-  --col-right: 320px;
+  --settings-w: 380px;
   --mtabs-h: 48px;
   --sheet-h: 55dvh;
   --tap: 40px; /* 모바일 최소 터치 크기 */

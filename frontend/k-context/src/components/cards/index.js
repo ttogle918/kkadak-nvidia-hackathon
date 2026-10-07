@@ -135,7 +135,7 @@ export function mount(root, ctx) {
     }
   });
 
-  /** "왜 이걸 골랐나요?" — 판단 근거 패널의 첫 칩을 연다. 응답이 늦게 와도 카드가 바뀌었으면 버린다. */
+  /** "왜 이걸 골랐나요?" — 판단 근거 태그의 첫 항목 팝오버를 연다. 응답이 늦게 와도 카드가 바뀌었으면 버린다. */
   async function whyPick() {
     const id = store.getState().selectedNow;
     if (!id) return;
@@ -144,10 +144,7 @@ export function mount(root, ctx) {
       const r = await api.getRationale(id);
       if (!whyGuard.isCurrent(token) || store.getState().selectedNow !== id) return;
       const key = r?.chips?.[0]?.key;
-      if (key) {
-        actions.openEvidence(key);
-        actions.setMobileTab?.('rationale');
-      }
+      if (key) actions.openEvidence(key);
     } catch {
       // 근거를 못 받아도 카드는 그대로 둔다
     }

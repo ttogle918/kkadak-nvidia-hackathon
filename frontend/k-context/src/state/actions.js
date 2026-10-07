@@ -30,6 +30,8 @@ export function createActions({ store, api }) {
     toggleMinimize: () => setState((s) => ({ minimizeChanges: !s.minimizeChanges })),
     toggleImmersion: () => setState((s) => ({ immersion: !s.immersion })),
     setSecurityOpen: (securityOpen) => setState({ securityOpen: !!securityOpen }),
+    /** 설정 패널 열기/닫기(톱바의 기어 버튼). */
+    setSettingsOpen: (settingsOpen) => setState({ settingsOpen: !!settingsOpen }),
 
     /** 옛날 구간 선택(card_id). null 이면 해제. 선택이 바뀌면 근거 패널·하이라이트는 초기화한다. */
     selectSeg: (cardId) => setState({ selectedSeg: cardId, hoverFact: null, openEvidence: null }),

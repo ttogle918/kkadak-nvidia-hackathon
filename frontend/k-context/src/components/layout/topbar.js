@@ -1,17 +1,18 @@
-// 상단 바: 로고 · 보기(옛날/지금/둘 다) · 날짜(DAY) · 일정 최소 변경 · 언어 · 테마.
+// 상단 바: 로고 · 보기(옛날/지금/둘 다) · 날짜(DAY) · 설정(기어) 버튼.
+// 언어·테마·일정 최소 변경과 보안 로그는 설정 패널(layout/settings.js)로 옮겼다. 기어에는 승인 대기 로그 수를 알림 점으로 단다.
 // 상태를 직접 바꾸지 않고 ctx.actions 를 부른다. 레이아웃 전용이라 다른 모듈과 무관하다.
 import { h, render, on } from '../../lib/dom.js';
+import { pendingCount } from '../../state/selectors.js';
+import { seg } from './seg.js';
 
 const MODES = ['old', 'now', 'both'];
-const LANGS = ['ko', 'en'];
-const THEMES = ['auto', 'light', 'dark'];
 const DAYS = [1, 2, 3]; // 샘플 일정은 DAY 1~3
 
-function seg(items, current, act, labelOf) {
-  return h('div', { class: 'seg', role: 'group' },
-    items.map((v) => h('button', {
-      type: 'button', class: ['seg__btn', v === current && 'is-on'], dataset: { act, value: v }, 'aria-pressed': String(v === current),
-    }, labelOf(v))));
+/** 기어 아이콘(인라인 SVG, 장식이라 aria-hidden) */
+function gearIcon() {
+  return h('svg', { class: 'topbar__gear-icon', viewBox: '0 0 24 24', width: 20, height: 20, 'aria-hidden': 'true', fill: 'none', stroke: 'currentColor', 'stroke-width': 1.8, 'stroke-linecap': 'round', 'stroke-linejoin': 'round' },
+    h('circle', { cx: 12, cy: 12, r: 3.2 }),
+    h('path', { d: 'M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8' }));
 }
 
 /** @returns {{destroy(): void}} */
@@ -24,30 +25,30 @@ export function mount(root, ctx) {
 
   function draw() {
     const s = store.getState();
+    const pend = pendingCount(s.logs);
+    const keep = globalThis.document?.activeElement?.dataset?.act === 'open-settings';
     render(root, h('div', { class: 'topbar' },
       h('div', { class: 'topbar__brand' }, logo, h('span', { class: 'topbar__title' }, t('app.title')), h('span', { class: 'topbar__tagline' }, t('app.tagline'))),
       h('div', { class: 'topbar__group', 'aria-label': t('topbar.mode') }, seg(MODES, s.mode, 'set-mode', (m) => t(`topbar.mode.${m}`))),
       h('div', { class: 'topbar__group' }, seg(DAYS, s.day, 'set-day', (d) => t('topbar.day', { n: d }))),
       h('div', { class: 'topbar__spacer' }),
       h('button', {
-        type: 'button', class: ['chip-toggle', s.minimizeChanges && 'is-on'], dataset: { act: 'toggle-min' }, 'aria-pressed': String(s.minimizeChanges),
-      }, t('topbar.minimize')),
-      h('div', { class: 'topbar__group', 'aria-label': t('topbar.theme') }, seg(THEMES, s.theme, 'set-theme', (m) => t(`topbar.theme.${m}`))),
-      h('div', { class: 'topbar__group', 'aria-label': t('topbar.lang') }, seg(LANGS, s.lang, 'set-lang', (l) => t(`topbar.lang.${l}`)))));
+        type: 'button', class: 'topbar__gear', dataset: { act: 'open-settings', pending: pend }, 'aria-haspopup': 'dialog', 'aria-expanded': String(!!s.settingsOpen),
+        'aria-label': pend > 0 ? t('topbar.settings_pending', { n: pend }) : t('topbar.settings'),
+      }, gearIcon(), pend > 0 ? h('span', { class: 'topbar__badge', dataset: { role: 'pending' }, 'aria-hidden': 'true' }, String(pend)) : null)));
+    if (keep) root.querySelector?.('[data-act="open-settings"]')?.focus?.();
   }
 
   const offClick = on(root, 'click', '[data-act]', (_e, el) => {
     const { act, value } = el.dataset;
     if (act === 'set-mode') actions.setMode(value);
     else if (act === 'set-day') actions.setDay(value);
-    else if (act === 'set-lang') actions.setLang(value);
-    else if (act === 'set-theme') actions.setTheme(value);
-    else if (act === 'toggle-min') actions.toggleMinimize();
+    else if (act === 'open-settings') actions.setSettingsOpen(!store.getState().settingsOpen);
   });
 
   draw();
   const offStore = store.select(
-    (s) => [s.mode, s.day, s.lang, s.theme, s.minimizeChanges],
+    (s) => [s.mode, s.day, s.lang, s.settingsOpen, pendingCount(s.logs)],
     draw,
     { equals: (a, b) => a.every((v, i) => v === b[i]) },
   );

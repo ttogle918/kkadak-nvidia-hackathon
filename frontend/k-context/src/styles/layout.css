@@ -1,21 +1,21 @@
-/* 앱 골격 배치. 데스크톱 3열 / 모바일(지도 바탕 + 아래 시트). 슬롯 마크업은 components/layout/app-shell.js */
+/* 앱 골격 배치. 데스크톱 2열 / 모바일(지도 바탕 + 아래 시트) + 설정 패널(우측 드로어 / 바닥 시트). 슬롯 마크업은 components/layout/app-shell.js */
 .app { display: flex; flex-direction: column; height: 100dvh; background: var(--c-bg-app); }
 .app__top { flex: none; border-bottom: 1px solid var(--c-line); background: var(--c-bg-app); position: relative; z-index: 5; }
-.app__main { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--col-left) minmax(0, 1fr) var(--col-right); }
+.app__main { flex: 1; min-height: 0; display: grid; grid-template-columns: var(--col-left) minmax(0, 1fr); }
 .mtabs { display: none; }
 
 .col { display: flex; flex-direction: column; min-height: 0; min-width: 0; }
 .col-left { border-right: 1px solid var(--c-line); }
-.col-right { border-left: 1px solid var(--c-line); }
 .slot { min-height: 0; min-width: 0; position: relative; }
 
 /* 데스크톱 슬롯 높이 배분 */
 .slot-chat { flex: 1 1 60%; overflow: auto; }
 .slot-timeline { flex: 0 1 40%; overflow: auto; border-top: 1px solid var(--c-line); }
 .slot-map { flex: 1 1 55%; background: var(--c-map); overflow: hidden; }
-.slot-cards { flex: 0 1 45%; overflow: auto; border-top: 1px solid var(--c-line); }
-.slot-rationale { flex: 1 1 55%; overflow: auto; }
-.slot-securitylog { flex: 0 1 45%; overflow: auto; background: var(--c-log-bg); color: var(--c-log-text); }
+/* 카드 영역 = 판단 근거 태그 줄(rationale) + 카드(cards). 태그 팝오버가 카드 위로 뜨도록 rationale 은 overflow 를 자르지 않는다 */
+.cards-zone { flex: 0 1 45%; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid var(--c-line); position: relative; }
+.slot-rationale { flex: none; overflow: visible; z-index: 4; }
+.slot-cards { flex: 1 1 auto; overflow: auto; }
 
 /* 상단 바 */
 .topbar { min-height: var(--topbar-h); display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); }
@@ -23,30 +23,51 @@
 .topbar__title { font-weight: 700; font-size: var(--fs-xl); }
 .topbar__tagline { color: var(--c-muted); font-size: var(--fs-sm); }
 .topbar__spacer { flex: 1; }
+.topbar__gear { position: relative; display: inline-flex; align-items: center; justify-content: center; min-width: 32px; min-height: 32px; border: 1px solid var(--c-line-ctl); border-radius: var(--r-md); background: var(--c-surface); color: var(--c-ink); padding: 0; }
+.topbar__gear[aria-expanded="true"] { background: var(--c-ink); color: var(--c-ink-inv); }
+/* 승인 대기 알림: 점 + 숫자(색만 의존하지 않는다) */
+.topbar__badge { position: absolute; top: -6px; right: -6px; min-width: 16px; height: 16px; padding: 0 4px; display: inline-flex; align-items: center; justify-content: center; border-radius: var(--r-pill); background: var(--c-warn); color: var(--c-ink-inv); border: 1.5px solid var(--c-bg-app); font-size: 10px; font-weight: 700; line-height: 1; }
+
+/* 설정 패널: 데스크톱은 톱바 아래 우측 드로어. 열림은 data-open */
+.settings-layer { position: fixed; inset: var(--topbar-h) 0 0 0; z-index: 30; display: none; }
+.settings-layer[data-open="true"] { display: block; }
+.settings-backdrop { position: absolute; inset: 0; background: transparent; }
+.settings-panel { position: absolute; top: 0; right: 0; bottom: 0; width: var(--settings-w); max-width: 100%; display: flex; flex-direction: column; background: var(--c-bg-app); border-left: 1px solid var(--c-line-strong); box-shadow: var(--shadow); }
+.slot-settings { flex: none; }
+.slot-securitylog { flex: 1 1 auto; overflow: auto; background: var(--c-log-bg); color: var(--c-log-text); border-top: 1px solid var(--c-line); }
+.settings__head { display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-3) var(--sp-4) var(--sp-2); }
+.settings__title { flex: 1; margin: 0; font-size: var(--fs-lg); }
+.settings__close { position: relative; min-width: 28px; min-height: 28px; border: 1px solid var(--c-line-ctl); background: var(--c-surface); border-radius: var(--r-sm); }
+.settings__rows { display: flex; flex-direction: column; gap: var(--sp-2); padding: 0 var(--sp-4) var(--sp-3); }
+.settings__row { display: flex; align-items: center; justify-content: space-between; gap: var(--sp-3); }
+.settings__label { font-size: var(--fs-md); color: var(--c-text-2); }
 
 /* ---------- 모바일 ---------- */
 @media (max-width: 899px) {
   .topbar__tagline { display: none; }
   .topbar { gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); }
   .seg__btn, .chip-toggle { min-height: var(--tap); }
+  .topbar__gear { min-width: var(--tap); min-height: var(--tap); }
   .app__main { display: block; position: relative; }
   .col { display: contents; } /* 슬롯을 main 의 직접 자식처럼 다룬다 */
-  .col-left, .col-right { border: 0; }
+  .col-left { border: 0; }
   .slot-map { position: absolute; inset: 0; flex: none; }
-  .slot-cards { position: absolute; left: 0; right: 0; bottom: 0; max-height: 42%; border-top: 0; background: transparent; z-index: 2; pointer-events: none; }
-  .slot-cards > * { pointer-events: auto; }
-  .app[data-sheet="open"] .slot-cards { bottom: var(--sheet-h); }
-  /* 시트: 4개 슬롯이 같은 자리를 쓰고 활성 탭만 보인다 */
-  .slot-chat, .slot-timeline, .slot-rationale, .slot-securitylog {
+  .cards-zone { position: absolute; left: 0; right: 0; bottom: 0; max-height: 42%; border-top: 0; background: transparent; z-index: 2; pointer-events: none; }
+  .cards-zone > * { pointer-events: auto; }
+  .app[data-sheet="open"] .cards-zone { bottom: var(--sheet-h); }
+  /* 시트: chat·timeline 이 같은 자리를 쓰고 활성 탭만 보인다 */
+  .slot-chat, .slot-timeline {
     display: none; position: absolute; left: 0; right: 0; bottom: 0; height: var(--sheet-h); z-index: 3;
     border: 0; border-top: 1px solid var(--c-line); border-radius: var(--r-lg) var(--r-lg) 0 0;
     background: var(--c-bg-app); box-shadow: var(--shadow); overflow: auto;
   }
-  .slot-securitylog { background: var(--c-log-bg); }
   .app[data-sheet="open"][data-mtab="chat"] .slot-chat,
-  .app[data-sheet="open"][data-mtab="timeline"] .slot-timeline,
-  .app[data-sheet="open"][data-mtab="rationale"] .slot-rationale,
-  .app[data-sheet="open"][data-mtab="securitylog"] .slot-securitylog { display: block; }
+  .app[data-sheet="open"][data-mtab="timeline"] .slot-timeline { display: block; }
+  /* 설정 패널: 바닥 시트 */
+  .settings-layer { inset: 0; }
+  .settings-backdrop { background: color-mix(in srgb, var(--c-ink) 45%, transparent); }
+  .settings-panel { top: auto; left: 0; right: 0; width: auto; height: min(80dvh, 640px); border-left: 0; border-top: 1px solid var(--c-line-strong); border-radius: var(--r-lg) var(--r-lg) 0 0; padding-bottom: env(safe-area-inset-bottom); }
+  .settings__close { min-width: var(--tap); min-height: var(--tap); }
   .mtabs { flex: none; display: flex; height: var(--mtabs-h); border-top: 1px solid var(--c-line); background: var(--c-bg-app); position: relative; z-index: 4; padding-bottom: env(safe-area-inset-bottom); }
   .mtabs__btn { flex: 1; border: 0; background: transparent; font-size: var(--fs-md); font-weight: 600; color: var(--c-text-2); }
   .mtabs__btn.is-on { color: var(--c-now); box-shadow: inset 0 3px 0 var(--c-now); }

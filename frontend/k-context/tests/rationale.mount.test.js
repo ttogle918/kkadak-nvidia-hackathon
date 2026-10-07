@@ -25,11 +25,11 @@ async function setup(overrides = {}, apiPatch = (a) => a) {
 }
 const chipKeys = (root) => root.find((e) => e.dataset?.act === 'chip').map((e) => e.dataset.key);
 
-test('mode now: 지금 카드의 칩 6개와 안내 문구, destroy 가 비운다', async () => {
+test('mode now: 지금 카드의 태그 6개(팝오버는 닫힘), destroy 가 비운다', async () => {
   const { root, m } = await setup({ mode: 'now' });
   assert.deepEqual(chipKeys(root), ['funnel', 'fit', 'date', 'detour', 'src', 'conflict']);
   assert.match(root.text, /후보 12건 중 채택 2/);
-  assert.match(root.text, /칩을 눌러/);
+  assert.equal(root.find((e) => e.attrs?.class?.includes('rationale-pop')).length, 0);
   m.destroy();
   assert.equal(root.children.length, 0);
 });
@@ -48,7 +48,7 @@ test('칩 클릭 → openEvidence, 패널 표시(깔때기), 같은 칩 다시 �
   assert.equal(store.getState().openEvidence, 'funnel');
   assert.equal(root.find((e) => e.attrs?.class === 'rationale-funnel').length, 1);
   assert.match(root.text, /기간 종료/);
-  assert.equal(byAct(root, 'chip', (e) => e.dataset.key === 'funnel').attrs['aria-pressed'], 'true');
+  assert.equal(byAct(root, 'chip', (e) => e.dataset.key === 'funnel').attrs['aria-expanded'], 'true');
   fire(root, 'click', byAct(root, 'close'));
   assert.equal(store.getState().openEvidence, null);
   fire(root, 'click', byAct(root, 'chip', (e) => e.dataset.key === 'funnel'));
@@ -65,8 +65,10 @@ test('충돌 해결: 채택/버림 표시, 미해결 충돌(보류 카드)에는
   assert.match(b.root.text, /해결된 척하지 않습니다/);
 });
 
-test('걸러낸 것(rejected) 목록과 이유가 보인다', async () => {
-  const { root } = await setup({ mode: 'now' });
+test('걸러낸 것(rejected) 목록과 이유는 깔때기 팝오버 안에 보인다', async () => {
+  const { root, store } = await setup({ mode: 'now' });
+  assert.doesNotMatch(root.text, /걸러낸 것/);
+  store.setState({ openEvidence: 'funnel' });
   assert.match(root.text, /걸러낸 것/);
   assert.match(root.text, /포스터: 19:00 시작/);
   assert.match(root.text, /이유/);
@@ -112,4 +114,33 @@ test('destroy 후에는 늦게 온 응답이 DOM 을 다시 채우지 않는다'
   m.destroy();
   await tick(60);
   assert.equal(root.children.length, 0);
+});
+
+test('태그는 작은 pill: 글리프+라벨 텍스트를 가지고 aria-expanded 로 열림을 알린다', async () => {
+  const { root } = await setup({ mode: 'both' });
+  const tags = root.find((e) => e.dataset?.act === 'chip');
+  assert.ok(tags.length >= 7);
+  for (const tg of tags) {
+    assert.match(tg.attrs.class, /rationale-tag/);
+    assert.match(tg.text, /^[◆◇●]/);
+    assert.equal(tg.attrs['aria-expanded'], 'false');
+  }
+});
+
+test('Esc 와 바깥 클릭으로 팝오버가 닫히고, 닫히면 태그로 포커스가 돌아온다', async () => {
+  const before = (document.listeners.keydown ?? []).length;
+  const { root, store, m } = await setup({ mode: 'now' });
+  fire(root, 'click', byAct(root, 'chip', (e) => e.dataset.key === 'fit'));
+  assert.equal(store.getState().openEvidence, 'fit');
+  await tick(); // 같은 클릭으로 연 직후의 바깥 클릭 무시 구간이 지나야 한다
+  const L = document.listeners;
+  L.keydown.forEach((fn) => fn({ key: 'Escape', target: root }));
+  assert.equal(store.getState().openEvidence, null);
+  assert.equal(document.activeElement?.dataset?.fk, 'chip:fit');
+  fire(root, 'click', byAct(root, 'chip', (e) => e.dataset.key === 'date'));
+  await tick();
+  L.click.forEach((fn) => fn({ target: new El('div') })); // 모듈 바깥
+  assert.equal(store.getState().openEvidence, null);
+  m.destroy();
+  assert.equal((L.keydown ?? []).length, before, 'destroy 가 리스너를 해제');
 });

@@ -1,21 +1,27 @@
-/* rationale 모듈 스타일. 클래스는 .rationale- 접두사, 색·간격은 tokens.css 변수만. */
-.rationale { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); }
-.rationale-title { margin: 0; font-size: var(--fs-lg); }
-.rationale-label { font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .1em; color: var(--c-muted); }
-.rationale-note { color: var(--c-muted); font-size: var(--fs-md); }
+/* rationale 모듈 스타일. 클래스는 .rationale- 접두사, 색·간격은 tokens.css 변수만.
+   판단 근거는 카드 위의 작은 pill 태그 한 줄 + 누르면 아래로 뜨는 작은 팝오버다(슬롯은 position:relative, overflow:visible). */
+.rationale { position: relative; padding: var(--sp-1) var(--sp-3) 0; }
+.rationale-note { color: var(--c-muted); font-size: var(--fs-sm); }
 .rationale-note.is-error { color: var(--c-bad); }
+.rationale-label { font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .1em; color: var(--c-muted); }
 
-.rationale-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
-.rationale-chip { border: 1.5px solid var(--c-now); background: var(--c-now-dim); color: var(--c-now-ink); border-radius: var(--r-pill); padding: 5px 11px; min-height: 30px; font-size: var(--fs-md); font-weight: 600; }
-.rationale-chip[data-tone="old"] { border-color: var(--c-old); background: var(--c-old-dim); color: var(--c-old); }
-.rationale-chip.is-on { background: var(--c-now); color: var(--c-ink-inv); }
-.rationale-chip[data-tone="old"].is-on { background: var(--c-old); color: var(--c-ink-inv); }
+/* 태그 줄: 한 줄로 가로 배치(넘치면 줄바꿈 — 가로 스크롤 없음) */
+.rationale-tags { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1) 6px; }
+.rationale-tags__label { font-size: var(--fs-xs); font-weight: 600; color: var(--c-muted); margin-right: 2px; }
+/* 시각 높이 22px, 글자 11px. 터치 영역은 ::after 의 투명 패딩으로 넓힌다 */
+.rationale-tag { position: relative; display: inline-flex; align-items: center; height: 22px; padding: 0 9px; font-size: 11px; line-height: 1; font-weight: 600; white-space: nowrap; border: 1px solid var(--c-now); background: var(--c-now-dim); color: var(--c-now-ink); border-radius: var(--r-pill); }
+.rationale-tag::after { content: ""; position: absolute; inset: -6px -2px; }
+.rationale-tag[data-tone="old"] { border-color: var(--c-old); background: var(--c-old-dim); color: var(--c-old); }
+.rationale-tag.is-on { background: var(--c-now); color: var(--c-ink-inv); }
+.rationale-tag[data-tone="old"].is-on { background: var(--c-old); color: var(--c-ink-inv); }
 
-.rationale-panel { border: 1px solid var(--c-line-strong); border-radius: var(--r-lg); background: var(--c-surface); padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+/* 팝오버(출처 팝오버 .cards-pop__dialog 와 같은 면·테두리·그림자) */
+.rationale-pop { position: absolute; z-index: 20; top: calc(100% + 2px); left: var(--sp-3); width: min(360px, calc(100% - 2 * var(--sp-3))); max-height: 36dvh; overflow: auto; background: var(--c-surface); color: var(--c-ink); border: 1px solid var(--c-line-strong); border-radius: var(--r-lg); box-shadow: var(--shadow); padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
 .rationale-panel__head { display: flex; align-items: center; gap: var(--sp-2); }
 .rationale-panel__title { flex: 1; font-size: var(--fs-lg); }
 .rationale-panel__text { margin: 0; font-size: var(--fs-md); line-height: 1.65; }
-.rationale-close { border: 1px solid var(--c-line-ctl); background: var(--c-surface); border-radius: var(--r-sm); min-width: 28px; min-height: 28px; }
+.rationale-close { position: relative; border: 1px solid var(--c-line-ctl); background: var(--c-surface); border-radius: var(--r-sm); min-width: 24px; min-height: 24px; font-size: var(--fs-sm); }
+.rationale-close::after { content: ""; position: absolute; inset: -8px; }
 
 .rationale-rows { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; font-size: var(--fs-md); }
 .rationale-row { display: flex; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-sm); border: 1px solid var(--c-line); }
@@ -40,5 +46,7 @@
 .rationale-rejected__claim { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--c-text-2); }
 .rationale-rejected__reason { color: var(--c-text-2); }
 @media (max-width: 899px) {
-  .rationale-chip, .rationale-close { min-height: var(--tap); }
+  .rationale-tag::after { inset: -9px -2px; } /* 시각 크기는 그대로, 세로 터치 영역 ≈40px */
+  /* 카드 영역이 화면 바닥에 있으므로 팝오버는 위(지도 쪽)로 연다 */
+  .rationale-pop { top: auto; bottom: calc(100% + 2px); left: var(--sp-2); width: calc(100% - 2 * var(--sp-2)); max-height: 40dvh; }
 }

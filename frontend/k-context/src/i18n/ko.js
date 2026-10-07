@@ -21,6 +21,12 @@ export default {
   'topbar.theme.auto': '자동',
   'topbar.theme.light': '라이트',
   'topbar.theme.dark': '다크',
+  'topbar.settings': '설정',
+  'topbar.settings_pending': '설정 · 승인 대기 {n}건',
+  'settings.title': '설정',
+  'settings.close': '설정 닫기',
+  'settings.on': '켜짐',
+  'settings.off': '꺼짐',
 
   // 모듈 슬롯(플레이스홀더에서 쓴다)
   'module.map': '지도',
@@ -35,8 +41,6 @@ export default {
   // 모바일 시트 탭
   'tab.chat': '대화',
   'tab.timeline': '일정',
-  'tab.rationale': '근거',
-  'tab.securitylog': '보안 로그',
 
   // 딱지
   'badge.기록': '◆ 기록',
