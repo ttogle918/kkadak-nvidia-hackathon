@@ -20,8 +20,11 @@ def norm(text):
 
 
 def test_empty_matches_deploy_baseline():
+    # 배포 정책에는 허용 항목이 추가될 수 있다(CLAUDE.md 규칙 2). 기본 설정(network_policies 위)만 비교한다.
     deploy = (REPO / "deploy/openshell/policy.yaml").read_text(encoding="utf-8")
-    assert norm(render_yaml(propose([]))) == norm(deploy)
+    head = deploy[: deploy.index("network_policies:")]
+    rendered = render_yaml(propose([]))
+    assert norm(rendered[: rendered.index("network_policies:")]) == norm(head)
 
 
 def test_golden_rest_entry():
