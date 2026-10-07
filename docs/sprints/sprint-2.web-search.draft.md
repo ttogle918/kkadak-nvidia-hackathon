@@ -30,7 +30,7 @@
 ## T226 — 검색 수집기(Tavily → 추출 → 인용 검증 → 정규화) [선택 · Stage 2 · T210 이후]
 - **착수 조건**: D12 승인, T210(정규화·저장) 완료, T211b(`inject.screen`) 완료. T225 는 없어도 합성으로 진행(실호출만 `confirmed` 필요).
 - **변경 파일**
-  - 신규: `domains/kcontext/ingest/events/web.py`(Tavily 호출·후보 모으기), `extract.py`(LLM 추출 + 인용 검증), (CLI 는 새 파일 없이 기존 `__main__.py` 에 `--provider web` 을 추가한다); `domains/kcontext/data/regions/{gangnam,mapo}.json`(없으면, `gu` 와 `keywords` 만, bbox·center 는 `null` + note `[확인 필요]` — 기존 `euljiro.json` 과 같은 형식. 중구는 `euljiro.json` 의 `gu: ["중구"]` 로 매칭되므로 새로 만들지 않는다); `tests/domains/kcontext/ingest/test_kc_ingest_events_web.py`, `test_kc_ingest_events_extract.py`; `tests/fixtures/kcontext/events/web.synthetic.json`; `.env.example`(`TAVILY_SEARCH_KEY=` 이름만 + 주석 "호스트 수집기 전용(D12), 샌드박스에 넣지 않는다")
+  - 신규: `domains/kcontext/ingest/events/web.py`(Tavily 호출·후보 모으기), `extract.py`(LLM 추출 + 인용 검증), (CLI 는 새 파일 없이 기존 `__main__.py` 에 `--provider web` 을 추가한다); `domains/kcontext/data/regions/{gangnam,mapo}.json`(main 에서 팀원이 `jung`·`mapo`·`gangnam`·`jongno` 로 지역을 교체해 T226 이 만들 필요가 없어졌다 — 병합 때 팀원 것을 채택); `tests/domains/kcontext/ingest/test_kc_ingest_events_web.py`, `test_kc_ingest_events_extract.py`; `tests/fixtures/kcontext/events/web.synthetic.json`; `.env.example`(`TAVILY_SEARCH_KEY=` 이름만 + 주석 "호스트 수집기 전용(D12), 샌드박스에 넣지 않는다")
   - 수정(계약 보충, T201 소유 파일이라 담당 확인): `domains/kcontext/contract/records.py` 의 `EventRecord.fetched_from` Literal 에 `"web"` 추가, `tests/domains/kcontext/contract/` 에 해당 케이스
 - **인터페이스**
   ```python
@@ -106,3 +106,5 @@
 - **제안 반영**: S2 제목 최소 길이, S3 테스트 키 문자열을 실행 시 조립 + `core.audit.redact` 에 `tvly-` 패턴 추가, S4 낡은 문서 정리, S5 `web_run` 이 problem 내용을 stderr 로 출력.
 - **미룬 것(경고)**: W1 색인 청크에 검사 결과 표시·소비 쪽 `wrap` · W10 "검색 수집 · 미확인" 화면 문구 · W11 Tavily 호출의 감사(audit) 기록 · S1 저장 quote 를 원문 구간으로. 모두 소비자(파이프라인 T216·MCP T217·LLM 연결 T223)가 생길 때 처리한다. 그 전에는 `fetched_from="web"` 을 화면 경로에 넣지 않는다.
 - 위 "명세와 달라진 점" 중 정정: `time_range` 는 기본 미사용, CLI 옵션은 `--region` 이 아니라 `--source`, `geometry_type` 은 `point`. "web 레코드의 status 를 확정으로 올리지 않는다"는 `now.py` 가 C·D 의 취소·변경을 적용하지 않는 규칙으로 구현됐다.
+
+- **병합 메모(2026-10-07)**: main 의 지역 교체(f77fd48: `euljiro`·`sinchon` 삭제, `jung`·`mapo`·`gangnam`·`jongno`)를 채택했다. `web_sources/junggu.json` 의 region 은 `jung`, 수기 fixture·테스트의 지역도 `jung` 으로 바꿨다. 지역 파일 충돌(`mapo`·`gangnam`)은 팀원 것을 그대로 썼다.

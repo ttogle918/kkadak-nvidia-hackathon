@@ -18,7 +18,7 @@ def test_fixture_loads_with_region_inferred_from_text():
     ids = {r.id for r in res.records}
     assert "m_elsewhere" not in ids and res.skipped_out_of_region == 1
     assert len(res.records) == 7
-    assert {r.region for r in res.records} == {"euljiro"}
+    assert {r.region for r in res.records} == {"jung"}
     assert all(r.fetched_from == "manual" and r.synthetic for r in res.records)
     assert res.problems == ()
 
@@ -102,7 +102,7 @@ def test_cli_api_provider_with_synthetic_field_map(tmp_path: Path, capsys):
     out = tmp_path / "o.jsonl"
     rc = main(["--provider", "tourapi", "--fixture", str(fx), "--field-map-dir", str(tmp_path),
                "--out", str(out), "--collected-at", "2026-10-07"])
-    assert rc == 0 and read_jsonl(out)[0].region == "euljiro"
+    assert rc == 0 and read_jsonl(out)[0].region == "jung"
 
 
 def test_cli_unreadable_fixture_exits_2(tmp_path: Path):

@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 출처: 국사편찬위원회 조선왕조실록 정보_실록원문 (data.go.kr) · 내려받은 날짜: 2026-08-21 · 이용허락: 공공누리 1유형(출처표시) · 원본 2nd_wca_111.xml 의 기사 wca_11112017_001 발췌, 기사 요소는 무수정, 상위 level 의 다른 기사는 제거 -->
+<!DOCTYPE level2 SYSTEM "history.dtd">
+<level2 id="wca_111">
+  <front>
+    <biblioData type="L">
+      <title>
+        <mainTitle>太宗實錄 十一年</mainTitle>
+      </title>
+      <date>
+        <dateOccured date="1411" type="서기"/>
+        <dateOccured type="간지">辛卯</dateOccured>
+        <dateOccured type="재위연도">태종 11</dateOccured>
+        <dateOccured type="개국연호">조선 개국(開國) 20</dateOccured>
+        <dateOccured type="중국연호">명 영락(永樂) 9</dateOccured>
+        <dateOccured type="단기">3744</dateOccured>
+        <dateOccured type="일본연호"/>
+        <dateOccured type="display">명 영락(永樂) 9</dateOccured>
+      </date>
+    </biblioData>
+  </front>
+  <text>
+    <content>
+      <paragraph align="center"> 十一年(1411)<annotation type="원주">
+          <noteContent>【<index num="0044774_0" sort="K" type="지명">大明</index>
+            <index num="0044775_0" type="연호">永樂</index>九年】</noteContent>
+        </annotation>
+      </paragraph>
+    </content>
+  </text>
+  <level3 id="wca_111120">
+    <front>
+      <biblioData type="L">
+        <title>
+          <mainTitle>太宗實錄 十一年 十二月</mainTitle>
+        </title>
+      </biblioData>
+    </front>
+    <text>
+      <content>
+        <paragraph align="center"> 十一年 十二月</paragraph>
+      </content>
+    </text>
+    <level4 id="wca_11112017">
+      <front>
+        <biblioData type="L">
+          <title>
+            <mainTitle>太宗 11年 12月 17日</mainTitle>
+          </title>
+          <date>
+            <dateOccured date="1411-12-17L0" type="서기"/>
+            <dateOccured type="간지">癸卯</dateOccured>
+            <dateOccured type="재위연도">태종 11년 12월 17일</dateOccured>
+            <dateOccured type="개국연호">조선 개국(開國) 20년 12월 17일</dateOccured>
+            <dateOccured type="중국연호">명 영락(永樂) 9년 12월 17일</dateOccured>
+            <dateOccured type="단기">3744년 12월 17일</dateOccured>
+            <dateOccured type="일본연호">년 12월 17일</dateOccured>
+            <dateOccured type="display">명 영락(永樂)9년 12월 17일</dateOccured>
+          </date>
+        </biblioData>
+      </front>
+      <level5 id="wca_11112017_001">
+        <front>
+          <biblioData type="T">
+            <title>
+              <mainTitle>종루에서 취각한 소리가 4대문에 이르도록 하는 문제에 대해 논의하다</mainTitle>
+            </title>
+            <docNo level="n" name="titleno">001</docNo>
+            <date>
+              <dateOccured date="1411-12-17L0" type="서기"/>
+            </date>
+            <source>
+              <mainTitle type="태백산사고본">太宗實錄 9책 22권</mainTitle>
+              <page begin="48장 A면"/>
+            </source>
+            <source>
+              <mainTitle type="국편영인본">太宗實錄 1책</mainTitle>
+              <page begin="614면"/>
+            </source>
+            <subjectClass>왕실-의식(儀式)</subjectClass>
+            <subjectClass>왕실-국왕(國王)</subjectClass>
+            <subjectClass>군사-군정(軍政)</subjectClass>
+          </biblioData>
+        </front>
+        <text>
+          <content>
+            <paragraph align="center">○癸卯/御便殿視事。 上言及兵事, 諸卿各陳其策。 上論天命人心去就之理曰: "歲當戊寅, 入直甲士棄甲而走, 是知庶孽之不當輔也。 其時, 予曰: ‘今日之事, 定在天命。’" <index num="0048131_0" ref="M_0004634" sort="K" type="이름">安城君</index>
+              <index num="0048132_0" ref="M_0004634" sort="K" type="이름">李叔蕃</index>曰: "當此危急之時, 豈可徒恃天命! 宜卽赴急。" 上又曰: "吹角於闕門外則近者先聞, 遠者不及。 自今吹角於<index num="0048133_0" sort="K" type="지명">鍾樓</index>, 令聲達四門, 人無不聽。" 知議政府事<index num="0048134_0" ref="M_0008618" sort="K" type="이름">李膺</index>對曰: "如此則事緩矣。 近者先到, 而遠者繼至可也。"</paragraph>
+          </content>
+        </text>
+      </level5></level4></level3></level2>

@@ -40,7 +40,7 @@
 - **마포구는 사람 결정이 필요하다.** robots.txt 가 일반 봇을 전부 막는다. 검색 제공자(Tavily)가 이미 색인한 내용을 돌려주는 것과 우리가 직접 가져오는 것은 다르지만, 마포구청이 일반 크롤러를 원하지 않는다는 의사표시다. 결정 전까지 `unconfirmed` 로 두어 T226 이 건너뛴다. 허용하려면 `web_sources/mapo.json` 의 `status` 를 사람이 `confirmed` 로 바꾼다.
 - T226 은 **우리가 직접 페이지를 가져오지 않는다**(Tavily 가 돌려준 본문만 쓴다). 그래도 위 차단 경로는 질의·후보 URL 에서 걸러낸다(`web.py` 의 후보 URL 필터에 `web_sources` 의 `disallow` 를 쓰려면 파일 형식에 필드가 필요 — T226 에서 결정 `[제안]`).
 - 구청 도메인 밖 후보(사용자 결정 §4): 강남페스티벌 `visitgangnam.net` 포함, 중구 공식 블로그 `blog.naver.com/junggu4u` 제외.
-- region: 중구는 기존 `euljiro`(gu=중구)로 매칭한다. `mapo`·`gangnam` 지역 파일은 T226 에서 만들었다(`regions/`).
+- region: 중구는 `regions/jung.json`, 마포·강남은 `regions/{mapo,gangnam}.json`(팀원이 main 에 올린 지역 설정)으로 매칭한다.
 
 ## 4. 사용자 결정 (2026-10-07)
 - 마포구 수집 허용(robots.txt `User-agent: *` 의 `Disallow: /` 를 알고 내린 결정). `mapo.json` status=confirmed.

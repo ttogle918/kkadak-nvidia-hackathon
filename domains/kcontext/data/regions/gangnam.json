@@ -1,8 +1,8 @@
 {
   "id": "gangnam",
   "name": {
-    "ko": "강남",
-    "en": "Gangnam"
+    "ko": "강남구",
+    "en": "Gangnam-gu"
   },
   "gu": [
     "강남구"
@@ -13,6 +13,11 @@
     "강남구",
     "강남"
   ],
-  "sillok_keywords": [],
-  "note": "구청 행사 검색 수집(D12, T226)용. bbox·center 는 H7 에서 채운다 [확인 필요]"
+  "sillok_keywords": [
+    "宣陵",
+    "靖陵",
+    "奉恩寺",
+    "狎鷗亭"
+  ],
+  "note": "bbox·center 는 H7 에서 채운다 [확인 필요]. sillok_keywords 는 docs/spikes/sillok.md 의 구체 지명만(노이즈 키워드 제외), 구 경계 매핑은 검증 전 [확인 필요]"
 }

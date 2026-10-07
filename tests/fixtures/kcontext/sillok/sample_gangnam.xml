@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 출처: 국사편찬위원회 조선왕조실록 정보_실록원문 (data.go.kr) · 내려받은 날짜: 2026-08-21 · 이용허락: 공공누리 1유형(출처표시) · 원본 2nd_wja_101.xml 의 기사 wja_10102012_001 발췌, 구조·내용 무수정 -->
+<!DOCTYPE level2 SYSTEM "history.dtd">
+<level2 id="wja_101">
+  <front>
+    <biblioData type="L">
+      <title>
+        <mainTitle>燕山君日記 元年</mainTitle>
+      </title>
+      <date>
+        <dateOccured date="1495" type="서기"/>
+        <dateOccured type="간지">乙卯</dateOccured>
+        <dateOccured type="재위연도">연산 1</dateOccured>
+        <dateOccured type="개국연호">조선 개국(開國) 104</dateOccured>
+        <dateOccured type="중국연호">명 홍치(弘治) 8</dateOccured>
+        <dateOccured type="단기">3828</dateOccured>
+        <dateOccured type="일본연호"/>
+        <dateOccured type="display">명 홍치(弘治) 8</dateOccured>
+      </date>
+    </biblioData>
+  </front>
+  <text>
+    <content>
+      <paragraph align="center"> 元年(1495)<annotation type="원주">
+          <noteContent>【<index num="0584419_0" sort="K" type="지명">大明</index>
+            <index num="0584420_0" type="연호">弘治</index>八年】</noteContent>
+        </annotation>
+      </paragraph>
+    </content>
+  </text>
+  <level3 id="wja_101020">
+    <front>
+      <biblioData type="L">
+        <title>
+          <mainTitle>燕山君日記 元年 二月</mainTitle>
+        </title>
+      </biblioData>
+    </front>
+    <text>
+      <content>
+        <paragraph align="center"> 元年 二月</paragraph>
+      </content>
+    </text>
+    <level4 id="wja_10102012">
+      <front>
+        <biblioData type="L">
+          <title>
+            <mainTitle>燕山君 元年 2月 12日</mainTitle>
+          </title>
+          <date>
+            <dateOccured date="1495-02-12L0" type="서기"/>
+            <dateOccured type="간지">丙寅</dateOccured>
+            <dateOccured type="재위연도">연산 1년 2월 12일</dateOccured>
+            <dateOccured type="개국연호">조선 개국(開國) 104년 2월 12일</dateOccured>
+            <dateOccured type="중국연호">명 홍치(弘治) 8년 2월 12일</dateOccured>
+            <dateOccured type="단기">3828년 2월 12일</dateOccured>
+            <dateOccured type="일본연호">년 2월 12일</dateOccured>
+            <dateOccured type="display">명 홍치(弘治)8년 2월 12일</dateOccured>
+          </date>
+        </biblioData>
+      </front>
+      <level5 id="wja_10102012_001">
+        <front>
+          <biblioData type="T">
+            <title>
+              <mainTitle>지평 최보가 이철견·정석견·전임 등에 대해서 국문할 것을 청하다</mainTitle>
+            </title>
+            <docNo level="n" name="titleno">001</docNo>
+            <date>
+              <dateOccured date="1495-02-12L0" type="서기"/>
+            </date>
+            <source>
+              <mainTitle type="태백산사고본">燕山君日記 1책 3권</mainTitle>
+              <page begin="10장 A면"/>
+            </source>
+            <source>
+              <mainTitle type="국편영인본">燕山君日記 12책</mainTitle>
+              <page begin="647면"/>
+            </source>
+            <subjectClass>정론-간쟁(諫諍)</subjectClass>
+            <subjectClass>인사-임면(任免)</subjectClass>
+            <subjectClass>사법-탄핵(彈劾)</subjectClass>
+            <subjectClass>인물(人物)</subjectClass>
+          </biblioData>
+        </front>
+        <text>
+          <content>
+            <paragraph align="center">○丙寅/持平<index num="0585488_0" ref="M_0062953" sort="K" type="이름">崔溥</index>啓: "<index num="0585489_0" ref="M_0005276" sort="K" type="이름">李鐵堅</index>前判義禁府, 聞<index num="0585490_0" ref="M_0054969" sort="K" type="이름">鄭灝</index>妾婢之美, 托以絃首、籍名禁府, 多方示威恐動之, 旋卽還除, 因奪以奸, 坐此罷職。 曾未數月, 又判禁府。 禁府豈<index num="0585491_0" ref="M_0005276" sort="K" type="이름">鐵堅</index>必居之地乎? <index num="0585492_0" ref="M_0011358" sort="K" type="이름">尹坦</index>前日爲<index num="0585493_0" sort="K" type="지명">忠淸</index>監司, 臺諫論其不合。 若少有方寸, 當謹愼戒懼之不暇。 曾不動念, 狂荒益甚, 恣行淫亂, 無所不至。 其不學無恥, 如此。 況禁府詔獄, 豈以狂誕之人濫處之地乎? <index num="0585494_0" ref="M_0005798" sort="K" type="이름">鄭錫堅</index>, 大行王不次擢用, 以朝散, 陞堂上、置喉舌之任, 上恩偏重, 期以死報。 當詔獄鞫問之時, 不以實對, 欺罔天聰, 罪固大矣。 及發配之日, 故舊餞慰, 雲集都門外。 <index num="0585495_0" ref="M_0005798" sort="K" type="이름">錫堅</index>曾不悔罪, 放浪詼諧, 乃至吟詠詩句, 略無逐臣蒼皇悔懼之狀。 是豈人臣之道乎? 還受職牒, 未幾超授成均館同知, 甚未便。 <index num="0585496_0" ref="M_0000870" sort="K" type="이름">田霖</index>性本殘忍, 爲<index num="0585497_0" sort="K" type="지명">會寧</index>府使, 未久枉殺四人, 鞫竟當永不敍用, 會蒙赦宥得免, 亦已幸矣。 曾未旬朔, 還授職, 又兼司僕將, 殊失懲戒之道。 <index num="0585498_0" ref="M_0058025" sort="K" type="이름">崔仁壽</index>本無來歷, 又短學術。 只以宣傳官授司果, 未幾又授長興庫主簿, 甚未便。 都事之任, 與議殿最、檢察一道, 所任非輕。 <index num="0585499_0" ref="M_0041728" sort="K" type="이름">李承烈</index>非但人器不合, 呈辭翌日, 遽授右職, 未便, 請竝改正。 <index num="0585500_0" sort="K" type="지명">宣陵</index>參奉, 例有恩數。 <index num="0585501_0" ref="M_0003982" sort="K" type="이름">李可臣</index>、<index num="0585502_0" ref="M_0035790" sort="K" type="이름">金禩</index>皆以<index num="0585503_0" ref="M_0004161" sort="K" type="이름">李克墩</index>族親, 擬望受點後, 旋卽引嫌。 於禩入啓改正, 初非不知其嫌, 乃敢擬望, 內不自安, 隱然啓稟。 於<index num="0585504_0" ref="M_0003982" sort="K" type="이름">可臣</index>, 則似若不爲族屬, 猶在其職, 烏得無情乎? 前日, 三都監郞廳, 多以族屬, 違法擬望。 本府請鞫之, 特原其罪, 猶不懲艾。 用人泛濫至此, 請推鞫。 國葬都監, 臺諫亦參者, 重其事, 而檢察不法也。 今者, 司諫<index num="0585505_0" ref="M_0061423" sort="K" type="이름">洪泂</index>常仕, 而同生<index num="0585506_0" ref="M_0061429" sort="K" type="이름">洪浩</index>、<index num="0585507_0" ref="M_0061058" sort="K" type="이름">洪湜</index>, 俱爲郞廳, 大體未便, 亦請改正。" 傳于承政院曰: "<index num="0585508_0" ref="M_0005276" sort="K" type="이름">李鐵堅</index>, 則其時, 旣以爲非, 而罪之, 今則已蒙赦宥。 若不合, 則已矣, 若合, 則何不可之有? <index num="0585509_0" ref="M_0011358" sort="K" type="이름">尹坦</index>爲觀察使時, 人無議之者, 今以爲, 不合於禁府、不稱其職論之, 可矣。 今無所失, 而論之, 無乃有妨於後日乎? <index num="0585510_0" ref="M_0005798" sort="K" type="이름">鄭錫堅</index>累蒙異恩, 不次擢用, 而不以實對。 前日, 大行亦非之。 今乃超授二品之職, 是果無人而擬之乎? <index num="0585511_0" ref="M_0000870" sort="K" type="이름">田霖</index> 若實殘酷, 則將帥領軍之任, 無奈不可乎? 今言<index num="0585512_0" ref="M_0058025" sort="K" type="이름">崔仁壽</index>無來歷, 是亦無人而擬之乎? <index num="0585513_0" ref="M_0041728" sort="K" type="이름">李承烈</index>人器不合云者, 何事耶? 且呈辭, 乃病親呈辭乎? <index num="0585514_0" ref="M_0003982" sort="K" type="이름">李可臣</index>、<index num="0585515_0" ref="M_0035790" sort="K" type="이름">金禩</index>, 於吏曹判書, 雖皆戚屬, 然無奈禩, 則有相避、<index num="0585516_0" ref="M_0003982" sort="K" type="이름">可臣</index>則無相避。 故不言<index num="0585517_0" ref="M_0003982" sort="K" type="이름">可臣</index>耶? 遣臺諫于都監者, 將欲糾擧不法也。 <index num="0585518_0" ref="M_0061423" sort="K" type="이름">泂</index>有二弟, 莅事, 則遣他諫員, 何? 其問于明日詣闕院相。" 傳于<index num="0585519_0" ref="M_0062953" sort="K" type="이름">崔溥</index>曰: "明當議而言之。"</paragraph>
+          </content>
+        </text>
+      </level5></level4></level3></level2>

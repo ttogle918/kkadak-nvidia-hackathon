@@ -28,7 +28,7 @@ def _write(d: Path, rid: str, **over):
 def test_real_regions_load(monkeypatch):
     monkeypatch.delenv("KC_DATA_DIR", raising=False)
     regs = load_regions()
-    assert set(regs) == {"euljiro", "gangnam", "jongno", "mapo", "sinchon"}
+    assert set(regs) == {"gangnam", "jongno", "jung", "mapo"}
     assert all(r.bbox is None and r.center is None for r in regs.values())
 
 
@@ -103,6 +103,6 @@ def test_demo_situation_shape():
 
 
 def test_no_region_literals_in_py():
-    pat = re.compile("종로|을지로|신촌")
+    pat = re.compile("중구|마포|강남|종로|을지로")
     for p in (REPO / "domains").rglob("*.py"):
         assert not pat.search(p.read_text("utf-8")), p

@@ -27,7 +27,7 @@ def test_fixture_run_writes_validated_records(tmp_path, capsys):
     rows = [json.loads(x) for x in out.read_text(encoding="utf-8").splitlines()]
     assert len(rows) == 1  # 정상 1 · quote 불일치 버림 · 지시문 후보 버림
     rec = event_from_dict(rows[0])
-    assert rec.fetched_from == "web" and rec.region == "euljiro"
+    assert rec.fetched_from == "web" and rec.region == "jung"
     report = json.loads(capsys.readouterr().out.splitlines()[-1])
     assert report["candidates"] == 3 and report["records"] == 1 and report["dropped"] == 2
     assert report["calls"] == 0
@@ -76,7 +76,7 @@ def test_candidates_only_prints_urls_and_needs_no_screen(capsys):
 
 def test_unconfirmed_source_exits_2(tmp_path, capsys):
     (tmp_path / "xx.json").write_text(json.dumps({
-        "region": "euljiro", "gu": "중구", "domains": ["a.invalid"], "queries": ["{gu}"],
+        "region": "jung", "gu": "중구", "domains": ["a.invalid"], "queries": ["{gu}"],
         "status": "unconfirmed"}), encoding="utf-8")
     rc = web_run.run(["--source", "xx", "--month", "2026-10"], env={KEY_ENV: "k"},
                      sources_dir=tmp_path)
