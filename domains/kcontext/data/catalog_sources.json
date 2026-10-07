@@ -30,10 +30,10 @@
     "method": "search",
     "status": "partial",
     "cadence_hours": 24,
-    "env_keys": ["TAVILY_SEARCH_KEY"],
+    "env_keys": ["TAVILY_SEARCH_KEY", "TAVILY_API_KEY"],
     "verified_at": "2026-10-07",
     "license": "확인 필요",
-    "notes": "D12: Tavily 검색으로 공식 도메인에서 후보를 찾고 LLM 이 추출한다(출처 등급 C, 인용 검증). 보도자료 게시판은 /content.do?cmsid=14390. LLM 추출기 연결(T223)이 없어 자동으로는 레코드를 만들지 못한다. robots.txt 는 /content.do?cmsid=14232 와 /search 만 차단한다."
+    "notes": "D12: Tavily 검색으로 공식 도메인에서 후보를 찾고 LLM(core.llm chat 설정)이 추출한다. 2단계다 — ① 호스트 수집기(python -m domains.kcontext.ingest.events --provider web --source junggu ...)가 var/data/events/web.jsonl 을 쓰고(키는 TAVILY_SEARCH_KEY, 없으면 별칭 TAVILY_API_KEY), ② catalog update --source junggu_site 가 그 파일을 읽어 관찰값으로 넣는다(이 단계는 검색·LLM 을 부르지 않는다). 출처 등급 C(ai_extracted)·'검색 수집 · 미확인' 표시 — 예약·언어·참여조건을 채우지 않고 독립 출처로 세지 않으며, 장소가 서울 ○○구로 확인되지 않으면 대상 지역 미확인이라 검색 목록이 아닌 관리자 검토 대기로 간다. 주기 실행은 아니다(수집기를 사람이 돌린다, 호출 한도·약관 미확인) — 그래서 partial. 보도자료 게시판은 /content.do?cmsid=14390. robots.txt 는 /content.do?cmsid=14232 와 /search 만 차단한다."
   },
   {
     "id": "junggu_sns",

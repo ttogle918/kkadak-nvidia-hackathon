@@ -18,8 +18,9 @@ from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 import httpx
-from dotenv import dotenv_values
 
+from core.llm import LlmError
+from core.llm.envfile import load_allowed_keys
 from domains.kcontext.contract.text import is_date
 from domains.kcontext.index.store import LocalIndex
 from domains.kcontext.paths import repo_root
@@ -28,7 +29,7 @@ from domains.kcontext.regions import load_regions
 from .extract import Extractor, ScreenFn, extract_events
 from .store import to_chunks, write_jsonl
 from .web import (
-    KEY_ENV,
+    KEY_ENVS,
     Candidate,
     KeyMissing,
     SourceUnconfirmed,
@@ -47,14 +48,12 @@ def _fail(msg: str) -> int:
 
 
 def _env_with_dotenv(env: Mapping[str, str] | None) -> Mapping[str, str]:
-    """셸 env 우선, 없으면 레포 .env 의 TAVILY 키만 보충한다(os.environ 은 바꾸지 않는다)."""
+    """셸 env 우선, 없으면 레포 .env 의 TAVILY 키(허용 이름만)를 보충한다(os.environ 은 바꾸지 않는다)."""
     if env is not None:
         return env
-    merged = dict(os.environ)
-    if not merged.get(KEY_ENV):
-        val = dotenv_values(repo_root() / ".env").get(KEY_ENV)
-        if val:
-            merged[KEY_ENV] = val
+    merged = {k: v for k, v in os.environ.items() if k in KEY_ENVS}
+    if not any(merged.get(k, "").strip() for k in KEY_ENVS):
+        merged.update(load_allowed_keys(repo_root() / ".env", KEY_ENVS))
     return merged
 
 
@@ -64,6 +63,13 @@ def _default_screen() -> ScreenFn | None:
     except ImportError:
         return None
     return screen
+
+
+def _default_extractor_factory() -> Callable[[Candidate], Extractor]:
+    """core.llm(chat 설정)으로 LLM 추출기를 조립한다. 키·설정 문제면 LlmError·KeyError·ValueError."""
+    from .llm_extract import make_extractor_factory
+
+    return make_extractor_factory()
 
 
 def _load_fixture(path: Path) -> tuple[list[Candidate], dict[str, list[dict]], bool]:
@@ -96,6 +102,11 @@ def run(
     ap.add_argument("--max-calls", type=int, default=30)
     ap.add_argument("--time-range", choices=["day", "week", "month", "year"])
     ap.add_argument("--candidates-only", action="store_true")
+    ap.add_argument("--save-candidates", type=Path,
+                    help="검색 결과(URL·본문)를 이 파일에 저장한다 — 레포 밖 임시 폴더에만 둔다(커밋 금지, D12 ⑦)")
+    ap.add_argument("--candidates-file", type=Path,
+                    help="--save-candidates 로 저장한 파일을 읽어 검색(Tavily 호출) 없이 추출만 한다")
+    ap.add_argument("--max-candidates", type=int, help="점수 순으로 이 수까지만 추출한다(LLM 호출 수 상한)")
     a = ap.parse_args(list(argv))
     try:
         month_label(a.month)
@@ -117,7 +128,14 @@ def run(
     calls = dropped_urls = 0
     table: dict[str, list[dict]] = {}
     synthetic = False
-    if a.fixture:
+    if a.candidates_file:
+        try:
+            raw = json.loads(a.candidates_file.read_text(encoding="utf-8"))
+            cands = [Candidate(c["url"], c.get("title", ""), c["content"], float(c.get("score", 0)))
+                     for c in raw["candidates"]]
+        except (OSError, ValueError, KeyError, TypeError) as e:
+            return _fail(f"--candidates-file 을 읽을 수 없다 ({type(e).__name__})")
+    elif a.fixture:
         cands, table, synthetic = _load_fixture(a.fixture)
         if synthetic and a.db:
             return _fail("합성 fixture 는 색인에 넣지 않는다 — --db 를 빼고 실행한다")
@@ -134,6 +152,14 @@ def run(
         cands, problems, calls, dropped_urls = (
             list(out.candidates), list(out.problems), out.calls, out.dropped_urls,
         )
+
+    if a.save_candidates and not a.fixture:
+        a.save_candidates.parent.mkdir(parents=True, exist_ok=True)
+        a.save_candidates.write_text(json.dumps({"candidates": [
+            {"url": c.url, "title": c.title, "content": c.content, "score": c.score} for c in cands
+        ]}, ensure_ascii=False), encoding="utf-8")
+    if a.max_candidates is not None:
+        cands = cands[: max(a.max_candidates, 0)]
 
     if a.candidates_only:
         for c in cands:
@@ -154,12 +180,16 @@ def run(
             items = table.get(c.url, [])  # fixture 의 합성 추출 결과
             return lambda _content: items
     if extractor_for is None:
-        return _fail("LLM 추출기(core.llm transport, T223)가 아직 없다 — "
-                     "--fixture 또는 --candidates-only 로 실행할 수 있다")
+        try:
+            extractor_for = _default_extractor_factory()
+        except (LlmError, KeyError, ValueError) as e:  # 설정·키 문제. 메시지에는 타입만 싣는다
+            return _fail(f"LLM 추출기를 만들 수 없다(키·deploy/llm.chat.yaml 확인, T223): {type(e).__name__}"
+                         " — --fixture 또는 --candidates-only 로 실행할 수 있다")
 
     records = []
     dropped = 0
-    for c in cands:
+    for n, c in enumerate(cands, 1):
+        print(f"extract {n}/{len(cands)} {c.url[:100]}", file=sys.stderr, flush=True)
         res = extract_events(c, extractor=extractor_for(c), screen=scr, region=region,
                              source_name=f"{src['gu']}청", collected_at=a.collected_at,
                              year=int(a.month[:4]), synthetic=synthetic)

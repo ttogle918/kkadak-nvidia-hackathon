@@ -1,6 +1,7 @@
 """행사 카탈로그 CLI (호스트 전용 — 공공데이터 키는 호스트 env 에서만 읽는다).
 
     python -m domains.kcontext.catalog update --source seoul_openapi [--sample]   # 한 출처 수집
+    python -m domains.kcontext.catalog update --source junggu_site [--web-events F]  # 검색 수집 JSONL → 카탈로그(D12)
     python -m domains.kcontext.catalog due                                         # 주기가 된 출처만
     python -m domains.kcontext.catalog loop --interval-min 30                      # 주기적 수집(스케줄러)
     python -m domains.kcontext.catalog status                                      # 수집·검토 현황 JSON
@@ -50,11 +51,13 @@ def _setup(args: argparse.Namespace):
     return CatalogStore(args.dir), region, _env()
 
 
-def _fetchers(sources: list[dict], region, now: datetime, env, sample: bool = False) -> dict:
+def _fetchers(sources: list[dict], region, now: datetime, env, sample: bool = False,
+              web_events: Path | None = None) -> dict:
     out = {}
     for s in sources:
         try:
-            out[s["id"]] = make_fetcher(s["id"], region=region, now=now, env=env, sample=sample)
+            out[s["id"]] = make_fetcher(s["id"], region=region, now=now, env=env, sample=sample,
+                                        web_events=web_events)
         except SourceError:
             continue
     return out
@@ -78,6 +81,8 @@ def main(argv: Sequence[str] | None = None) -> int:
     u = sub.add_parser("update")
     u.add_argument("--source", required=True)
     u.add_argument("--sample", action="store_true")
+    u.add_argument("--web-events", type=Path,
+                   help="junggu_site 전용: 검색 수집 결과 JSONL(기본 var/data/events/web.jsonl)")
     sub.add_parser("due")
     lp = sub.add_parser("loop")
     lp.add_argument("--interval-min", type=float, default=30.0)
@@ -98,7 +103,12 @@ def main(argv: Sequence[str] | None = None) -> int:
             print("--sample(5행 연결 확인)은 실제 카탈로그를 오염시키지 않도록 --dir <임시 폴더>(기본 카탈로그 경로가 아닌) 와 함께만 쓴다",
                   file=sys.stderr)
             return 2
-        fetchers = _fetchers(sources, region, now, env, sample=a.sample)
+        fetchers = _fetchers(sources, region, now, env, sample=a.sample, web_events=a.web_events)
+        if a.source not in fetchers and a.source == "junggu_site":
+            print("junggu_site: 검색 수집 결과 JSONL 이 없다 — `python -m domains.kcontext.ingest.events --provider web "
+                  "--source junggu --month YYYY-MM --out var/data/events/web.jsonl --collected-at YYYY-MM-DD` 로 먼저 만들거나 "
+                  "--web-events 로 경로를 준다", file=sys.stderr)
+            return 2
         if a.source not in fetchers:
             print(f"{a.source}: 자동 수집이 구현돼 있지 않거나 알 수 없는 출처다 — status 로 확인", file=sys.stderr)
             return 2

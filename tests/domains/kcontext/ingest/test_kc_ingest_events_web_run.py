@@ -46,7 +46,11 @@ def test_no_screen_exits_2(monkeypatch, capsys):
     assert rc == 2 and "screen" in capsys.readouterr().err
 
 
-def test_real_search_without_extractor_exits_2(capsys):
+def test_real_search_without_extractor_exits_2(capsys, monkeypatch):
+    def no_llm():  # 실제 .env·키와 무관하게 "LLM 을 쓸 수 없음" 경로를 시험한다
+        raise web_run.LlmError("x")
+
+    monkeypatch.setattr(web_run, "_default_extractor_factory", no_llm)
     def handler(req: httpx.Request) -> httpx.Response:
         return httpx.Response(200, json={"results": []})
 

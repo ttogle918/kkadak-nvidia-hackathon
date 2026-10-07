@@ -1,6 +1,6 @@
 """Tavily 검색으로 구청 행사 후보(URL·본문)를 모은다 (D12). 호스트 수집기 전용.
 
-- 키는 env ``TAVILY_SEARCH_KEY`` 에서만 읽는다. 로그·예외에는 키 값이 남지 않는다.
+- 키는 env ``TAVILY_SEARCH_KEY``(없으면 별칭 ``TAVILY_API_KEY``)에서만 읽는다. 로그·예외에는 키 값이 남지 않는다.
 - 요청 ``include_domains`` 는 도메인만 받는다(공식 문서). 경로 제한·차단 경로는 응답 URL 을
   이 모듈이 다시 거른다(``url_allowed``). 서버가 어겨도 코드가 거른다.
 - 이 모듈은 구청 페이지를 직접 가져오지 않는다. Tavily 가 돌려준 본문만 쓴다.
@@ -24,6 +24,7 @@ from domains.kcontext.paths import data_dir
 
 __all__ = [
     "KEY_ENV",
+    "KEY_ENVS",
     "Candidate",
     "KeyMissing",
     "SearchOutcome",
@@ -32,11 +33,13 @@ __all__ = [
     "build_queries",
     "load_web_source",
     "month_label",
+    "resolve_key",
     "search_candidates",
     "url_allowed",
 ]
 
 KEY_ENV = "TAVILY_SEARCH_KEY"
+KEY_ENVS = (KEY_ENV, "TAVILY_API_KEY")  # 앞쪽이 우선, 뒤는 별칭(Tavily 대시보드 기본 이름)
 ENDPOINT = "https://api.tavily.com/search"
 MAX_CONTENT_CHARS = 20_000
 _ID_RE = re.compile(r"^[a-z][a-z0-9_]{0,31}$")
@@ -184,6 +187,15 @@ def url_allowed(url: str, src: Mapping) -> bool:
     return not any(_blocked(d, path, parts.query) for d in src.get("disallow_path_prefixes") or [])
 
 
+def resolve_key(env: Mapping[str, str]) -> str:
+    """KEY_ENVS 순서대로 처음 비어 있지 않은 값. 없으면 빈 문자열."""
+    for name in KEY_ENVS:
+        v = env.get(name, "").strip()
+        if v:
+            return v
+    return ""
+
+
 def _mask(text: str, key: str | None) -> str:
     if key:
         text = text.replace(key, "***")
@@ -201,9 +213,9 @@ def search_candidates(
 ) -> SearchOutcome:
     if src.get("status") != "confirmed" or any(_PLACEHOLDER in d for d in src["domains"]):
         raise SourceUnconfirmed(f"{src.get('gu')}: web_sources 가 confirmed 가 아니다")
-    key = (os.environ if env is None else env).get(KEY_ENV, "")
+    key = resolve_key(os.environ if env is None else env)
     if not key:
-        raise KeyMissing(f"{KEY_ENV} 가 설정되지 않았다")
+        raise KeyMissing(f"{KEY_ENV}(또는 별칭 TAVILY_API_KEY)가 설정되지 않았다")
     queries = build_queries(src, month)
     problems: list[str] = []
     if len(queries) > max_calls:

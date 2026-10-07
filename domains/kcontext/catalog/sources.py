@@ -16,6 +16,8 @@ from domains.kcontext.regions import Region
 from .model import Observation
 from .seoul import KEY_ENV as SEOUL_KEY_ENV
 from .seoul import fetch_rows, observations_from_rows
+from .web_events import SOURCE_ID as WEB_SOURCE_ID
+from .web_events import default_events_file, make_web_fetcher
 
 __all__ = ["METHODS", "STATUSES", "SourceError", "load_sources", "make_fetcher"]
 
@@ -54,7 +56,7 @@ def load_sources(path: Path | None = None) -> list[dict]:
 
 def make_fetcher(
     source_id: str, *, region: Region, now: datetime, env: Mapping[str, str] | None = None,
-    client: httpx.Client | None = None, sample: bool = False,
+    client: httpx.Client | None = None, sample: bool = False, web_events: Path | None = None,
 ) -> Callable[[], list[Observation]]:
     """자동 수집이 구현된 출처의 수집 함수. 구현되지 않은 출처는 SourceError."""
     e = os.environ if env is None else env
@@ -68,4 +70,10 @@ def make_fetcher(
             return observations_from_rows(rows, region=region, collected_at=collected)
 
         return fetch_seoul
+    if source_id == WEB_SOURCE_ID:  # D12: 호스트 수집기(web_run)가 쓴 JSONL 을 읽는다 — 검색·LLM 호출은 여기서 하지 않는다
+        path = web_events if web_events is not None else default_events_file()
+        if not path.is_file():
+            raise SourceError(f"{source_id}: 검색 수집 결과 파일이 없다 ({path.name}) — "
+                              "python -m domains.kcontext.ingest.events --provider web --source junggu ... --out 으로 먼저 만든다")
+        return make_web_fetcher(path, region=region)
     raise SourceError(f"{source_id}: 자동 수집이 구현돼 있지 않다 (docs: catalog_sources.json 의 status)")
