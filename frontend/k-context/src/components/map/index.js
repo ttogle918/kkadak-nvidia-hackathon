@@ -2,7 +2,8 @@
 // 읽는 상태: mode day selectedSeg selectedRoute selectedNow lang data loaded. 쓰는 액션: selectSeg selectRoute selectNow.
 // 다른 components/* 를 import 하지 않는다. 변경이 있으면 가볍게 전체 재렌더하고, 포커스(data-fk)와 목록 스크롤은 되살린다.
 import { h, on, render } from '../../lib/dom.js';
-import { cardById, routeById } from '../../state/selectors.js';
+import { cardById, mockRegions, routeById } from '../../state/selectors.js';
+import { mockBadge } from '../../lib/mock-badge.js';
 import { VIEW_BOX, buildBaseMap } from './base-map.js';
 import { buildLabel, nowLabelSpec, segLabelSpec, stripGlyph } from './labels.js';
 import {
@@ -147,7 +148,7 @@ function buildSkeleton(t) {
  * @param {{store, api, t, actions}} ctx
  */
 export function mount(root, ctx) {
-  const { store, t, actions } = ctx;
+  const { store, t, actions, api } = ctx;
   // 지도가 메인이므로 구간 목록은 접힌 채로 시작한다(데스크톱·모바일 공통)
   let stepsOpen = false;
   let destroyed = false;
@@ -175,6 +176,7 @@ export function mount(root, ctx) {
         h('div', { class: 'map-bundle-head' },
           h('span', { class: 'map-bundle-head__title' }, t('map.bundle.title')),
           b.sample ? h('span', { class: 'cb-flag', dataset: { flag: 'sample' } }, t('bundle.sample')) : null,
+          mockRegions(s, api).map ? mockBadge(t, { kind: mockRegions(s, api).map }) : null,
           bundleHasPins(b) ? null : h('span', { role: 'status' }, t('map.bundle.no_pins'))),
         h('div', { class: 'map-stage' }, kview ? [kakaoHost, kview.status] : [buildBundleSvg(b, t, pinKey), buildPinPanel(b, pinKey, t)])));
       if (kview) { try { kview.update(s); } catch { console.warn('[map] 카카오 지도 갱신 실패'); } }
@@ -188,7 +190,9 @@ export function mount(root, ctx) {
       return;
     }
     const route = routeById(s, s.selectedRoute) ?? s.data.routes[0];
+    const mr = mockRegions(s, api);
     render(root, h('div', { class: 'map', dataset: { module: 'map' } },
+      mr.routes || mr.map ? h('div', { class: 'mock-row', dataset: { module: 'map-mock' } }, mockBadge(t, { kind: mr.routes ?? mr.map, note: true })) : null,
       buildRouteCards(s.data.routes, route.id, t),
       h('div', { class: 'map-stage' }, kview ? [kakaoHost, kview.status] : [buildMapSvg(s, t), buildLegend(t)]),
       buildStepList({ route, selectedSeg: s.selectedSeg, cardOf: (id) => cardById(s, id), t, open: stepsOpen })));

@@ -2,6 +2,7 @@
 // 텍스트는 textContent(h() 의 문자열 자식)와 Marker.title(속성) 로만 넣는다 — innerHTML 금지.
 // 일정 앵커(itinerary.anchors)의 유효 좌표도 마커가 된다. lat/lng 가 null·비수치·범위 밖인 항목은 건너뛴다. 하나도 없으면 기본 중심만 보이고 '좌표 없음'을 표시한다.
 import { h } from '../../lib/dom.js';
+import { mockBadge } from '../../lib/mock-badge.js';
 import { bundlePins, pinInfo } from '../../lib/chat-bundle.js';
 import { pinInfoNode } from '../../lib/chat-bundle-view.js';
 
@@ -87,10 +88,11 @@ export function createKakaoView(kakao, host, t) {
         h('span', { class: 'map-kakao__me-halo' }),
         h('span', { class: 'map-kakao__me-dot' }),
         h('span', { class: 'map-kakao__me-label' }, label),
+        mockBadge(t),
       ]);
       o = new maps.CustomOverlay({ position: pos, content: node, xAnchor: 0.5, yAnchor: 0.5, zIndex: 10 });
     } else {
-      o = new maps.Marker({ position: pos, title: label });
+      o = new maps.Marker({ position: pos, title: `${label} · MOCK` });
     }
     o.setMap(map);
     overlays.push(o);

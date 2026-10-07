@@ -28,14 +28,26 @@ export const API_METHODS = [
  */
 export const HTTP_METHODS = ['getMessages', 'sendMessage', 'getCards', 'getCard', 'getSources', 'getRationale'];
 
+/**
+ * 화면 데이터의 출처 종류(표시용 메타 — 응답을 감싸지 않는다). api.dataKinds[키] 값:
+ *  'mock'    프론트 data/ 의 고정 예시   'fixture' 서버가 주지만 backend/fixtures/screen 의 고정 예시(mock 과 같은 내용)
+ *  'server'  실제 서버 응답              'none'    아직 서버에 없음(호출하면 ApiNotImplementedError)
+ * 키: itinerary·routes·cards·sources·rationale·messages·audit. HTTP_METHODS 가 늘면 여기도 맞춘다.
+ */
+export const DATA_KINDS = {
+  mock: { itinerary: 'mock', routes: 'mock', cards: 'mock', sources: 'mock', rationale: 'mock', messages: 'mock', audit: 'mock' },
+  chat: { itinerary: 'mock', routes: 'mock', cards: 'fixture', sources: 'fixture', rationale: 'fixture', messages: 'server', audit: 'mock' },
+  http: { itinerary: 'none', routes: 'none', cards: 'fixture', sources: 'fixture', rationale: 'fixture', messages: 'server', audit: 'none' },
+};
+
 /** @param {{mode?:'mock'|'http', baseUrl?:string, latencyMs?:number}} opts */
 export function createApi({ mode = 'mock', baseUrl, latencyMs } = {}) {
-  if (mode === 'mock') return createMockApi({ latencyMs });
-  if (mode === 'http') return createHttpApi({ baseUrl });
+  if (mode === 'mock') return { ...createMockApi({ latencyMs }), dataKinds: { ...DATA_KINDS.mock } };
+  if (mode === 'http') return { ...createHttpApi({ baseUrl }), dataKinds: { ...DATA_KINDS.http } };
   if (mode === 'chat') {
     // 하이브리드: HTTP_METHODS 만 실제 backend, 나머지는 mock.
     const http = createHttpApi({ baseUrl });
-    const api = { ...createMockApi({ latencyMs }), mode: 'chat', baseUrl: http.baseUrl };
+    const api = { ...createMockApi({ latencyMs }), mode: 'chat', baseUrl: http.baseUrl, dataKinds: { ...DATA_KINDS.chat } };
     for (const n of HTTP_METHODS) api[n] = http[n];
     return api;
   }

@@ -2,7 +2,8 @@
 // 언어·테마·일정 최소 변경과 보안 로그는 설정 패널(layout/settings.js)로 옮겼다. 기어에는 승인 대기 로그 수를 알림 점으로 단다.
 // 상태를 직접 바꾸지 않고 ctx.actions 를 부른다. 레이아웃 전용이라 다른 모듈과 무관하다.
 import { h, render, on } from '../../lib/dom.js';
-import { pendingCount } from '../../state/selectors.js';
+import { pendingCount, screenStatus } from '../../state/selectors.js';
+import { mockBadge } from '../../lib/mock-badge.js';
 import { seg } from './seg.js';
 
 const MODES = ['old', 'now', 'both'];
@@ -15,9 +16,16 @@ function gearIcon() {
     h('path', { d: 'M12 2.8v2.6M12 18.6v2.6M2.8 12h2.6M18.6 12h2.6M5.5 5.5l1.8 1.8M16.7 16.7l1.8 1.8M5.5 18.5l1.8-1.8M16.7 7.3l1.8-1.8' }));
 }
 
+/** 지금 화면이 MOCK 인지 실제 서버 결과인지 한 줄로. 실제(bundle)일 때는 MOCK 딱지를 붙이지 않는다. */
+export function statusNode(status, t) {
+  return h('div', { class: 'topbar__status', role: 'status', dataset: { status } },
+    status === 'bundle' ? null : mockBadge(t),
+    h('span', { class: 'topbar__status-text' }, t(`mock.status.${status === 'all-mock' ? 'all' : status}`)));
+}
+
 /** @returns {{destroy(): void}} */
 export function mount(root, ctx) {
-  const { store, t, actions } = ctx;
+  const { store, t, actions, api } = ctx;
 
   const logo = h('svg', { class: 'topbar__logo', viewBox: '0 0 24 24', width: 22, height: 22, 'aria-hidden': 'true' },
     h('rect', { x: 5, y: 5, width: 14, height: 14, rx: 2, fill: 'var(--c-old)', transform: 'rotate(45 12 12)' }),
@@ -32,6 +40,7 @@ export function mount(root, ctx) {
       h('div', { class: 'topbar__group', 'aria-label': t('topbar.mode') }, seg(MODES, s.mode, 'set-mode', (m) => t(`topbar.mode.${m}`))),
       h('div', { class: 'topbar__group' }, seg(DAYS, s.day, 'set-day', (d) => t('topbar.day', { n: d }))),
       h('div', { class: 'topbar__spacer' }),
+      statusNode(screenStatus(s, api), t),
       h('button', {
         type: 'button', class: 'topbar__gear', dataset: { act: 'open-settings', pending: pend }, 'aria-haspopup': 'dialog', 'aria-expanded': String(!!s.settingsOpen),
         'aria-label': pend > 0 ? t('topbar.settings_pending', { n: pend }) : t('topbar.settings'),
@@ -48,7 +57,7 @@ export function mount(root, ctx) {
 
   draw();
   const offStore = store.select(
-    (s) => [s.mode, s.day, s.lang, s.settingsOpen, pendingCount(s.logs)],
+    (s) => [s.mode, s.day, s.lang, s.settingsOpen, pendingCount(s.logs), s.chatBundle],
     draw,
     { equals: (a, b) => a.every((v, i) => v === b[i]) },
   );

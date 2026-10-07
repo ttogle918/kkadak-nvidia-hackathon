@@ -254,7 +254,7 @@ test('내 위치(예시): 별도 레이어, [lat,lng], 예시 라벨, bounds 포
   const kn = makeKakao();
   delete kn.maps.CustomOverlay;
   createKakaoView(kn, new El('div'), t).update(stAnc([]));
-  assert.equal(kn.log.markers[0].o.title, '내 위치 (예시)');
+  assert.equal(kn.log.markers[0].o.title, '내 위치 (예시) · MOCK'); // MOCK 표시 추가로 갱신: Marker 는 title 만 보이므로 MOCK 을 붙인다
   assert.equal(geoTouched, 0, 'navigator.geolocation 접근 없음');
   assert.equal(innerHtmlWrites, before, 'innerHTML 미사용');
   delete globalThis.navigator;

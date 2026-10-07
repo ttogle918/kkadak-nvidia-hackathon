@@ -41,3 +41,41 @@ export function timelineFor(itinerary, day, { added, skipped, selectedNow }) {
 export function pendingCount(logs) {
   return (logs ?? []).filter((l) => l.kind === 'pend').length;
 }
+
+// ---- MOCK(가짜 데이터) 표시 판정. 화면 어디에 MOCK 딱지를 붙일지는 여기서만 정한다 ----
+// 규칙: ① api.dataKinds[키] 가 'mock'·'fixture' 이거나 모르면(없음) MOCK 으로 본다(실제라고 단정하지 않는다).
+//       ② chatBundle 이 있으면 타임라인·지도 핀·카드는 그 묶음이 기준이다 — 서버가 준 묶음(sample 아님, api.mode !== 'mock')만 실제.
+//       ③ chatBundle 이 있으면 mock 판단 근거(rationale)는 숨긴다(실제 결과와 섞이지 않게).
+
+/** 데이터 키의 종류: 'mock'|'fixture'|'server'|'none'. dataKinds 가 없으면 'mock'. */
+export const dataKindOf = (api, key) => api?.dataKinds?.[key] ?? 'mock';
+const isMockKind = (k) => k === 'mock' || k === 'fixture' || k == null;
+
+/** chatBundle 이 없으면 null, 있으면 'server'(실제) | 'mock'(sample 이거나 backend 없는 mock api). */
+export function bundleKind(state, api) {
+  if (!state.chatBundle) return null;
+  return state.chatBundle.sample === true || api?.mode === 'mock' || api?.mode == null ? 'mock' : 'server';
+}
+
+/**
+ * 영역별 MOCK 여부.
+ * 반환: {timeline, routes, map, cards, rationale: 'mock'|'fixture'|null, hideRationale, myLocation}
+ *  - routes: 경로 A·B·C 탭 줄(묶음 화면에는 없다)   - map: 지도의 선·핀   - myLocation: 지도의 '내 위치'(항상 예시 좌표)
+ */
+export function mockRegions(state, api) {
+  const bk = bundleKind(state, api);
+  const kind = (key) => { const k = dataKindOf(api, key); return isMockKind(k) ? (k === 'fixture' ? 'fixture' : 'mock') : null; };
+  if (bk) {
+    const m = bk === 'mock' ? 'mock' : null;
+    return { timeline: m, routes: null, map: m, cards: m, rationale: null, hideRationale: true, myLocation: 'mock' };
+  }
+  return { timeline: kind('itinerary'), routes: kind('routes'), map: kind('routes') ?? kind('itinerary'), cards: kind('cards'), rationale: kind('rationale'), hideRationale: false, myLocation: 'mock' };
+}
+
+/**
+ * 상단 상태: 'all-mock'(백엔드 미연결 — 전체 MOCK) | 'bundle'(챗봇이 정리한 일정, 실제 서버) | 'mock'(서버는 연결됐지만 화면은 MOCK).
+ */
+export function screenStatus(state, api) {
+  if (api?.mode == null || api.mode === 'mock') return 'all-mock';
+  return bundleKind(state, api) === 'server' ? 'bundle' : 'mock';
+}

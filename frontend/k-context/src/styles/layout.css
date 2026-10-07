@@ -92,3 +92,9 @@
 @media (prefers-reduced-motion: reduce) {
   .cards-zone { transition: none; }
 }
+
+/* 상단 상태 줄: MOCK 이면 경고색 테두리, 실제 서버 결과면 지금(파랑) 색 */
+.topbar__status { display: inline-flex; align-items: center; gap: var(--sp-2); font-size: var(--fs-sm); font-weight: 600; color: var(--c-warn); min-width: 0; }
+.topbar__status[data-status="bundle"] { color: var(--c-now-ink); }
+.topbar__status[data-status="all-mock"] .topbar__status-text { text-decoration: underline dotted; text-underline-offset: 3px; }
+@media (max-width: 899px) { .topbar__status-text { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; max-width: 34vw; } }

@@ -1,6 +1,8 @@
 // rationale 모듈: 판단 근거 태그 줄(작은 pill) + 태그를 누르면 뜨는 작은 팝오버(깔때기엔 걸러낸 것 포함). 데이터는 api.getRationale(cardId).
 // 계약: mount(root, ctx) -> {destroy()}. 다른 components/* 를 import 하지 않는다.
 import { h, on, render } from '../../lib/dom.js';
+import { mockBadge } from '../../lib/mock-badge.js';
+import { mockRegions } from '../../state/selectors.js';
 import { renderChips } from './chips.js';
 import { renderEvidencePanel, renderRejected } from './evidence-panel.js';
 import { activeCardIds, createLatestGuard, mergeRationale, openItem, rejectedFor } from './logic.js';
@@ -27,10 +29,16 @@ export function mount(root, ctx) {
     focusAfter = null;
 
     let content = null;
+    const mr = mockRegions(s, api);
+    if (mr.hideRationale) { // 챗봇이 정리한 일정이 있으면 mock 판단 근거는 숨긴다(실제 결과와 섞이지 않게)
+      render(root, h('div', { class: 'rationale', dataset: { status: 'hidden' } }, h('div', { class: 'rationale-note', role: 'status' }, t('mock.rationale.hidden'))));
+      return;
+    }
     if (model.status === 'loading') content = h('div', { class: 'rationale-note' }, t('app.loading'));
     else if (model.status === 'error') content = h('div', { class: 'rationale-note is-error', role: 'alert' }, t('rationale.error'));
     else if (model.merged.chips.length) {
       content = [
+        mr.rationale ? h('div', { class: 'mock-row', dataset: { module: 'rationale-mock' } }, mockBadge(t, { kind: mr.rationale, note: true })) : null,
         renderChips(model.merged.chips, { t, openKey: item ? item.key : null }),
         // 깔때기 팝오버에는 걸러낸 주장과 이유를 함께 둔다
         item ? renderEvidencePanel(item, { t, extra: item.key === 'funnel' ? renderRejected(rejectedFor(s.data?.cards, ids), { t }) : null }) : null,
@@ -56,7 +64,7 @@ export function mount(root, ctx) {
     const ids = activeCardIds(store.getState());
     const key = ids.join(',');
     const token = guard.next();
-    if (!ids.length) {
+    if (!ids.length || store.getState().chatBundle) { // 묶음이 있으면 근거를 받지 않는다(숨김)
       model = { status: 'idle', ids: key, merged: { chips: [], items: {} } };
       draw();
       return;
@@ -108,8 +116,8 @@ export function mount(root, ctx) {
       justOpened = true;
       setTimeout(() => { justOpened = false; }, 0);
     }
-    if (idsOf(s) !== idsOf(prev)) load();
-    else if (s.openEvidence !== prev.openEvidence || s.lang !== prev.lang || s.data !== prev.data) draw();
+    if (idsOf(s) !== idsOf(prev) || !!s.chatBundle !== !!prev.chatBundle) load();
+    else if (s.openEvidence !== prev.openEvidence || s.chatBundle !== prev.chatBundle || s.lang !== prev.lang || s.data !== prev.data) draw();
   });
 
   return {

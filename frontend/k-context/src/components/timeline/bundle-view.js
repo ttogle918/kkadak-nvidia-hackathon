@@ -1,6 +1,7 @@
 // 챗봇이 정리한 일정(chatBundle)의 타임라인. 고정 샘플 일정과 구분되도록 제목·"챗봇이 정리했어요" 표시를 둔다.
 // 행 모양은 기존 timelineRowNode 를 재사용한다. 외부 문자열은 전부 텍스트 노드로만 들어간다.
 import { h } from '../../lib/dom.js';
+import { mockBadge } from '../../lib/mock-badge.js';
 import { bundleDayDate, bundleDays, bundleTimelineFor, problemLines } from '../../lib/chat-bundle.js';
 import { STATUS_META } from './logic.js';
 import { timelineRowNode } from './timeline-row.js';
@@ -15,7 +16,7 @@ function rowNode(r, t) {
 }
 
 /** @param {object} bundle 검증된 chatBundle  @param {number} day 선택한 날(없는 날이면 첫 날로 본다) */
-export function bundleTimelineNode(bundle, day, t) {
+export function bundleTimelineNode(bundle, day, t, { mock = bundle.sample ? 'mock' : null } = {}) {
   const days = bundleDays(bundle);
   const cur = days.includes(day) ? day : (days[0] ?? 0);
   const rows = bundleTimelineFor(bundle, cur);
@@ -25,6 +26,7 @@ export function bundleTimelineNode(bundle, day, t) {
     h('div', { class: 'timeline__head' },
       h('span', { class: 'timeline__title' }, t('timeline.bundle.title')),
       bundle.sample ? h('span', { class: 'cb-flag', dataset: { flag: 'sample' } }, t('bundle.sample')) : null,
+      mock ? mockBadge(t, { kind: mock }) : null,
       h('button', { type: 'button', class: 'timeline-min', dataset: { act: 'clear-bundle' } }, t('timeline.bundle.back'))),
     days.length ? h('div', { class: 'timeline-days', role: 'tablist', 'aria-label': t('timeline.days') },
       days.map((d) => h('button', {

@@ -232,4 +232,12 @@ export default {
   'map.bundle.pin_aria': '{name} · {n} Sillok mention(s)',
   'map.bundle.panel_aria': '{name} details',
   'map.bundle.close': 'Close details',
+  // --- MOCK 표시 ---
+  'mock.badge': 'MOCK',
+  'mock.badge.title': 'Sample data — not real',
+  'mock.badge.fixture': 'Fixed sample from the server (fixture) — not real',
+  'mock.status.all': 'Backend not connected — all MOCK',
+  'mock.status.mock': 'MOCK data — only chatbot replies are real',
+  'mock.status.bundle': 'Itinerary organized by the chatbot (real server)',
+  'mock.rationale.hidden': 'Reasoning for this itinerary is not ready yet (MOCK sample hidden)',
 };

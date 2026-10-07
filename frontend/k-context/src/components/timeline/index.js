@@ -4,13 +4,15 @@ import { h, on, render } from '../../lib/dom.js';
 import { timelineView } from './logic.js';
 import { timelineRowNode, legendNode } from './timeline-row.js';
 import { bundleTimelineNode } from './bundle-view.js';
+import { mockBadge } from '../../lib/mock-badge.js';
+import { mockRegions } from '../../state/selectors.js';
 
 /**
  * @param {HTMLElement} root app-shell 이 준 슬롯 div
  * @param {{store, api, t, actions}} ctx
  */
 export function mount(root, ctx) {
-  const { store, t, actions } = ctx;
+  const { store, t, actions, api } = ctx;
 
   function draw() {
     // 다시 그리면 포커스가 사라지므로 키보드 사용자를 위해 같은 컨트롤로 되돌린다
@@ -18,7 +20,7 @@ export function mount(root, ctx) {
     const keep = active && root.contains?.(active) && active.dataset?.act ? { act: active.dataset.act, value: active.dataset.value } : null;
     const s = store.getState();
     if (s.chatBundle) {
-      render(root, bundleTimelineNode(s.chatBundle, s.day, t));
+      render(root, bundleTimelineNode(s.chatBundle, s.day, t, { mock: mockRegions(s, api).timeline }));
       restoreFocus(keep);
       return;
     }
@@ -28,6 +30,7 @@ export function mount(root, ctx) {
     render(root, h('div', { class: 'timeline', dataset: { module: 'timeline' } },
       h('div', { class: 'timeline__head' },
         h('span', { class: 'timeline__title' }, t('timeline.title')),
+        mockRegions(s, api).timeline ? mockBadge(t, { kind: mockRegions(s, api).timeline, note: true }) : null,
         h('button', {
           type: 'button', class: 'timeline-min', role: 'switch', 'aria-checked': String(!!s.minimizeChanges),
           dataset: { act: 'toggle-min', on: s.minimizeChanges ? 'true' : 'false' },

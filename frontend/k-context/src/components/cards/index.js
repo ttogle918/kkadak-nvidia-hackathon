@@ -5,6 +5,8 @@ import { renderOldCard } from './old-card.js';
 import { renderNowCard } from './now-card.js';
 import { renderSourcePopover } from './source-popover.js';
 import { bundleCardNodes } from './bundle-view.js';
+import { mockBadge } from '../../lib/mock-badge.js';
+import { mockRegions } from '../../state/selectors.js';
 import { createLatestGuard, findSource, nowButtons, supportingFacts, visibleCards } from './logic.js';
 
 const BODY_KEYS = ['lang', 'mode', 'selectedSeg', 'selectedNow', 'immersion', 'expandedTags', 'added', 'skipped', 'data', 'loaded', 'selectedTag', 'chatBundle'];
@@ -55,7 +57,7 @@ export function mount(root, ctx) {
   function drawBody() {
     const s = store.getState();
     if (s.chatBundle) { // 챗봇이 정리한 일정이 있으면 그 기록·행사 카드를 보인다(샘플 카드 대신)
-      render(body, bundleCardNodes(s.chatBundle, t));
+      render(body, bundleCardNodes(s.chatBundle, t, { mock: mockRegions(s, api).cards }));
       return;
     }
     // 다시 그리면 포커스가 사라지므로 fk 를 기억했다가 되돌린다
@@ -73,6 +75,8 @@ export function mount(root, ctx) {
         t, added: s.added, skipped: s.skipped, expanded: !!s.expandedTags[now.id], openId: s.selectedTag,
       }));
     }
+    const mk = mockRegions(s, api).cards;
+    if (nodes.length && mk) nodes.unshift(h('div', { class: 'mock-row', dataset: { module: 'cards-mock' } }, mockBadge(t, { kind: mk, note: true })));
     if (!nodes.length) nodes.push(h('div', { class: 'cards-empty' }, s.loaded ? t('cards.empty') : t('app.loading')));
     render(body, nodes);
     if (keepFk) focusFk(keepFk);

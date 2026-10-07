@@ -244,4 +244,12 @@ export default {
   'map.bundle.pin_aria': '{name} · 실록 언급 {n}건',
   'map.bundle.panel_aria': '{name} 정보',
   'map.bundle.close': '정보창 닫기',
+  // --- MOCK 표시 ---
+  'mock.badge': 'MOCK',
+  'mock.badge.title': '예시 데이터 — 실제 아님',
+  'mock.badge.fixture': '서버가 주는 고정 예시(fixture) — 실제 아님',
+  'mock.status.all': '백엔드 미연결 — 전체 MOCK',
+  'mock.status.mock': 'MOCK 데이터 — 서버는 챗봇 답만 실제',
+  'mock.status.bundle': '챗봇이 정리한 일정 (실제 서버)',
+  'mock.rationale.hidden': '이 일정의 판단 근거는 아직 준비 중이에요 (MOCK 예시는 숨김)',
 };
