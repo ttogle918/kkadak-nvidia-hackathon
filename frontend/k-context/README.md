@@ -26,13 +26,13 @@ index.html                 진입점: CSS 1개(src/styles/index.css) + module sc
 src/
   main.js                  부트: store → api → actions → 레이아웃 → 모듈 mount → 데이터 로드
   modules.js               슬롯 이름 → 모듈 레지스트리
-  lib/                     store · dom(h/on/esc/render) · i18n · format(출처 태그 문구·딱지) · theme · placeholder(스텁용)
+  lib/                     store · panel-level(하단 패널 단계 계산) · dom(h/on/esc/render) · i18n · format(출처 태그 문구·딱지) · theme · placeholder(스텁용)
   i18n/{ko,en}.js          UI 문구 사전(키는 1:1, 테스트가 검사)
   state/                   initial(상태 키) · actions(상태 전이) · selectors(파생값)
   api/                     index(createApi) · mock · http(스텁) · schema(계약 검증기)
   data/                    sources · cards · routes · itinerary · messages · auditlog · rationale (계약 형식 샘플)
   components/
-    layout/                app-shell(슬롯 배치·설정 패널 틀) · topbar(보기·날짜·설정 기어) · settings(설정 패널 머리말·언어·테마·최소 변경) · seg(공용 세그먼트)
+    layout/                app-shell(슬롯 배치·설정 패널 틀·하단 패널 핸들) · topbar(보기·날짜·설정 기어) · settings(설정 패널 머리말·언어·테마·최소 변경) · seg(공용 세그먼트)
     map/ cards/ chat/ securitylog/ rationale/ timeline/    각 index.js(스텁) + <이름>.css(빈 파일)
   styles/                  tokens(변수·다크) · base(공통 원자) · layout(2열/모바일/설정 패널) · index(@import 목록)
 tests/                     node --test
@@ -92,6 +92,7 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 | `data` | `{itinerary,routes,cards,sources: null}` | api 로 받은 원본 | (SEG/TAGS 상수) |
 | `loaded` / `error` | `false` / `null` | 로드 상태 | — |
 | `settingsOpen` | `false` | 설정 패널(보안 로그·언어·테마·최소 변경) 열림 | — |
+| `panelLevel` | `'default'` | 하단 패널(`.cards-zone`) 높이 단계 `'collapsed'`\|`'default'`\|`'expanded'` — 접힘 48px / 가운데 열의 1/3 / 70% | — |
 | `mobileTab` / `sheetOpen` | `'chat'` / `false` | 모바일 시트 탭(`chat`\|`timeline`)과 열림 | — |
 
 규칙: 상태는 불변 갱신(`setState({k: 새 값})` 또는 `setState(s => patch)`). 배열·객체는 새 참조로 넣는다. 같은 값이면 알림이 가지 않는다.
@@ -100,7 +101,7 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 ### 공유 액션 (`ctx.actions`, `src/state/actions.js`)
 `loadAll` · `setLang` · `setTheme` · `setMode` · `setDay` · `toggleMinimize` · `toggleImmersion` · `setSecurityOpen` · `setSettingsOpen` ·
 `selectSeg(cardId|null)` · `selectRoute(id)` · `selectNow(cardId)` · `openLocalContext(storyCardId)` · `openTag(sourceId)` · `closeTag` · `expandTags(cardId)` ·
-`openEvidence(key)` · `closeEvidence` · `setHoverFact(n|null)` · `addSelected` · `skipSelected` · `setInput` · `send(text?)` · `decide(id,'approve'|'reject')` · `setMobileTab` · `setSheetOpen`.
+`openEvidence(key)` · `closeEvidence` · `setHoverFact(n|null)` · `addSelected` · `skipSelected` · `setInput` · `send(text?)` · `decide(id,'approve'|'reject')` · `setMobileTab` · `setSheetOpen` · `setPanelLevel(level)` · `stepPanel(±1)`.
 필요한 전이가 없으면 `actions.js` 에 한 줄 추가하되, 기존 함수의 동작은 바꾸지 않는다(다른 모듈이 의존한다).
 
 ### 파생값 (`src/state/selectors.js`) · 표시 규칙 (`src/lib/format.js`)
@@ -148,6 +149,10 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
   Esc·바깥(backdrop) 클릭·닫기 버튼으로 닫고 포커스는 기어로 돌아간다. 승인 대기(pend) 로그가 있으면 기어에 점+숫자(aria-label 에도 개수).
 - 판단 근거 태그는 pill(높이 22px·글자 11px), 터치 영역은 `::after` 투명 패딩으로 확장. `openEvidence` 로 팝오버가 열린다(같은 태그 재클릭·Esc·바깥 클릭·✕ 로 닫음).
   카드의 "왜 이걸 골랐나요?" 링크도 첫 태그의 팝오버를 연다.
+- **하단 패널 핸들**(shell 소유, `.cards-zone` 맨 위): 막대+제목(`role=separator`, `aria-valuenow/min/max`) + ^ / v 버튼. 세 단계 — 접힘(핸들+카드 제목 한 줄, 48px) / 기본(가운데 열의 1/3) / 펼침(70%).
+  ^ 는 한 단계 위, v 는 한 단계 아래. 핸들 드래그(pointer events, 터치 포함)는 자유 리사이즈 후 놓으면 가장 가까운 단계로 스냅(임시 높이는 shell 로컬, 놓을 때 `setPanelLevel` 만 store 에).
+  키보드: 위/아래 화살표 = 단계 이동, Enter/Space = 접힘↔기본. 선택 카드가 바뀌어도 접어 둔 패널을 자동으로 펼치지 않는다. 계산은 `lib/panel-level.js`(순수 함수). 모듈(cards·rationale)은 높이를 몰라도 되고 스크롤만 된다.
+  지도(`map`)가 메인이다: 구간 안내 목록은 접힌 채 시작하고 경로 A·B·C 카드는 낮은 한 줄이다(자세한 이유는 툴팁 `title`).
 - 모듈은 화면 크기를 몰라도 된다 — 슬롯 안에서 가로로 유연하게만 그린다. 모바일 터치 크기는 `--tap`(40px) 이상.
 - 슬롯 높이 배분은 `styles/layout.css` 에 있다.
 

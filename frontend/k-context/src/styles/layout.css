@@ -11,11 +11,26 @@
 /* 데스크톱 슬롯 높이 배분 */
 .slot-chat { flex: 1 1 60%; overflow: auto; }
 .slot-timeline { flex: 0 1 40%; overflow: auto; border-top: 1px solid var(--c-line); }
-.slot-map { flex: 1 1 55%; background: var(--c-map); overflow: hidden; }
+.slot-map { flex: 1 1 0; background: var(--c-map); overflow: hidden; }
 /* 카드 영역 = 판단 근거 태그 줄(rationale) + 카드(cards). 태그 팝오버가 카드 위로 뜨도록 rationale 은 overflow 를 자르지 않는다 */
-.cards-zone { flex: 0 1 45%; min-height: 0; display: flex; flex-direction: column; border-top: 1px solid var(--c-line); position: relative; }
+.cards-zone { flex: none; height: var(--panel-h-default); min-height: 0; display: flex; flex-direction: column; border-top: 1px solid var(--c-line); position: relative; background: var(--c-bg-app); transition: height .18s ease; }
+.cards-zone[data-level="collapsed"] { height: var(--panel-collapsed-h); }
+.cards-zone[data-level="expanded"] { height: var(--panel-h-expanded); }
+.cards-zone[data-dragging="true"] { transition: none; } /* 드래그 중 높이는 인라인 style */
+.cards-zone[data-level="collapsed"] .slot-rationale, .cards-zone[data-level="collapsed"] .slot-cards { display: none; }
+
+/* 하단 패널 핸들 바: 막대+제목(separator) 와 ^ / v 버튼. 터치 영역은 투명 패딩으로 40px 이상 */
+.panel-handle { flex: none; display: flex; align-items: stretch; min-height: 44px; border-bottom: 1px solid var(--c-line); background: var(--c-bg-app); }
+.cards-zone[data-level="collapsed"] .panel-handle { border-bottom: 0; }
+.panel-handle__grip { flex: 1; min-width: 0; display: flex; align-items: center; gap: var(--sp-3); padding: 0 var(--sp-3); min-height: var(--tap); cursor: ns-resize; touch-action: none; user-select: none; }
+.panel-handle__bar { flex: none; width: 36px; height: 4px; border-radius: var(--r-pill); background: var(--c-line-ctl); }
+.panel-handle__grip:hover .panel-handle__bar, .panel-handle__grip:focus-visible .panel-handle__bar { background: var(--c-ink); }
+.panel-handle__title { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: var(--fs-sm); font-weight: 700; color: var(--c-text-2); }
+.panel-handle__btn { flex: none; width: var(--tap); min-height: var(--tap); border: 0; background: transparent; color: var(--c-ink); font-size: var(--fs-md); }
+.panel-handle__btn:disabled { color: var(--c-off); cursor: default; }
+.panel-handle__btn:hover:not(:disabled) { background: var(--c-surface-2); }
 .slot-rationale { flex: none; overflow: visible; z-index: 4; }
-.slot-cards { flex: 1 1 auto; overflow: auto; }
+.slot-cards { flex: 1 1 0; min-height: 0; overflow: auto; }
 
 /* 상단 바 */
 .topbar { min-height: var(--topbar-h); display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); }
@@ -52,9 +67,10 @@
   .col { display: contents; } /* 슬롯을 main 의 직접 자식처럼 다룬다 */
   .col-left { border: 0; }
   .slot-map { position: absolute; inset: 0; flex: none; }
-  .cards-zone { position: absolute; left: 0; right: 0; bottom: 0; max-height: 42%; border-top: 0; background: transparent; z-index: 2; pointer-events: none; }
-  .cards-zone > * { pointer-events: auto; }
+  /* 모바일: 지도 위에 겹치되 높이는 단계(접힘 48px / 1/3 / 70%)로. 지도가 메인이다 */
+  .cards-zone { position: absolute; left: 0; right: 0; bottom: 0; z-index: 2; border-radius: var(--r-lg) var(--r-lg) 0 0; box-shadow: var(--shadow); }
   .app[data-sheet="open"] .cards-zone { bottom: var(--sheet-h); }
+  .panel-handle { min-height: var(--tap); }
   /* 시트: chat·timeline 이 같은 자리를 쓰고 활성 탭만 보인다 */
   .slot-chat, .slot-timeline {
     display: none; position: absolute; left: 0; right: 0; bottom: 0; height: var(--sheet-h); z-index: 3;
@@ -71,4 +87,8 @@
   .mtabs { flex: none; display: flex; height: var(--mtabs-h); border-top: 1px solid var(--c-line); background: var(--c-bg-app); position: relative; z-index: 4; padding-bottom: env(safe-area-inset-bottom); }
   .mtabs__btn { flex: 1; border: 0; background: transparent; font-size: var(--fs-md); font-weight: 600; color: var(--c-text-2); }
   .mtabs__btn.is-on { color: var(--c-now); box-shadow: inset 0 3px 0 var(--c-now); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cards-zone { transition: none; }
 }

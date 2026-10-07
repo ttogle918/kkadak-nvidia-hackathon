@@ -33,7 +33,7 @@ const { createActions } = await import('../src/state/actions.js');
 const { createT } = await import('../src/lib/i18n.js');
 const map = await import('../src/components/map/index.js');
 
-async function setup(over = {}, load = true) {
+async function setup(over = {}, load = true, openSteps = true) {
   const store = createStore(createInitialState(over));
   const api = createApi({ mode: 'mock', latencyMs: 0 });
   const actions = createActions({ store, api });
@@ -41,6 +41,8 @@ async function setup(over = {}, load = true) {
   const t = createT(() => store.getState().lang);
   const root = new El('section', 'html');
   const m = map.mount(root, { store, api, t, actions });
+  // 구간 목록은 접힌 채로 시작한다 — 목록을 보는 테스트는 먼저 펼친다
+  if (load && openSteps) root.listeners.click[0]({ target: root.find((e) => e.dataset?.act === 'toggle-steps')[0] });
   return { store, actions, root, m };
 }
 const click = (root, el) => root.listeners.click[0]({ target: el });
@@ -52,6 +54,8 @@ test('로드 전에는 스켈레톤, 로드 후 지도·경로 카드 3개·구�
   await actions.loadAll();
   assert.equal(root.find((e) => e.attrs?.class === 'map-skeleton').length, 0);
   assert.equal(acts(root, 'route').length, 3);
+  assert.equal(root.find((e) => e.attrs?.class === 'map-steps__list').length, 0, '목록은 접힌 채로 시작');
+  click(root, acts(root, 'toggle-steps')[0]);
   assert.equal(root.find((e) => e.tag === 'svg' && e.attrs.class === 'map-svg').length, 1);
   // 선택 경로 A 의 구간 4개 중 이야기 있는 3개만 지도 구간 버튼 + 목록 버튼
   assert.equal(root.find((e) => e.attrs?.role === 'button' && e.dataset.act === 'seg').length, 3);
@@ -121,7 +125,10 @@ test('언어 전환·day 변경으로 다시 그려지고, 문자열은 텍스�
 });
 
 test('목록 토글은 열고 닫을 수 있고, destroy 는 구독·리스너를 해제하고 비운다', async () => {
-  const { store, root, m } = await setup();
+  const { store, root, m } = await setup({}, true, false);
+  assert.equal(root.find((e) => e.attrs?.class === 'map-steps__list').length, 0, '기본은 접힘');
+  assert.equal(acts(root, 'toggle-steps')[0].attrs['aria-expanded'], 'false');
+  click(root, acts(root, 'toggle-steps')[0]);
   assert.equal(root.find((e) => e.attrs?.class === 'map-steps__list').length, 1);
   click(root, acts(root, 'toggle-steps')[0]);
   assert.equal(root.find((e) => e.attrs?.class === 'map-steps__list').length, 0);

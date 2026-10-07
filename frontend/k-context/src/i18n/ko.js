@@ -38,6 +38,15 @@ export default {
   'module.placeholder': '{name} 모듈 — 2단계에서 구현',
   'module.error': '{name} 모듈을 띄우지 못했어요',
 
+  // 하단 패널 핸들
+  'panel.title': '카드',
+  'panel.handle': '하단 패널 높이 조절',
+  'panel.up': '패널 한 단계 펼치기',
+  'panel.down': '패널 한 단계 줄이기',
+  'panel.level.collapsed': '접힘',
+  'panel.level.default': '기본',
+  'panel.level.expanded': '펼침',
+
   // 모바일 시트 탭
   'tab.chat': '대화',
   'tab.timeline': '일정',

@@ -19,7 +19,7 @@ const setup = async () => {
 test('초기 상태 키(README 표와 동일)', () => {
   assert.deepEqual(STATE_KEYS.sort(), [
     'added', 'data', 'day', 'error', 'expandedTags', 'hoverFact', 'immersion', 'input', 'lang', 'loaded', 'logs', 'messages',
-    'minimizeChanges', 'mobileTab', 'mode', 'openEvidence', 'securityOpen', 'selectedNow', 'selectedRoute', 'selectedSeg',
+    'minimizeChanges', 'mobileTab', 'mode', 'openEvidence', 'panelLevel', 'securityOpen', 'selectedNow', 'selectedRoute', 'selectedSeg',
     'selectedTag', 'sending', 'settingsOpen', 'sheetOpen', 'skipped', 'theme',
   ]);
   const s = createInitialState({ lang: 'en' });

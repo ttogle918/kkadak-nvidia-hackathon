@@ -1,17 +1,23 @@
 /* map 모듈. 클래스는 .map- 접두사, 색은 tokens.css 변수만. 다크는 변수가 처리한다. */
 .map { --map-water: color-mix(in srgb, var(--c-now) 16%, var(--c-map)); display: flex; flex-direction: column; height: 100%; min-height: 0; background: var(--c-map); }
 
-/* 경로 카드 */
-.map-routes { flex: none; display: flex; gap: var(--sp-2); padding: var(--sp-2); overflow-x: auto; background: var(--c-bg-app); border-bottom: 1px solid var(--c-line); }
-.map-route { flex: 1 0 150px; display: flex; flex-direction: column; gap: 2px; text-align: left; padding: var(--sp-2); min-height: var(--tap); border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-surface); color: var(--c-ink); font-size: var(--fs-sm); }
-.map-route.is-on { border: 2px solid var(--c-old); background: var(--c-old-dim); padding: calc(var(--sp-2) - 1px); }
-.map-route__head { display: flex; flex-wrap: wrap; align-items: center; gap: var(--sp-1); }
-.map-route__id { display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: var(--r-sm); background: var(--c-ink); color: var(--c-ink-inv); font-weight: 700; font-size: var(--fs-xs); }
-.map-route__theme { font-weight: 700; font-size: var(--fs-md); }
-.map-route__chip { border: 1px solid var(--c-line-ctl); border-radius: var(--r-pill); padding: 0 6px; font-size: var(--fs-xs); color: var(--c-text-2); }
-.map-route__meta { color: var(--c-text-2); }
-.map-route__mix { color: var(--c-old); font-size: var(--fs-xs); font-weight: 600; }
-.map-route__reason { color: var(--c-muted); font-size: var(--fs-xs); }
+/* 경로 카드: 낮은 한 줄(지도가 가려지지 않게). 이유·구성은 title(툴팁)과 카드/목록에서 본다 */
+.map-routes { flex: none; display: flex; gap: var(--sp-1); padding: var(--sp-1) var(--sp-2); overflow: hidden; background: var(--c-bg-app); border-bottom: 1px solid var(--c-line); }
+.map-route { flex: 1 1 0; min-width: 0; display: flex; align-items: center; gap: var(--sp-2); text-align: left; padding: 0 var(--sp-2); min-height: 32px; border: 1px solid var(--c-line-strong); border-radius: var(--r-md); background: var(--c-surface); color: var(--c-ink); font-size: var(--fs-sm); overflow: hidden; white-space: nowrap; }
+.map-route.is-on { border: 2px solid var(--c-old); background: var(--c-old-dim); padding: 0 calc(var(--sp-2) - 1px); }
+.map-route__head { display: flex; align-items: center; gap: var(--sp-1); min-width: 0; }
+.map-route__id { flex: none; display: inline-grid; place-items: center; width: 18px; height: 18px; border-radius: var(--r-sm); background: var(--c-ink); color: var(--c-ink-inv); font-weight: 700; font-size: var(--fs-xs); }
+.map-route__theme { font-weight: 700; font-size: var(--fs-md); overflow: hidden; text-overflow: ellipsis; }
+.map-route__chip, .map-route__mix, .map-route__reason { display: none; }
+.map-route__meta { flex: none; color: var(--c-text-2); font-size: var(--fs-xs); }
+@media (max-width: 899px) {
+  .map-route { min-height: var(--tap); }
+  .map-route__meta { display: none; }
+  /* 목록 토글이 아래 패널에 가리지 않도록 지도 위쪽(경로 카드 바로 아래)에 둔다 */
+  .map-routes { order: 0; }
+  .map-steps { order: 1; border-top: 0; border-bottom: 1px solid var(--c-line); }
+  .map-stage { order: 2; }
+}
 
 /* 지도 */
 .map-stage { position: relative; flex: 1 1 0; min-height: 140px; overflow: hidden; }

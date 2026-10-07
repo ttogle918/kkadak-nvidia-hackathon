@@ -34,6 +34,15 @@ export default {
   'module.securitylog': 'Security log',
   'module.placeholder': '{name} module — to be built in stage 2',
   'module.error': 'Could not start the {name} module',
+  // bottom panel handle
+  'panel.title': 'Cards',
+  'panel.handle': 'Resize bottom panel',
+  'panel.up': 'Expand panel one step',
+  'panel.down': 'Shrink panel one step',
+  'panel.level.collapsed': 'Collapsed',
+  'panel.level.default': 'Default',
+  'panel.level.expanded': 'Expanded',
+
 
   'tab.chat': 'Chat',
   'tab.timeline': 'Plan',

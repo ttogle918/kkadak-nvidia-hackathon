@@ -145,8 +145,8 @@ function buildSkeleton(t) {
  */
 export function mount(root, ctx) {
   const { store, t, actions } = ctx;
-  // 모바일(좁은 화면)은 아래 카드가 지도를 덮으므로 목록을 접어서 시작한다
-  let stepsOpen = !(typeof globalThis.matchMedia === 'function' && globalThis.matchMedia('(max-width: 899px)').matches);
+  // 지도가 메인이므로 구간 목록은 접힌 채로 시작한다(데스크톱·모바일 공통)
+  let stepsOpen = false;
   let destroyed = false;
 
   function draw() {

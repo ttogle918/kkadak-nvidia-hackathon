@@ -2,6 +2,7 @@
 // 쓰기 규칙: 에이전트가 쓰는 도구는 draft 만 만든다. 여기서도 decide() 는 "사람이 누른 버튼" 에서만 호출한다
 // (신원은 서버가 정하므로 인자로 받지 않는다).
 import { normalizeLang } from '../lib/i18n.js';
+import { isLevel, stepLevel } from '../lib/panel-level.js';
 
 export function createActions({ store, api }) {
   const { getState, setState } = store;
@@ -100,6 +101,11 @@ export function createActions({ store, api }) {
       setState((s) => ({ logs: s.logs.map((l) => (l.id === entry.id ? entry : l)) }));
       return entry;
     },
+
+    /** 하단 패널 높이 단계(핸들 소유는 app-shell). 모르는 값은 무시한다. */
+    setPanelLevel: (level) => { if (isLevel(level)) setState({ panelLevel: level }); },
+    /** 한 단계 위(+1)/아래(-1). */
+    stepPanel: (dir) => setState((s) => ({ panelLevel: stepLevel(s.panelLevel, dir) })),
 
     setMobileTab: (mobileTab) => setState({ mobileTab, sheetOpen: true }),
     setSheetOpen: (sheetOpen) => setState({ sheetOpen: !!sheetOpen }),

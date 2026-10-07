@@ -58,6 +58,15 @@ test('boot: 슬롯 8개(오른쪽 열 없음)에 모듈이 마운트되고 데�
   assert.equal(app.ctx.store.getState().sheetOpen, false);
   // 모바일 탭은 대화·일정 두 개뿐(근거·보안은 카드 안 태그·설정 패널로 옮겼다)
   assert.deepEqual(root.find((e) => e.dataset?.act === 'mtab').map((e) => e.dataset.value), ['chat', 'timeline']);
+  // 하단 패널: 기본 단계 + 핸들(separator) 이 cards-zone 안에 있고, ^ 로 펼침 -> store.panelLevel
+  assert.equal(s.panelLevel, 'default');
+  const zone = root.find((e) => e.attrs?.class === 'cards-zone')[0];
+  assert.equal(zone.dataset.level, 'default');
+  assert.equal(zone.find((e) => e.attrs?.role === 'separator').length, 1);
+  const up = root.find((e) => e.dataset?.act === 'panel-up')[0];
+  up.listeners.click[0]();
+  assert.equal(app.ctx.store.getState().panelLevel, 'expanded');
+  assert.equal(zone.dataset.level, 'expanded');
   // 기어 버튼 -> 설정 패널 열림(data-open) -> 바깥(backdrop) 클릭으로 닫힘
   const layer = root.find((e) => e.attrs?.class === 'settings-layer')[0];
   assert.equal(layer.dataset.open, 'false');

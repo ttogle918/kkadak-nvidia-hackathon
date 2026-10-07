@@ -16,7 +16,7 @@
 //   input / msgs / logs -> input / messages / logs
 //
 // 이 프로젝트에서 새로 생긴 키: data(api 로 받은 원본), loaded/error, sending, selectedRoute, selectedNow,
-//   mobileTab/sheetOpen(모바일 시트), theme, settingsOpen.
+//   mobileTab/sheetOpen(모바일 시트), theme, settingsOpen, panelLevel(하단 패널 높이 단계).
 
 /** @param {object} overrides 테스트·URL 파라미터로 덮어쓸 값 */
 export function createInitialState(overrides = {}) {
@@ -50,6 +50,8 @@ export function createInitialState(overrides = {}) {
     data: { itinerary: null, routes: null, cards: null, sources: null },
     loaded: false,
     error: null,
+    // --- 하단 패널 높이 단계 ---
+    panelLevel: 'default', // 'collapsed' | 'default' | 'expanded'
     // --- 모바일 시트 ---
     mobileTab: 'chat', // 'chat' | 'timeline'
     sheetOpen: false,

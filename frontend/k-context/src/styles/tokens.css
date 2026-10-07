@@ -60,6 +60,8 @@
   --settings-w: 380px;
   --mtabs-h: 48px;
   --sheet-h: 55dvh;
+  --panel-collapsed-h: 48px; /* 하단 패널 접힘 높이(panel-level.js 의 COLLAPSED_PX 와 같게) */
+  --panel-h-default: 33.333%; --panel-h-expanded: 70%;
   --tap: 40px; /* 모바일 최소 터치 크기 */
 }
 

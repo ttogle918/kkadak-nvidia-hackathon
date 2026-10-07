@@ -21,7 +21,7 @@ export function buildRouteCards(routes, selectedId, t) {
       const on = r.id === selectedId;
       return h('button', {
         type: 'button', class: ['map-route', on && 'is-on'], 'aria-pressed': String(on),
-        dataset: { act: 'route', id: r.id, fk: `route:${r.id}` },
+        title: t(r.recommend_reason), dataset: { act: 'route', id: r.id, fk: `route:${r.id}` },
       },
       h('span', { class: 'map-route__head' },
         h('span', { class: 'map-route__id' }, r.id),

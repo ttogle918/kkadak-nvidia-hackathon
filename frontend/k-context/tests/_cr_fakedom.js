@@ -6,6 +6,7 @@ export class El {
   }
   setAttribute(k, v) { this.attrs[k] = v; }
   getAttribute(k) { return this.attrs[k] ?? null; }
+  removeAttribute(k) { delete this.attrs[k]; }
   appendChild(c) { c.parent = this; this.children.push(c); return c; }
   addEventListener(t, fn) { (this.listeners[t] ||= []).push(fn); }
   removeEventListener(t, fn) { this.listeners[t] = (this.listeners[t] || []).filter((f) => f !== fn); }
