@@ -1,0 +1,829 @@
+[
+  {
+    "place": {
+      "name": {
+        "ko": "○○로 ○○ 구간",
+        "en": "○○-ro, section ○○"
+      },
+      "lat": null,
+      "lng": null
+    },
+    "slot": null,
+    "time_cost_min": null,
+    "stay_min": null,
+    "valid": null,
+    "why_fits": [],
+    "caveats": [],
+    "local_context": null,
+    "narration": {
+      "ko": "당신은 지금 ○○년의 이 길에 서 있습니다. 앞쪽으로 행렬의 먼지가 일고 있습니다…",
+      "en": "You are standing on this road in the year ○○. Dust rises ahead where the procession passes…"
+    },
+    "rejected": [],
+    "era": {
+      "ko": "○○ 시대",
+      "en": "○○ era"
+    },
+    "facts": [
+      {
+        "text": {
+          "ko": "이 구간은 ○○ 기록에 행차로로 나온다.",
+          "en": "This section appears in ○○ records as a processional road."
+        },
+        "ref": 1
+      },
+      {
+        "text": {
+          "ko": "길 폭은 ○○ 정도였다고 적혀 있다.",
+          "en": "Its width is noted as about ○○."
+        },
+        "ref": 2
+      }
+    ],
+    "alternatives": null,
+    "checks": [],
+    "poster": null,
+    "only": null,
+    "warning": null,
+    "kind_label": null,
+    "user_state": "proposed",
+    "id": "card_old_1",
+    "kind": "story",
+    "title": {
+      "ko": "왕이 지나던 길 (예시)",
+      "en": "The King's Passage (sample)"
+    },
+    "geometry": {
+      "type": "segment",
+      "coords": [
+        [
+          90,
+          70
+        ],
+        [
+          210,
+          100
+        ],
+        [
+          300,
+          100
+        ]
+      ],
+      "basis": {
+        "ko": "○○ (예시)",
+        "en": "○○ (sample)"
+      },
+      "space": "schematic"
+    },
+    "body": {
+      "ko": "이 구간은 ○○ 기록에 행차로로 나온다. 길 폭은 ○○ 정도였다고 적혀 있다.",
+      "en": "This section appears in ○○ records as a processional road. Its width is noted as about ○○."
+    },
+    "badge": "기록",
+    "sources": [
+      {
+        "id": "doc_01",
+        "tier": "S",
+        "name": "조선왕조실록 (예시)",
+        "locator": "○○ ○년 ○월 ○일",
+        "url": "",
+        "bib": "○○실록 권○ · 자리 표시용 서지",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "「○○○○ 행차 ○○…」 (예시 원문 구절)"
+      },
+      {
+        "id": "doc_02",
+        "tier": "A",
+        "name": "서울지명사전 (예시)",
+        "locator": "p.214",
+        "url": "",
+        "bib": "서울지명사전, 자리 표시용 서지, p.214",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "「○○ 일대에 ○○ 물길이 있었다」 (예시 구절)"
+      }
+    ]
+  },
+  {
+    "place": {
+      "name": {
+        "ko": "○○ 뒷골목",
+        "en": "○○ back alley"
+      },
+      "lat": null,
+      "lng": null
+    },
+    "slot": null,
+    "time_cost_min": null,
+    "stay_min": null,
+    "valid": null,
+    "why_fits": [],
+    "caveats": [],
+    "local_context": null,
+    "narration": {
+      "ko": "당신은 지금 ○○년의 이 골목에 서 있습니다. 큰길을 피한 발걸음들이 이곳으로 모입니다…",
+      "en": "You are in this alley in the year ○○. Footsteps that avoided the main road gather here…"
+    },
+    "rejected": [],
+    "era": {
+      "ko": "○○ 시대",
+      "en": "○○ era"
+    },
+    "facts": [
+      {
+        "text": {
+          "ko": "옛길과 대체로 겹친다고 추정된다.",
+          "en": "It is presumed to roughly overlap the old road."
+        },
+        "ref": 1
+      },
+      {
+        "text": {
+          "ko": "직접 기록은 확인되지 않았다.",
+          "en": "No direct record has been found."
+        },
+        "ref": 1
+      }
+    ],
+    "alternatives": null,
+    "checks": [],
+    "poster": null,
+    "only": null,
+    "warning": null,
+    "kind_label": null,
+    "user_state": "proposed",
+    "id": "card_old_2",
+    "kind": "story",
+    "title": {
+      "ko": "백성이 피해 다닌 뒷골목 (예시)",
+      "en": "The Back Alley Locals Avoided (sample)"
+    },
+    "geometry": {
+      "type": "segment",
+      "coords": [
+        [
+          300,
+          100
+        ],
+        [
+          300,
+          170
+        ],
+        [
+          300,
+          230
+        ]
+      ],
+      "basis": {
+        "ko": "○○ (예시)",
+        "en": "○○ (sample)"
+      },
+      "space": "schematic"
+    },
+    "body": {
+      "ko": "옛길과 대체로 겹친다고 추정된다. 직접 기록은 확인되지 않았다.",
+      "en": "It is presumed to roughly overlap the old road. No direct record has been found."
+    },
+    "badge": "추정",
+    "sources": [
+      {
+        "id": "doc_02",
+        "tier": "A",
+        "name": "서울지명사전 (예시)",
+        "locator": "p.214",
+        "url": "",
+        "bib": "서울지명사전, 자리 표시용 서지, p.214",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "「○○ 일대에 ○○ 물길이 있었다」 (예시 구절)"
+      }
+    ]
+  },
+  {
+    "place": {
+      "name": {
+        "ko": "○○ 물길 옛 자리",
+        "en": "Former ○○ stream bed"
+      },
+      "lat": null,
+      "lng": null
+    },
+    "slot": null,
+    "time_cost_min": null,
+    "stay_min": null,
+    "valid": null,
+    "why_fits": [],
+    "caveats": [],
+    "local_context": null,
+    "narration": {
+      "ko": "당신은 지금 ○○년의 이 길에 서 있습니다. 발밑으로 물소리가 지나갑니다…",
+      "en": "You are standing on this road in the year ○○. Water murmurs beneath your feet…"
+    },
+    "rejected": [],
+    "era": {
+      "ko": "○○ 시대",
+      "en": "○○ era"
+    },
+    "facts": [
+      {
+        "text": {
+          "ko": "이 길 아래로 ○○ 물길이 흐르던 것으로 전해진다.",
+          "en": "A stream is said to have run beneath this road."
+        },
+        "ref": 1
+      },
+      {
+        "text": {
+          "ko": "물길이 덮인 시기는 자료마다 달라 두 설이 있다.",
+          "en": "Sources differ on when it was covered, so two accounts exist."
+        },
+        "ref": 2
+      }
+    ],
+    "alternatives": [
+      {
+        "label": {
+          "ko": "설 A",
+          "en": "Account A"
+        },
+        "text": {
+          "ko": "○○ 시기에 덮임 (자료 ①)",
+          "en": "Covered in ○○ (source ①)"
+        }
+      },
+      {
+        "label": {
+          "ko": "설 B",
+          "en": "Account B"
+        },
+        "text": {
+          "ko": "△△ 시기에 덮임 (자료 ②)",
+          "en": "Covered in △△ (source ②)"
+        }
+      }
+    ],
+    "checks": [],
+    "poster": null,
+    "only": null,
+    "warning": null,
+    "kind_label": null,
+    "user_state": "proposed",
+    "id": "card_old_4",
+    "kind": "story",
+    "title": {
+      "ko": "지금은 덮인 물길 위 (예시)",
+      "en": "Above the Covered Stream (sample)"
+    },
+    "geometry": {
+      "type": "segment",
+      "coords": [
+        [
+          400,
+          230
+        ],
+        [
+          470,
+          230
+        ]
+      ],
+      "basis": {
+        "ko": "○○ (예시)",
+        "en": "○○ (sample)"
+      },
+      "space": "schematic"
+    },
+    "body": {
+      "ko": "이 길 아래로 ○○ 물길이 흐르던 것으로 전해진다. 물길이 덮인 시기는 자료마다 달라 두 설이 있다.",
+      "en": "A stream is said to have run beneath this road. Sources differ on when it was covered, so two accounts exist."
+    },
+    "badge": "전승",
+    "sources": [
+      {
+        "id": "doc_02",
+        "tier": "A",
+        "name": "서울지명사전 (예시)",
+        "locator": "p.214",
+        "url": "",
+        "bib": "서울지명사전, 자리 표시용 서지, p.214",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "「○○ 일대에 ○○ 물길이 있었다」 (예시 구절)"
+      },
+      {
+        "id": "doc_01",
+        "tier": "S",
+        "name": "조선왕조실록 (예시)",
+        "locator": "○○ ○년 ○월 ○일",
+        "url": "",
+        "bib": "○○실록 권○ · 자리 표시용 서지",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "「○○○○ 행차 ○○…」 (예시 원문 구절)"
+      }
+    ]
+  },
+  {
+    "place": {
+      "name": {
+        "ko": "야장 골목 ○○",
+        "en": "Night-market alley ○○"
+      },
+      "lat": null,
+      "lng": null
+    },
+    "slot": {
+      "day": 1,
+      "at": "19:30",
+      "between": [
+        {
+          "ko": "익선동",
+          "en": "Ikseon-dong"
+        },
+        {
+          "ko": "숙소",
+          "en": "hotel"
+        }
+      ]
+    },
+    "time_cost_min": 12,
+    "stay_min": 70,
+    "valid": {
+      "from": "2026-10-15",
+      "to": "2026-10-18",
+      "as_of": "2026-10-05"
+    },
+    "why_fits": [
+      {
+        "ko": "관심사와 일치: 한국 음식, 로컬 문화",
+        "en": "Matches: Korean food, local culture"
+      },
+      {
+        "ko": "여행 날짜에 열림 (10/15–18)",
+        "en": "Open on your travel dates (10/15–18)"
+      },
+      {
+        "ko": "일정을 거의 바꾸지 않음 (빈 시간 안)",
+        "en": "Barely changes your plan (fits free time)"
+      }
+    ],
+    "caveats": [
+      {
+        "ko": "현금만 가능",
+        "en": "Cash only"
+      },
+      {
+        "ko": "대기 있음",
+        "en": "Possible queue"
+      },
+      {
+        "ko": "우천 시 미운영",
+        "en": "Closed if raining"
+      }
+    ],
+    "local_context": {
+      "text": {
+        "ko": "이 골목의 지명은 ○○에서 왔다고 전해집니다.",
+        "en": "This alley's name is said to come from ○○."
+      },
+      "story_card_id": "card_old_4"
+    },
+    "narration": null,
+    "rejected": [
+      {
+        "claim": {
+          "ko": "포스터: 19:00 시작",
+          "en": "Poster: starts 19:00"
+        },
+        "reason": {
+          "ko": "나중에 올라온 공식 변경 공지(19:30)를 채택, 포스터 시간은 참고로 남김",
+          "en": "Chose the later official notice (19:30); kept the poster time as reference"
+        }
+      }
+    ],
+    "era": null,
+    "facts": [],
+    "alternatives": null,
+    "checks": [
+      {
+        "level": "ok",
+        "text": {
+          "ko": "공식 출처",
+          "en": "Official source"
+        }
+      },
+      {
+        "level": "ok",
+        "text": {
+          "ko": "날짜 확인됨",
+          "en": "Date confirmed"
+        }
+      },
+      {
+        "level": "ok",
+        "text": {
+          "ko": "2일 전 갱신",
+          "en": "Updated 2 days ago"
+        }
+      }
+    ],
+    "poster": {
+      "read": {
+        "ko": "날짜 10/15–18 · 19:30 시작 · ○○ 골목 (예시)",
+        "en": "Oct 15–18 · from 19:30 · ○○ alley (sample)"
+      }
+    },
+    "only": {
+      "ko": "여행 기간에만 열림",
+      "en": "Only during your trip"
+    },
+    "warning": null,
+    "kind_label": {
+      "ko": "야장",
+      "en": "NIGHT MKT"
+    },
+    "user_state": "proposed",
+    "id": "card_now_1",
+    "kind": "now",
+    "title": {
+      "ko": "○○ 야장",
+      "en": "○○ Night Market"
+    },
+    "geometry": {
+      "type": "segment",
+      "coords": [
+        [
+          470,
+          232
+        ],
+        [
+          470,
+          328
+        ]
+      ],
+      "radius_m": null,
+      "basis": {
+        "ko": "주소 (예시)",
+        "en": "address (sample)"
+      },
+      "space": "schematic"
+    },
+    "body": {
+      "ko": "익선동에서 야장 골목까지 들렀다 가는 제안입니다 (예시).",
+      "en": "A suggested detour from Ikseon-dong to the night-market alley (sample)."
+    },
+    "badge": "확인됨",
+    "sources": [
+      {
+        "id": "doc_03",
+        "tier": "B",
+        "name": "한국관광공사 TourAPI",
+        "locator": "2026-10-05 갱신",
+        "url": "https://example.org/tourapi/○○",
+        "published": "2026-10-05",
+        "collected_at": "2026-10-05",
+        "quote": "행사명 ○○ 야장 / 기간 10/15–10/18 (예시)"
+      },
+      {
+        "id": "doc_04",
+        "tier": "B",
+        "name": "종로구청 공지",
+        "locator": "2026-10-02 게시",
+        "url": "https://example.org/jongno/notice/○○",
+        "published": "2026-10-02",
+        "collected_at": "2026-10-05",
+        "quote": "○○ 야장 운영 안내, 19:30 시작 (예시)"
+      },
+      {
+        "id": "doc_05",
+        "tier": "B",
+        "name": "포스터에서 읽음",
+        "locator": "중구청 게시물 첨부",
+        "url": "https://example.org/jung/board/○○ · 첨부 poster.jpg",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "포스터 이미지에서 읽은 날짜·시간·장소 (예시)"
+      },
+      {
+        "id": "doc_02",
+        "tier": "A",
+        "name": "서울지명사전 (예시)",
+        "locator": "p.214",
+        "url": "",
+        "bib": "서울지명사전, 자리 표시용 서지, p.214",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "「○○ 일대에 ○○ 물길이 있었다」 (예시 구절)"
+      }
+    ]
+  },
+  {
+    "place": {
+      "name": {
+        "ko": "○○동 일대",
+        "en": "○○-dong area"
+      },
+      "lat": null,
+      "lng": null
+    },
+    "slot": {
+      "day": 2,
+      "at": "13:00",
+      "between": [
+        {
+          "ko": "경복궁",
+          "en": "Gyeongbokgung"
+        },
+        {
+          "ko": "광화문",
+          "en": "Gwanghwamun"
+        }
+      ]
+    },
+    "time_cost_min": 8,
+    "stay_min": null,
+    "valid": {
+      "from": "2026-10-16",
+      "to": "2026-10-16",
+      "as_of": "2026-10-05"
+    },
+    "why_fits": [
+      {
+        "ko": "관심사와 일치: 한국 음식",
+        "en": "Matches: Korean food"
+      },
+      {
+        "ko": "여행 날짜에 열림 (10/16)",
+        "en": "Open on your travel dates (10/16)"
+      },
+      {
+        "ko": "일정을 거의 바꾸지 않음 (+8분)",
+        "en": "Barely changes your plan (+8 min)"
+      }
+    ],
+    "caveats": [
+      {
+        "ko": "위치 현장 확인",
+        "en": "Confirm location on site"
+      },
+      {
+        "ko": "대기 있음",
+        "en": "Possible queue"
+      }
+    ],
+    "local_context": null,
+    "narration": null,
+    "rejected": [],
+    "era": null,
+    "facts": [],
+    "alternatives": null,
+    "checks": [
+      {
+        "level": "ok",
+        "text": {
+          "ko": "공식 출처",
+          "en": "Official source"
+        }
+      },
+      {
+        "level": "warn",
+        "text": {
+          "ko": "날짜 불분명 (종료일 미기재)",
+          "en": "Date unclear (no end date)"
+        }
+      },
+      {
+        "level": "warn",
+        "text": {
+          "ko": "출처 1건 (단독)",
+          "en": "Single source"
+        }
+      }
+    ],
+    "poster": {
+      "read": {
+        "ko": "10/16 · 시간 미기재 · ○○동 일대 (예시)",
+        "en": "Oct 16 · time not stated · ○○-dong area (sample)"
+      }
+    },
+    "only": {
+      "ko": "여행 기간에만 열림",
+      "en": "Only during your trip"
+    },
+    "warning": {
+      "title": {
+        "ko": "단독 출처예요",
+        "en": "Single source"
+      },
+      "body": {
+        "ko": "공식 게시물이 한 곳뿐이고 종료 시간이 적혀 있지 않습니다. 정확한 위치는 현장 확인이 필요해요.",
+        "en": "Only one official post exists and it has no end time. Confirm the exact location on site."
+      }
+    },
+    "kind_label": {
+      "ko": "시장",
+      "en": "MARKET"
+    },
+    "user_state": "proposed",
+    "id": "card_now_2",
+    "kind": "now",
+    "title": {
+      "ko": "△△ 시장 행사",
+      "en": "△△ Market Event"
+    },
+    "geometry": {
+      "type": "approx",
+      "coords": [
+        [
+          140,
+          290
+        ]
+      ],
+      "radius_m": 150,
+      "basis": {
+        "ko": "포스터 문구 (예시)",
+        "en": "poster text (sample)"
+      },
+      "space": "schematic"
+    },
+    "body": {
+      "ko": "경복궁과 광화문 사이에 들를 수 있는 시장 행사입니다 (예시).",
+      "en": "A market event you could drop into between Gyeongbokgung and Gwanghwamun (sample)."
+    },
+    "badge": "확인 필요",
+    "sources": [
+      {
+        "id": "doc_06",
+        "tier": "B",
+        "name": "종로구청 공지",
+        "locator": "2026-10-04 게시",
+        "url": "https://example.org/jongno/notice/△△",
+        "published": "2026-10-04",
+        "collected_at": "2026-10-05",
+        "quote": "△△ 시장 행사 안내 (예시)"
+      },
+      {
+        "id": "doc_05",
+        "tier": "B",
+        "name": "포스터에서 읽음",
+        "locator": "중구청 게시물 첨부",
+        "url": "https://example.org/jung/board/○○ · 첨부 poster.jpg",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "포스터 이미지에서 읽은 날짜·시간·장소 (예시)"
+      }
+    ]
+  },
+  {
+    "place": {
+      "name": {
+        "ko": "○○ 공연장",
+        "en": "○○ venue"
+      },
+      "lat": null,
+      "lng": null
+    },
+    "slot": {
+      "day": 3,
+      "at": "18:00",
+      "between": [
+        {
+          "ko": "신촌 일정 이후",
+          "en": "after Sinchon"
+        }
+      ]
+    },
+    "time_cost_min": 22,
+    "stay_min": null,
+    "valid": {
+      "from": "2026-10-17",
+      "to": "2026-10-17",
+      "as_of": "2026-10-05"
+    },
+    "why_fits": [
+      {
+        "ko": "관심사와 일치: 로컬 문화",
+        "en": "Matches: local culture"
+      },
+      {
+        "ko": "여행 날짜에 열림 (10/17)",
+        "en": "Open on your travel dates (10/17)"
+      },
+      {
+        "ko": "추가 이동이 큼 (+22분)",
+        "en": "Large detour (+22 min)"
+      }
+    ],
+    "caveats": [
+      {
+        "ko": "우천 시 취소 여부",
+        "en": "Cancelled if rain? unknown"
+      },
+      {
+        "ko": "현금만 가능",
+        "en": "Cash only"
+      }
+    ],
+    "local_context": null,
+    "narration": null,
+    "rejected": [],
+    "era": null,
+    "facts": [],
+    "alternatives": null,
+    "checks": [
+      {
+        "level": "ok",
+        "text": {
+          "ko": "공식 출처",
+          "en": "Official source"
+        }
+      },
+      {
+        "level": "bad",
+        "text": {
+          "ko": "취소·변경 정보 충돌",
+          "en": "Conflicting cancel/change info"
+        }
+      },
+      {
+        "level": "warn",
+        "text": {
+          "ko": "1일 전 갱신 · 재확인 필요",
+          "en": "Updated 1 day ago · recheck"
+        }
+      }
+    ],
+    "poster": {
+      "read": {
+        "ko": "10/17 · 18:00 · ○○ 공연장 (예시)",
+        "en": "Oct 17 · 18:00 · ○○ venue (sample)"
+      }
+    },
+    "only": {
+      "ko": "오늘 하루만",
+      "en": "Today only"
+    },
+    "warning": {
+      "title": {
+        "ko": "자료끼리 달라요",
+        "en": "Sources disagree"
+      },
+      "body": {
+        "ko": "구청 공지에는 \"운영\", 주최 측 게시물에는 \"우천 시 취소\"로 올라와 있어 확정하지 않았습니다.",
+        "en": "The district notice says \"operating\" while the organizer post says \"cancelled if rain\", so this is not confirmed."
+      }
+    },
+    "kind_label": {
+      "ko": "공연",
+      "en": "SHOW"
+    },
+    "user_state": "proposed",
+    "id": "card_now_3",
+    "kind": "now",
+    "title": {
+      "ko": "◇◇ 공연",
+      "en": "◇◇ Performance"
+    },
+    "geometry": {
+      "type": "point",
+      "coords": [
+        [
+          540,
+          190
+        ]
+      ],
+      "basis": {
+        "ko": "주소 (예시)",
+        "en": "address (sample)"
+      },
+      "space": "schematic"
+    },
+    "body": {
+      "ko": "신촌 일정 이후에 볼 수 있는 공연입니다 (예시).",
+      "en": "A performance you could see after your Sinchon plans (sample)."
+    },
+    "badge": "보류",
+    "sources": [
+      {
+        "id": "doc_07",
+        "tier": "B",
+        "name": "종로구청 공지",
+        "locator": "2026-10-03 게시",
+        "url": "https://example.org/jongno/notice/◇◇",
+        "published": "2026-10-03",
+        "collected_at": "2026-10-05",
+        "quote": "◇◇ 공연은 운영 (예시)"
+      },
+      {
+        "id": "doc_08",
+        "tier": "C",
+        "name": "주최 측 게시물",
+        "locator": "social.example.com",
+        "url": "https://social.example.com/○○",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "◇◇ 공연은 우천 시 취소 (예시)"
+      }
+    ]
+  }
+]

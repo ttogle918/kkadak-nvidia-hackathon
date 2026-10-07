@@ -1,6 +1,8 @@
-// http API — 실제 backend 연결 자리(스텁). mock.js 와 같은 메서드 이름·시그니처를 가진다.
-// 아직 backend 계약이 없어서 모든 메서드가 ApiNotImplementedError 를 던진다.
+// http API — 실제 backend 연결. mock.js 와 같은 메서드 이름·시그니처를 가진다.
+// 연결된 것: getMessages·sendMessage·getCards·getCard·getSources·getRationale. 나머지는 아직 ApiNotImplementedError.
 // 구현할 때: ENDPOINTS 표(제안)를 확정하고 request() 로 채운다. 신원(요청자·승인자)은 클라이언트가 보내지 않는다 — 서버가 세션에서 정한다.
+
+import { validateCard, validateSource } from './schema.js';
 
 export class ApiNotImplementedError extends Error {
   constructor(method, baseUrl) {
@@ -10,7 +12,7 @@ export class ApiNotImplementedError extends Error {
   }
 }
 
-/** 제안 엔드포인트(미확정). */
+/** 엔드포인트. cards·sources·rationale·messages 는 backend 에 있고 나머지는 제안(미확정). */
 export const ENDPOINTS = {
   getItinerary: 'GET /itinerary',
   getRoutes: 'GET /routes',
@@ -36,6 +38,9 @@ const ERROR_MESSAGES = {
   timeout: '응답이 너무 오래 걸립니다. 잠시 후 다시 시도해 주세요',
   network: '서버에 연결할 수 없습니다',
   bad_response: '서버 응답을 해석하지 못했습니다',
+  not_found: '찾을 수 없습니다',
+  bad_id: '요청 형식이 올바르지 않습니다',
+  internal_error: '서버에서 오류가 발생했습니다',
 };
 
 function apiError(code, status) {
@@ -95,13 +100,28 @@ export function createHttpApi({ baseUrl = '/api' } = {}) {
     baseUrl,
     getItinerary: nope('getItinerary'),
     getRoutes: nope('getRoutes'),
-    getCards: nope('getCards'),
-    async getCard(id) { // eslint-disable-line no-unused-vars
-      throw new ApiNotImplementedError('getCard', baseUrl);
+    /** GET /cards -> Card[] (backend/routers/screen.py). 형식이 어긋나면 bad_response. */
+    async getCards() {
+      const data = await requestJson(baseUrl, '/cards');
+      if (!Array.isArray(data) || data.some((c) => validateCard(c).length > 0)) throw apiError('bad_response');
+      return data;
     },
-    getSources: nope('getSources'),
-    async getRationale(cardId) { // eslint-disable-line no-unused-vars
-      throw new ApiNotImplementedError('getRationale', baseUrl);
+    async getCard(id) {
+      const data = await requestJson(baseUrl, `/cards/${encodeURIComponent(String(id))}`);
+      if (validateCard(data).length > 0) throw apiError('bad_response');
+      return data;
+    },
+    /** GET /sources -> Source[] */
+    async getSources() {
+      const data = await requestJson(baseUrl, '/sources');
+      if (!Array.isArray(data) || data.some((s) => validateSource(s).length > 0)) throw apiError('bad_response');
+      return data;
+    },
+    /** GET /cards/{id}/rationale -> {card_id, chips[], items{}} */
+    async getRationale(cardId) {
+      const data = await requestJson(baseUrl, `/cards/${encodeURIComponent(String(cardId))}/rationale`);
+      if (!data || typeof data !== 'object' || !Array.isArray(data.chips) || typeof data.items !== 'object' || data.items === null) throw apiError('bad_response');
+      return data;
     },
     /** GET /messages -> Message[] (backend/routers/messages.py) */
     async getMessages() {

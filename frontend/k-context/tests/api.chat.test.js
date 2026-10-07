@@ -1,6 +1,6 @@
 import { test, afterEach } from 'node:test';
 import assert from 'node:assert/strict';
-import { createApi, resolveApi, DEFAULT_CHAT_BASE, API_METHODS } from '../src/api/index.js';
+import { createApi, resolveApi, DEFAULT_CHAT_BASE, API_METHODS, HTTP_METHODS } from '../src/api/index.js';
 import { createHttpApi } from '../src/api/http.js';
 import { createT } from '../src/lib/i18n.js';
 import { messageView } from '../src/components/chat/logic.js';
@@ -84,7 +84,7 @@ test('타임아웃: 응답이 없으면 abort 되어 code=timeout (90초 이내)
   } finally { globalThis.setTimeout = realSet; }
 });
 
-test("'chat' 모드: getMessages·sendMessage 만 http, 나머지는 mock", async () => {
+test("'chat' 모드: HTTP_METHODS(챗봇+카드·출처·근거)만 http, 나머지는 mock", async () => {
   const mock = createApi({ mode: 'mock', latencyMs: 0 });
   const chat = createApi({ mode: 'chat', baseUrl: BASE, latencyMs: 0 });
   assert.equal(chat.mode, 'chat');
@@ -92,9 +92,8 @@ test("'chat' 모드: getMessages·sendMessage 만 http, 나머지는 mock", asyn
   const http = createHttpApi({ baseUrl: BASE });
   for (const n of API_METHODS) assert.equal(chat[n].length, mock[n].length, `${n} 인자 개수`);
   const calls = fake(jsonRes(200, []));
-  // 다른 메서드는 fetch 를 부르지 않고 mock 데이터를 돌려준다
-  assert.equal((await chat.getCards()).length, 6);
-  assert.ok((await chat.getItinerary()) && (await chat.getAuditLog()));
+  // 목록 밖 메서드는 fetch 를 부르지 않고 mock 데이터를 돌려준다
+  assert.ok((await chat.getItinerary()) && (await chat.getAuditLog()) && (await chat.getRoutes()));
   assert.equal(calls.length, 0);
   await chat.getMessages();
   assert.equal(calls.length, 1);

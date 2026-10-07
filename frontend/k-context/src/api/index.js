@@ -22,14 +22,22 @@ export const API_METHODS = [
   'getMessages', 'sendMessage', 'getAuditLog', 'decideAudit',
 ];
 
+/**
+ * 하이브리드('chat'·auto)에서 실제 backend 로 보내는 메서드 목록. 나머지는 mock.
+ * backend 에 엔드포인트가 생기면 여기에 이름만 추가한다(getItinerary·getRoutes·getAuditLog·decideAudit 는 아직 mock).
+ */
+export const HTTP_METHODS = ['getMessages', 'sendMessage', 'getCards', 'getCard', 'getSources', 'getRationale'];
+
 /** @param {{mode?:'mock'|'http', baseUrl?:string, latencyMs?:number}} opts */
 export function createApi({ mode = 'mock', baseUrl, latencyMs } = {}) {
   if (mode === 'mock') return createMockApi({ latencyMs });
   if (mode === 'http') return createHttpApi({ baseUrl });
   if (mode === 'chat') {
-    // 하이브리드: 챗봇(getMessages·sendMessage)만 실제 backend, 나머지는 mock.
+    // 하이브리드: HTTP_METHODS 만 실제 backend, 나머지는 mock.
     const http = createHttpApi({ baseUrl });
-    return { ...createMockApi({ latencyMs }), mode: 'chat', baseUrl: http.baseUrl, getMessages: http.getMessages, sendMessage: http.sendMessage };
+    const api = { ...createMockApi({ latencyMs }), mode: 'chat', baseUrl: http.baseUrl };
+    for (const n of HTTP_METHODS) api[n] = http[n];
+    return api;
   }
   throw new Error(`알 수 없는 api mode: ${mode} (mock|http|chat)`);
 }

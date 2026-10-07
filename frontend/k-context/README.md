@@ -18,7 +18,7 @@ node --test                                               # 순수 로직 테스
 
 `node --test tests/` 는 node 22 에서 "Cannot find module" 이 난다(디렉터리를 파일로 읽음). `node --test` 또는 `node --test tests/*.test.js` 를 쓴다.
 
-URL 파라미터: `?lang=en` · `?theme=dark|light|auto` · `?mode=old|now|both` · `?day=1..3` · `?api=auto|mock|http|chat&base=/api` (기본 `auto` = 부팅 때 backend `http://localhost:8000/api` 를 한 번 찔러 보고 떠 있으면 `chat`(챗봇만 backend, 나머지 mock), 아니면 `mock`. `mock`·`chat` 은 강제 지정이고 `chat` 은 backend 가 없어도 mock 으로 넘어가지 않는다)
+URL 파라미터: `?lang=en` · `?theme=dark|light|auto` · `?mode=old|now|both` · `?day=1..3` · `?api=auto|mock|http|chat&base=/api` (기본 `auto` = 부팅 때 backend `http://localhost:8000/api` 를 한 번 찔러 보고 떠 있으면 `chat`(챗봇·카드·출처·판단 근거만 backend — `src/api/index.js` 의 `HTTP_METHODS` — 나머지 mock), 아니면 `mock`. `mock`·`chat` 은 강제 지정이고 `chat` 은 backend 가 없어도 mock 으로 넘어가지 않는다)
 
 ## 지도 렌더러 (SVG 기본 · 카카오맵 선택)
 기본은 SVG 지도(외부 요청 없음). 카카오맵은 **키가 있고 SDK 가 로드될 때만** 자동으로 쓰이며, 아니면 SVG 로 폴백하고 콘솔에 사유 한 줄(`[map] 카카오맵 대신 SVG 지도 사용: …`, 키 값은 출력 안 함)을 남긴다.
@@ -135,6 +135,8 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 | `decideAudit(id, decision)` | `AuditEntry` — `decision` 은 `'approve'\|'reject'`, **대기(pend)만** 가능. 결정자(`decided_by`)는 서버가 채운다 |
 
 `decideAudit` 은 backend 의 사람 전용 승인 API 와 같은 개념이다. 요청에 신원 필드를 넣지 않는다.
+
+backend 연결 상태: `getMessages`·`sendMessage`·`getCards`·`getCard`·`getSources`·`getRationale` 만 실제 `/api/*`(카드·출처·근거는 `backend/fixtures/screen/*.json` 을 읽고 mock 데이터와 같은 내용 — `tests/api.screen.test.js` 가 일치를 검사). 나머지는 mock.
 
 ### 데이터 형식
 `data/*.js` 는 AGENT_CONTEXT 3.3 의 카드·경로 JSON 을 그대로 따른다(`api/schema.js` 의 `validateCard`/`validateRoute` 와 테스트가 검증).
