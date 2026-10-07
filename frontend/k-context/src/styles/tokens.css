@@ -1,0 +1,86 @@
+/* 디자인 토큰. 색·간격·타이포는 여기 변수만 쓴다(모듈 css 에서 hex 를 직접 쓰지 않는다).
+   라이트가 기본, 다크는 prefers-color-scheme 과 [data-theme="dark"] 양쪽에 둔다([data-theme="light"] 는 OS 다크를 덮어쓴다). */
+:root {
+  /* 글꼴 — 원격 폰트 금지. 시스템에 있는 한글 폰트 순으로 */
+  --font-sans: "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", "Segoe UI", system-ui, sans-serif;
+  --font-serif: "Noto Serif KR", "Nanum Myeongjo", "Batang", serif;
+  --font-mono: ui-monospace, "SFMono-Regular", Menlo, Consolas, monospace;
+
+  /* 바탕·면 */
+  --c-bg: #ebe9e3;
+  --c-bg-app: #fbfaf8;
+  --c-surface: #ffffff;
+  --c-surface-2: #f5f4f0;
+  --c-map: #eceae4;
+  --c-line: #e2dfd8;
+  --c-line-strong: #cfccc4;
+  --c-line-ctl: #8a8a92;
+
+  /* 글자 */
+  --c-ink: #1f1f23;          /* 먹색 */
+  --c-ink-inv: #ffffff;
+  --c-text-2: #4a4a52;
+  --c-muted: #7a7a82;
+
+  /* 옛날(이야기 길) — 갈색 계열 */
+  --c-old: #8B6B4A;
+  --c-old-dim: #f5eee5;
+  --c-old-hl: #e6d8c6;
+  /* 지금(지금의 한국) — 파랑 계열 */
+  --c-now: #2563EB;
+  --c-now-dim: #e6eefc;
+  --c-now-ink: #1e40af;
+
+  /* 상태 */
+  --c-ok: #166534;
+  --c-warn: #9a3412;
+  --c-bad: #b91c1c;
+  --c-off: #bdbab2;          /* 꺼진 토글 */
+
+  /* 로그(보안 로그 패널은 어두운 면) */
+  --c-log-bg: #1f1f23;
+  --c-log-text: #e8e8ec;
+  --c-log-ok: #4ade80;
+  --c-log-deny: #f87171;
+  --c-log-pend: #fbbf24;
+  --c-log-no: #9a9aa6;
+
+  /* 간격·모서리·그림자 */
+  --sp-1: 4px; --sp-2: 8px; --sp-3: 12px; --sp-4: 16px; --sp-5: 24px; --sp-6: 32px;
+  --r-sm: 3px; --r-md: 6px; --r-lg: 10px; --r-pill: 999px;
+  --shadow: 0 2px 10px rgba(0, 0, 0, .08);
+
+  /* 타이포 */
+  --fs-xs: 10.5px; --fs-sm: 11.5px; --fs-md: 12.5px; --fs-lg: 14px; --fs-xl: 16px;
+  --lh: 1.6;
+
+  /* 레이아웃 */
+  --topbar-h: 52px;
+  --col-left: 340px;
+  --col-right: 320px;
+  --mtabs-h: 48px;
+  --sheet-h: 55dvh;
+  --tap: 40px; /* 모바일 최소 터치 크기 */
+}
+
+/* 다크 — 변수 묶음을 두 곳에 같은 값으로 둔다(CSS 에 변수 묶음 재사용 문법이 없어서) */
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --c-bg: #141417; --c-bg-app: #1a1a1e; --c-surface: #232328; --c-surface-2: #2b2b31; --c-map: #26262b;
+    --c-line: #34343b; --c-line-strong: #44444c; --c-line-ctl: #8a8a92;
+    --c-ink: #f2f1ee; --c-ink-inv: #1a1a1e; --c-text-2: #c4c3c9; --c-muted: #9a9aa6;
+    --c-old: #c9a57f; --c-old-dim: #3a3027; --c-old-hl: #4a3b2c;
+    --c-now: #6b9bff; --c-now-dim: #1f2a44; --c-now-ink: #a9c4ff;
+    --c-ok: #4ade80; --c-warn: #fb923c; --c-bad: #f87171; --c-off: #55555c;
+    --c-log-bg: #0e0e11; --shadow: 0 2px 10px rgba(0, 0, 0, .5);
+  }
+}
+:root[data-theme="dark"] {
+  --c-bg: #141417; --c-bg-app: #1a1a1e; --c-surface: #232328; --c-surface-2: #2b2b31; --c-map: #26262b;
+  --c-line: #34343b; --c-line-strong: #44444c; --c-line-ctl: #8a8a92;
+  --c-ink: #f2f1ee; --c-ink-inv: #1a1a1e; --c-text-2: #c4c3c9; --c-muted: #9a9aa6;
+  --c-old: #c9a57f; --c-old-dim: #3a3027; --c-old-hl: #4a3b2c;
+  --c-now: #6b9bff; --c-now-dim: #1f2a44; --c-now-ink: #a9c4ff;
+  --c-ok: #4ade80; --c-warn: #fb923c; --c-bad: #f87171; --c-off: #55555c;
+  --c-log-bg: #0e0e11; --shadow: 0 2px 10px rgba(0, 0, 0, .5);
+}

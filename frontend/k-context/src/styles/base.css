@@ -1,0 +1,49 @@
+/* 리셋 + 공통 원자(출처 태그·딱지·토글·플레이스홀더). 모듈 css 가 이 클래스를 재사용한다. */
+*, *::before, *::after { box-sizing: border-box; }
+html { color-scheme: light dark; }
+:root[data-theme="light"] { color-scheme: light; }
+:root[data-theme="dark"] { color-scheme: dark; }
+body { margin: 0; background: var(--c-bg); color: var(--c-ink); font-family: var(--font-sans); font-size: var(--fs-md); line-height: var(--lh); }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: var(--c-old); }
+a:hover { color: var(--c-now); }
+:focus-visible { outline: 2px solid var(--c-now); outline-offset: 2px; }
+code { font-family: var(--font-mono); }
+
+/* 세그먼트 버튼(상단 바·모듈 공용) */
+.seg { display: inline-flex; border: 1px solid var(--c-ink); border-radius: var(--r-md); overflow: hidden; }
+.seg__btn { border: 0; background: var(--c-surface); color: var(--c-ink); padding: 4px 10px; min-height: 28px; font-size: var(--fs-sm); font-weight: 600; }
+.seg__btn + .seg__btn { border-left: 1px solid var(--c-ink); }
+.seg__btn.is-on { background: var(--c-ink); color: var(--c-ink-inv); }
+
+/* 켜고 끄는 칩 */
+.chip-toggle { border: 1.5px solid var(--c-old); background: var(--c-surface); color: var(--c-old); border-radius: var(--r-pill); padding: 4px 11px; min-height: 28px; font-size: var(--fs-sm); font-weight: 600; }
+.chip-toggle.is-on { background: var(--c-old); color: var(--c-ink-inv); }
+
+/* 출처 태그: data-grade="S|A|B|C|D". 내용은 "[등급] 출처 이름 · 위치" (lib/format.js sourceLabel) */
+.src-tag { display: inline-block; border-radius: var(--r-sm); padding: 3px 6px; font-size: var(--fs-xs); font-weight: 500; line-height: 1.3; text-align: left; border: 1px solid var(--c-ink); background: var(--c-surface); color: var(--c-ink); }
+.src-tag[data-grade="S"] { background: var(--c-ink); color: var(--c-ink-inv); }
+.src-tag[data-grade="A"] { background: var(--c-old-dim); color: var(--c-old); border-color: var(--c-old); }
+.src-tag[data-grade="B"] { background: var(--c-surface); color: var(--c-text-2); border-color: var(--c-line-ctl); }
+.src-tag[data-grade="C"] { background: var(--c-surface); color: var(--c-text-2); border: 1px dashed var(--c-line-ctl); }
+.src-tag[data-grade="D"] { background: var(--c-surface-2); color: var(--c-muted); border: 1px dotted var(--c-line-ctl); }
+.src-tag.is-open { box-shadow: 0 0 0 2px var(--c-now); }
+
+/* 딱지: data-badge="record|lore|presumed|confirmed|verify|hold" (lib/format.js BADGE_KEY) */
+.badge { display: inline-block; border-radius: var(--r-sm); padding: 2px 7px; font-size: var(--fs-xs); font-weight: 700; border: 1px solid var(--c-old); }
+.badge[data-badge="record"] { background: var(--c-old); color: var(--c-ink-inv); }
+.badge[data-badge="lore"] { background: var(--c-surface); color: var(--c-old); border-width: 1.5px; }
+.badge[data-badge="presumed"] { background: var(--c-surface); color: var(--c-old); border: 1.5px dashed var(--c-old); }
+.badge[data-badge="confirmed"] { background: var(--c-now); color: #fff; border-color: var(--c-now); }
+.badge[data-badge="verify"] { background: var(--c-surface); color: var(--c-now-ink); border: 1.5px solid var(--c-now); }
+.badge[data-badge="hold"] { background: var(--c-surface-2); color: var(--c-text-2); border: 1.5px dashed var(--c-line-ctl); }
+
+/* 스텁 플레이스홀더(lib/placeholder.js) — 모듈을 채우면 쓰이지 않는다 */
+.placeholder { display: flex; flex-direction: column; gap: var(--sp-1); align-items: flex-start; justify-content: center; min-height: 100%; padding: var(--sp-4); border: 1px dashed var(--c-line-strong); border-radius: var(--r-md); margin: var(--sp-2); background: var(--c-surface-2); }
+.placeholder__name { font-size: var(--fs-lg); }
+.placeholder__note { color: var(--c-muted); font-size: var(--fs-sm); }
+.placeholder__echo { color: var(--c-text-2); font-size: var(--fs-xs); word-break: break-all; }
+.module-error { margin: var(--sp-2); padding: var(--sp-3); border: 1px solid var(--c-bad); color: var(--c-bad); border-radius: var(--r-md); background: var(--c-surface); }
+
+/* 접근성: 시각적으로만 숨김 */
+.sr-only { position: absolute; width: 1px; height: 1px; overflow: hidden; clip: rect(0 0 0 0); white-space: nowrap; }

@@ -1,0 +1,44 @@
+/* rationale 모듈 스타일. 클래스는 .rationale- 접두사, 색·간격은 tokens.css 변수만. */
+.rationale { display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); }
+.rationale-title { margin: 0; font-size: var(--fs-lg); }
+.rationale-label { font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .1em; color: var(--c-muted); }
+.rationale-note { color: var(--c-muted); font-size: var(--fs-md); }
+.rationale-note.is-error { color: var(--c-bad); }
+
+.rationale-chips { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.rationale-chip { border: 1.5px solid var(--c-now); background: var(--c-now-dim); color: var(--c-now-ink); border-radius: var(--r-pill); padding: 5px 11px; min-height: 30px; font-size: var(--fs-md); font-weight: 600; }
+.rationale-chip[data-tone="old"] { border-color: var(--c-old); background: var(--c-old-dim); color: var(--c-old); }
+.rationale-chip.is-on { background: var(--c-now); color: var(--c-ink-inv); }
+.rationale-chip[data-tone="old"].is-on { background: var(--c-old); color: var(--c-ink-inv); }
+
+.rationale-panel { border: 1px solid var(--c-line-strong); border-radius: var(--r-lg); background: var(--c-surface); padding: var(--sp-3) var(--sp-4); display: flex; flex-direction: column; gap: var(--sp-2); }
+.rationale-panel__head { display: flex; align-items: center; gap: var(--sp-2); }
+.rationale-panel__title { flex: 1; font-size: var(--fs-lg); }
+.rationale-panel__text { margin: 0; font-size: var(--fs-md); line-height: 1.65; }
+.rationale-close { border: 1px solid var(--c-line-ctl); background: var(--c-surface); border-radius: var(--r-sm); min-width: 28px; min-height: 28px; }
+
+.rationale-rows { display: flex; flex-direction: column; gap: var(--sp-1); margin: 0; font-size: var(--fs-md); }
+.rationale-row { display: flex; justify-content: space-between; gap: var(--sp-3); padding: var(--sp-1) var(--sp-2); border-radius: var(--r-sm); border: 1px solid var(--c-line); }
+.rationale-row dt { color: var(--c-muted); }
+.rationale-row dd { margin: 0; text-align: right; }
+.rationale-row.is-adopted { border: 1.5px solid var(--c-ok); }
+.rationale-row.is-dropped { border: 1.5px dashed var(--c-line-ctl); color: var(--c-text-2); }
+.rationale-row.is-dropped dd { text-decoration: line-through; text-decoration-thickness: 1px; }
+.rationale-mark { font-size: var(--fs-xs); font-weight: 700; text-decoration: none; display: inline-block; }
+.rationale-mark.is-adopted { color: var(--c-ok); }
+
+.rationale-funnel { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-1); font-size: var(--fs-md); }
+.rationale-funnel__row { display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 28px; gap: var(--sp-2); align-items: center; }
+.rationale-funnel__bar { display: block; height: 8px; border-radius: 4px; background: var(--c-surface-2); overflow: hidden; }
+.rationale-funnel__bar i { display: block; height: 100%; background: var(--c-line-ctl); }
+.rationale-funnel__row.is-adopted .rationale-funnel__bar i { background: var(--c-ok); }
+.rationale-funnel__row.is-adopted { color: var(--c-ok); font-weight: 700; }
+.rationale-funnel__v { text-align: right; font-family: var(--font-mono); }
+
+.rationale-rejected ul { list-style: none; margin: var(--sp-1) 0 0; padding: 0; display: flex; flex-direction: column; gap: var(--sp-2); }
+.rationale-rejected__item { border: 1.5px dashed var(--c-line-ctl); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); font-size: var(--fs-md); line-height: 1.55; }
+.rationale-rejected__claim { text-decoration: line-through; text-decoration-thickness: 1px; color: var(--c-text-2); }
+.rationale-rejected__reason { color: var(--c-text-2); }
+@media (max-width: 899px) {
+  .rationale-chip, .rationale-close { min-height: var(--tap); }
+}

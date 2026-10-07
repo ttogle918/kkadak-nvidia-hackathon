@@ -1,0 +1,39 @@
+/* timeline 모듈 스타일. 클래스는 .timeline- 접두사, 색·간격은 tokens.css 변수만 쓴다.
+   상태는 색 + 선 모양 + 기호 + 라벨로 구분한다: 원래=실선 · 빈 시간=빗금 · 제안=점선 · 추가함=채움 · 건너뜀=흐림. */
+.timeline { padding: var(--sp-3) var(--sp-4); background: var(--c-bg-app); min-height: 100%; }
+.timeline__head { display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-2); margin-bottom: var(--sp-2); }
+.timeline__title { font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .1em; color: var(--c-muted); }
+.timeline-min { margin-left: auto; display: inline-flex; align-items: center; gap: var(--sp-2); border: 0; background: none; padding: 0; min-height: 28px; font-size: var(--fs-sm); font-weight: 500; color: var(--c-ink); }
+.timeline-min__track { position: relative; width: 28px; height: 16px; border-radius: 8px; background: var(--c-off); display: inline-block; }
+.timeline-min__knob { position: absolute; top: 2px; left: 2px; width: 12px; height: 12px; border-radius: 50%; background: var(--c-surface); }
+.timeline-min[aria-checked="true"] .timeline-min__track { background: var(--c-ink); }
+.timeline-min[aria-checked="true"] .timeline-min__knob { left: 14px; }
+
+.timeline-days { display: flex; gap: var(--sp-1); margin-bottom: var(--sp-2); }
+.timeline-days__btn { border: 1px solid var(--c-line-ctl); background: var(--c-surface); color: var(--c-text-2); border-radius: var(--r-md); padding: 2px var(--sp-3); min-height: 28px; font-family: var(--font-mono); font-size: var(--fs-sm); font-weight: 600; }
+.timeline-days__btn.is-on { background: var(--c-ink); color: var(--c-ink-inv); border-color: var(--c-ink); }
+.timeline__day { font-family: var(--font-mono); font-size: var(--fs-md); font-weight: 700; letter-spacing: .08em; margin: var(--sp-1) 0 var(--sp-2); }
+.timeline__date { font-weight: 500; color: var(--c-muted); }
+.timeline__empty { margin: var(--sp-3) 0; color: var(--c-muted); font-size: var(--fs-md); }
+
+.timeline__rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 5px; }
+.timeline-row { display: flex; align-items: center; gap: var(--sp-2); padding: 6px 9px; border-radius: 4px; border: 1.5px solid var(--c-ink); background: var(--c-surface); color: var(--c-ink); font-weight: 500; }
+.timeline-row__time { flex: none; width: 92px; font-family: var(--font-mono); font-size: var(--fs-sm); }
+.timeline-row__body { flex: 1; min-width: 0; font-size: var(--fs-md); overflow-wrap: anywhere; }
+.timeline-row__sub { color: var(--c-muted); font-weight: 400; font-size: var(--fs-sm); }
+.timeline-row__tag { flex: none; font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 700; letter-spacing: .05em; }
+.timeline-row[data-status="free"], .timeline-legend__swatch[data-status="free"] { background: repeating-linear-gradient(135deg, var(--c-surface-2) 0 5px, var(--c-bg-app) 5px 10px); border: 1px dashed var(--c-line-strong); color: var(--c-muted); font-weight: 400; min-height: 34px; }
+.timeline-row[data-status="proposed"], .timeline-legend__swatch[data-status="proposed"] { border: 1.5px dashed var(--c-now); color: var(--c-now-ink); font-weight: 700; }
+.timeline-row[data-status="added"], .timeline-legend__swatch[data-status="added"] { background: var(--c-now); border: 1.5px solid var(--c-now); color: var(--c-ink-inv); font-weight: 700; }
+.timeline-row[data-status="added"] .timeline-row__sub { color: inherit; }
+.timeline-row[data-status="skipped"], .timeline-legend__swatch[data-status="skipped"] { border: 1px dashed var(--c-line-strong); color: var(--c-muted); font-weight: 400; opacity: .6; }
+.timeline-row[data-status="skipped"] .timeline-row__title { text-decoration: line-through; }
+
+.timeline-legend { list-style: none; margin: var(--sp-3) 0 0; padding: 0; display: flex; flex-wrap: wrap; gap: var(--sp-1) var(--sp-3); font-size: var(--fs-xs); color: var(--c-text-2); }
+.timeline-legend__swatch { min-height: 0; height: 12px; }
+.timeline-legend__item { display: inline-flex; align-items: center; gap: var(--sp-1); }
+.timeline-legend__swatch { display: inline-block; width: 12px; height: 12px; border: 1.5px solid var(--c-ink); background: var(--c-surface); }
+@media (max-width: 899px) {
+  .timeline-days__btn, .timeline-min { min-height: var(--tap); }
+  .timeline-row__time { width: 78px; }
+}

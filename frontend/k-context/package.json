@@ -1,0 +1,10 @@
+{
+  "name": "k-context-frontend",
+  "private": true,
+  "type": "module",
+  "description": "의존성 없음. type=module 은 node --test 가 src/*.js 를 ES 모듈로 읽게 하려는 용도",
+  "scripts": {
+    "test": "node --test",
+    "serve": "python3 -m http.server 8766"
+  }
+}

@@ -1,0 +1,31 @@
+/* chat 모듈 스타일. 클래스는 .chat- 접두사, 색·간격은 tokens.css 변수만 쓴다.
+   슬롯(.slot-chat)이 스크롤하므로 입력부는 sticky 로 바닥에 붙인다. */
+.chat { display: flex; flex-direction: column; min-height: 100%; }
+.chat-list { flex: 1; display: flex; flex-direction: column; gap: var(--sp-3); padding: var(--sp-3) var(--sp-4); min-width: 0; }
+
+.chat-msg { display: flex; flex-direction: column; align-items: flex-start; min-width: 0; }
+.chat-msg--user { align-items: flex-end; }
+.chat-msg__bubble { max-width: 96%; padding: var(--sp-2) var(--sp-3); border-radius: var(--r-lg) var(--r-lg) var(--r-lg) 2px; background: var(--c-surface); border: 1px solid var(--c-line); font-size: var(--fs-md); line-height: var(--lh); overflow-wrap: anywhere; white-space: pre-wrap; }
+.chat-msg--user .chat-msg__bubble { max-width: 92%; background: var(--c-ink); color: var(--c-ink-inv); border-color: var(--c-ink); border-radius: var(--r-lg) var(--r-lg) 2px var(--r-lg); }
+/* 차단 응답: 색만이 아니라 점선 테두리 + "⊘ 차단됨" 라벨로 구분 */
+.chat-msg--blocked .chat-msg__bubble { border: 1.5px dashed var(--c-bad); background: var(--c-surface-2); }
+.chat-msg__flag { font-size: var(--fs-xs); font-weight: 700; color: var(--c-bad); margin-bottom: var(--sp-1); }
+.chat-msg__assume { margin-top: var(--sp-1); display: flex; gap: var(--sp-2); align-items: baseline; font-size: var(--fs-sm); color: var(--c-text-2); max-width: 96%; }
+.chat-msg__assume-tag { flex: none; border: 1px solid var(--c-line-strong); border-radius: var(--r-sm); padding: 0 5px; font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600; }
+
+.chat-status { color: var(--c-muted); font-size: var(--fs-sm); }
+.chat-error { display: flex; flex-wrap: wrap; gap: var(--sp-2); align-items: center; border: 1px solid var(--c-bad); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); color: var(--c-bad); background: var(--c-surface); font-size: var(--fs-sm); }
+.chat-error__text { overflow-wrap: anywhere; }
+.chat-error__retry { border: 1px solid var(--c-bad); background: var(--c-surface); color: var(--c-bad); border-radius: var(--r-md); padding: 2px var(--sp-3); min-height: 28px; font-weight: 600; }
+
+.chat-foot { position: sticky; bottom: 0; display: flex; flex-direction: column; gap: var(--sp-2); padding: var(--sp-2) var(--sp-4) var(--sp-3); border-top: 1px solid var(--c-line); background: var(--c-surface-2); }
+.chat-suggest { display: flex; flex-wrap: wrap; gap: var(--sp-2); }
+.chat-suggest__btn { border: 1px solid var(--c-line-strong); background: var(--c-surface); color: var(--c-text-2); border-radius: var(--r-md); padding: var(--sp-1) var(--sp-2); min-height: 28px; font-size: var(--fs-sm); font-weight: 500; text-align: left; }
+.chat-suggest__btn--attack { border: 1px dashed var(--c-line-ctl); }
+.chat-composer { display: flex; gap: var(--sp-2); }
+.chat-composer__input { flex: 1; min-width: 0; min-height: 36px; border: 1px solid var(--c-line-ctl); border-radius: var(--r-md); padding: var(--sp-2) var(--sp-3); font: inherit; font-size: var(--fs-lg); background: var(--c-surface); color: var(--c-ink); }
+.chat-composer__send { border: 0; background: var(--c-ink); color: var(--c-ink-inv); border-radius: var(--r-md); padding: 0 var(--sp-4); font-weight: 600; min-height: 36px; }
+.chat-composer__send:disabled, .chat-composer__input:disabled { opacity: .5; cursor: not-allowed; }
+@media (max-width: 899px) {
+  .chat-suggest__btn, .chat-composer__send, .chat-composer__input, .chat-error__retry { min-height: var(--tap); }
+}

@@ -1,0 +1,33 @@
+/* securitylog 모듈 스타일. 클래스는 .securitylog- 접두사. 슬롯 바탕이 어두운 면(--c-log-bg)이므로 --c-log-* 변수를 쓴다.
+   종류 구분은 색 + 왼쪽 선 모양(실선/점선/이중선) + 기호 + 글자 라벨. */
+.securitylog { display: flex; flex-direction: column; min-height: 100%; font-size: var(--fs-md); }
+.securitylog__head { position: sticky; top: 0; z-index: 1; display: flex; align-items: center; gap: var(--sp-2); padding: var(--sp-2) var(--sp-3); background: var(--c-log-bg); border-bottom: 1px solid var(--c-line-strong); }
+.securitylog__toggle { border: 0; background: none; color: var(--c-log-text); padding: 0; min-height: 28px; font-family: var(--font-mono); font-size: var(--fs-xs); font-weight: 600; letter-spacing: .1em; }
+.securitylog__pending { border: 1px solid var(--c-log-pend); color: var(--c-log-pend); border-radius: var(--r-sm); padding: 0 var(--sp-2); font-size: var(--fs-xs); font-weight: 700; }
+.securitylog__live { margin-left: auto; display: inline-flex; align-items: center; gap: 5px; font-family: var(--font-mono); font-size: var(--fs-xs); color: var(--c-log-ok); }
+.securitylog__dot { width: 7px; height: 7px; border-radius: 50%; background: var(--c-log-ok); display: inline-block; }
+
+.securitylog__list { list-style: none; margin: 0; padding: var(--sp-2) var(--sp-3); display: flex; flex-direction: column; gap: 7px; flex: 1; }
+.securitylog-row { border-left: 3px solid var(--c-log-ok); padding-left: var(--sp-2); font-family: var(--font-mono); font-size: var(--fs-sm); line-height: 1.5; min-width: 0; }
+.securitylog-row[data-kind="deny"] { border-left-color: var(--c-log-deny); }
+.securitylog-row[data-kind="pend"] { border-left: 3px dashed var(--c-log-pend); }
+.securitylog-row[data-kind="approved"] { border-left: 3px double var(--c-log-ok); }
+.securitylog-row[data-kind="rejected"] { border-left: 3px dotted var(--c-log-no); }
+.securitylog-row__time { color: var(--c-log-no); margin-right: var(--sp-2); }
+.securitylog-row__label { color: var(--c-log-ok); }
+.securitylog-row[data-kind="deny"] .securitylog-row__label { color: var(--c-log-deny); }
+.securitylog-row[data-kind="pend"] .securitylog-row__label { color: var(--c-log-pend); }
+.securitylog-row[data-kind="rejected"] .securitylog-row__label { color: var(--c-log-no); }
+.securitylog-row__text { font-family: var(--font-sans); color: var(--c-log-text); overflow-wrap: anywhere; }
+.securitylog-row__note { color: var(--c-log-no); }
+.securitylog-row__error { margin-top: var(--sp-1); color: var(--c-log-deny); font-family: var(--font-sans); }
+
+.securitylog-actions { display: flex; gap: var(--sp-2); margin-top: var(--sp-1); }
+.securitylog-btn { border-radius: var(--r-sm); padding: 3px var(--sp-3); min-height: 28px; font-family: var(--font-sans); font-size: var(--fs-sm); font-weight: 700; }
+.securitylog-btn--approve { border: 1px solid var(--c-log-ok); background: var(--c-log-ok); color: var(--c-log-bg); }
+.securitylog-btn--reject { border: 1px solid var(--c-log-no); background: none; color: var(--c-log-text); }
+.securitylog-btn:disabled { opacity: .5; cursor: not-allowed; }
+.securitylog__note { margin: 0; padding: var(--sp-2) var(--sp-3); border-top: 1px solid var(--c-line-strong); font-size: var(--fs-sm); color: var(--c-log-no); line-height: 1.5; }
+@media (max-width: 899px) {
+  .securitylog-btn, .securitylog__toggle { min-height: var(--tap); }
+}
