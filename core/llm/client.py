@@ -105,6 +105,13 @@ class LlmClient:
                 )
                 self._sems[(name, backend)] = asyncio.Semaphore(p.concurrency_for(backend))
 
+    def busy(self, feature: str) -> bool:
+        """feature 의 provider 동시 호출 한도가 가득 찼는가(대기 없이 거절하려는 호출자용)."""
+        fc = self._config.features.get(feature)
+        if fc is None:
+            raise UnknownFeature(f"알 수 없는 feature: {feature!r}")
+        return self._sems[(fc.provider, self._backends[feature])].locked()
+
     async def complete(self, feature: str, messages: Sequence[Message]) -> str:
         fc = self._config.features.get(feature)
         if fc is None:

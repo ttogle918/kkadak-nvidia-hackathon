@@ -18,7 +18,7 @@ node --test                                               # 순수 로직 테스
 
 `node --test tests/` 는 node 22 에서 "Cannot find module" 이 난다(디렉터리를 파일로 읽음). `node --test` 또는 `node --test tests/*.test.js` 를 쓴다.
 
-URL 파라미터: `?lang=en` · `?theme=dark|light|auto` · `?mode=old|now|both` · `?day=1..3` · `?api=mock|http&base=/api`
+URL 파라미터: `?lang=en` · `?theme=dark|light|auto` · `?mode=old|now|both` · `?day=1..3` · `?api=mock|http|chat&base=/api` (`chat` = 챗봇만 backend `http://localhost:8000/api`, 나머지 mock)
 
 ## 구조
 ```

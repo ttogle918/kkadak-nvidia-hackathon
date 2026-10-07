@@ -9,12 +9,12 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
 from starlette.exceptions import HTTPException as StarletteHTTPException
 
-from backend.routers import review
+from backend.routers import messages, review
 from backend.settings import Settings
 from core.hitl import init_db
 
 # 라우터 추가는 이 목록에 한 줄 + 위 import 한 줄로 끝낸다.
-ROUTERS = [review.router]
+ROUTERS = [review.router, messages.router]
 
 
 def _error(status: int, code: str, message: str) -> JSONResponse:

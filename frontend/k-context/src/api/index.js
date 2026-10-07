@@ -23,5 +23,10 @@ export const API_METHODS = [
 export function createApi({ mode = 'mock', baseUrl, latencyMs } = {}) {
   if (mode === 'mock') return createMockApi({ latencyMs });
   if (mode === 'http') return createHttpApi({ baseUrl });
-  throw new Error(`알 수 없는 api mode: ${mode} (mock|http)`);
+  if (mode === 'chat') {
+    // 하이브리드: 챗봇(getMessages·sendMessage)만 실제 backend, 나머지는 mock.
+    const http = createHttpApi({ baseUrl });
+    return { ...createMockApi({ latencyMs }), mode: 'chat', baseUrl: http.baseUrl, getMessages: http.getMessages, sendMessage: http.sendMessage };
+  }
+  throw new Error(`알 수 없는 api mode: ${mode} (mock|http|chat)`);
 }

@@ -16,9 +16,9 @@ test('mock 과 http 는 같은 메서드 이름·인자 개수를 가진다', ()
   }
 });
 
-test('http 의 모든 메서드는 명확한 에러를 던진다', async () => {
+test('http 의 미구현 메서드는 명확한 에러를 던진다', async () => {
   const h = createApi({ mode: 'http', baseUrl: '/x' });
-  for (const name of API_METHODS) {
+  for (const name of API_METHODS.filter((n) => n !== 'getMessages' && n !== 'sendMessage')) { // 두 메서드는 chat 연결로 구현됨
     await assert.rejects(() => h[name]('a', 'approve'), (e) => e instanceof ApiNotImplementedError && e.message.includes(name));
   }
 });
