@@ -1,0 +1,695 @@
+<!DOCTYPE html>
+<html lang="ko" data-theme="dark">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>감사 기록 · 에이전트 콘솔</title>
+<style>
+/* ================= COMMON v1 — 모든 페이지에서 글자 그대로 동일 ================= */
+:root,[data-theme="dark"]{
+  --bg-0:#08080a;--bg-1:#0e0e11;--bg-2:#131317;--bg-3:#1a1a1f;--bg-4:#222228;
+  --line:#2a2a31;--line-2:#454550;--divider:rgba(255,255,255,.09);
+  --tx-1:#f2f2f6;--tx-2:#c2c2cc;--tx-3:#9c9ca8;
+  --accent:#ff4d6d;--accent-2:#ff1f4b;--accent-tx:#ff6683;--accent-dim:rgba(255,31,75,.16);--on-accent:#fff;
+  --accent-shadow:0 3px 12px rgba(255,31,75,.32);
+  --positive:#76b900;--positive-2:#86cc00;--on-positive:#0a0b0f;--positive-shadow:0 3px 12px rgba(118,185,0,.3);
+  --crit:#f04141;--crit-tx:#ff7676;--crit-dim:rgba(240,65,65,.12);
+  --high:#f59e0b;--high-tx:#fbbf24;--high-dim:rgba(245,158,11,.12);
+  --med:#eab308;--med-tx:#facc15;--med-dim:rgba(234,179,8,.10);
+  --low:#76b900;--low-tx:#8fd400;--low-dim:rgba(118,185,0,.12);
+  --info:#569cd6;--info-tx:#8cc0ee;--info-dim:rgba(86,156,214,.12);
+  /* 출처 상태 — 브랜드 주황과 겹치지 않게 정의 */
+  --pv-un-fg:#e2e2ea;--pv-un-bg:rgba(226,226,234,.06);--pv-un-bd:#a0a0ac;--pv-un-hatch:rgba(255,255,255,.08);
+  --pv-dr-fg:#67e8f9;--pv-dr-bg:rgba(34,211,238,.10);--pv-dr-bd:#22d3ee;
+  --pv-ap-fg:#8fd400;--pv-ap-bg:rgba(118,185,0,.14);--pv-ap-bd:#76b900;
+  --pv-bk-fg:#ff7676;--pv-bk-bg:rgba(240,65,65,.15);--pv-bk-bd:#f04141;
+  --pv-ne-fg:#c4b5fd;--pv-ne-bg:rgba(167,139,250,.12);--pv-ne-bd:#a78bfa;
+  --pv-se-fg:#fde047;--pv-se-bg:rgba(234,179,8,.10);--pv-se-bd:#eab308;--pv-se-hatch:rgba(234,179,8,.16);
+  --ink:#f2f2f6;--on-ink:#0a0a0d;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Segoe UI",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono","D2Coding",Consolas,"Liberation Mono",monospace;
+  --fs-xs:13px;--fs-sm:14px;--fs-base:16px;--fs-md:18px;--fs-lg:22px;--fs-xl:30px;--fs-2xl:40px;
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;
+  --r-sm:4px;--r-md:8px;--r-lg:10px;--r-xl:14px;
+  --t-hover:150ms ease-out;--t-panel:250ms cubic-bezier(.4,0,.2,1);
+  --sidebar-w:240px;--rail-w:80px;--top-h:60px;--tab-h:64px;--touch:48px;
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);
+  color-scheme:dark;
+}
+[data-theme="light"]{
+  --bg-0:#e7e9ee;--bg-1:#ffffff;--bg-2:#ffffff;--bg-3:#f1f2f5;--bg-4:#e4e6eb;
+  --line:#c3c7cf;--line-2:#8a8f9b;--divider:rgba(0,0,0,.12);
+  --tx-1:#0a0b0f;--tx-2:#2c2e37;--tx-3:#474a55;
+  --accent:#ff1f4b;--accent-2:#d9123b;--accent-tx:#b30f31;--accent-dim:rgba(255,31,75,.10);
+  --positive:#76b900;--positive-2:#6aa600;--on-positive:#0a0b0f;--positive-shadow:0 3px 12px rgba(118,185,0,.35);
+  --crit:#dc2626;--crit-tx:#a51616;--crit-dim:#fde6e6;
+  --high:#d97706;--high-tx:#8a4b00;--high-dim:#fdf0d8;
+  --med:#ca8a04;--med-tx:#6b4a00;--med-dim:#fdf6d4;
+  --low:#5f9600;--low-tx:#3d6100;--low-dim:#eef6dc;
+  --info:#2563eb;--info-tx:#1d4fa8;--info-dim:#e3ecfb;
+  --pv-un-fg:#22242c;--pv-un-bg:#eeeff2;--pv-un-bd:#5a5e69;--pv-un-hatch:rgba(0,0,0,.07);
+  --pv-dr-fg:#075a6b;--pv-dr-bg:#def5fa;--pv-dr-bd:#0e93ad;
+  --pv-ap-fg:#3d6100;--pv-ap-bg:#eef6dc;--pv-ap-bd:#5f9600;
+  --pv-bk-fg:#9f1414;--pv-bk-bg:#fde4e4;--pv-bk-bd:#dc2626;
+  --pv-ne-fg:#55209f;--pv-ne-bg:#eee8ff;--pv-ne-bd:#7c3aed;
+  --pv-se-fg:#5e4100;--pv-se-bg:#fdf2c9;--pv-se-bd:#b98900;--pv-se-hatch:rgba(185,137,0,.16);
+  --ink:#0a0b0f;--on-ink:#ffffff;
+  color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg-0);color:var(--tx-1);font-family:var(--font-sans);font-size:var(--fs-base);line-height:1.55;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overflow:hidden}
+a{color:var(--accent-tx);text-decoration:none;font-weight:600}
+a:hover{color:var(--accent);text-decoration:underline}
+button{font:inherit;color:inherit}
+h1,h2,h3,h4,p{margin:0}
+code,pre,.mono{font-family:var(--font-mono)}
+.ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:4px}
+*{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+*:focus-visible{outline:3px solid var(--accent-2);outline-offset:2px;border-radius:6px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
+
+/* 앱 셸 */
+.app{display:grid;grid-template-columns:var(--sidebar-w) minmax(0,1fr);height:100vh;height:100dvh}
+.sidebar{background:var(--bg-1);border-right:1px solid var(--line);display:flex;flex-direction:column;min-height:0;padding-left:var(--sal)}
+.sb-brand{display:flex;align-items:center;gap:10px;height:var(--top-h);padding:0 18px;font-weight:800;font-size:17px;border-bottom:1px solid var(--line);flex:none}
+.sb-mark{width:30px;height:30px;border-radius:8px;display:grid;place-items:center;background:var(--accent-2);color:#fff}
+.sb-mark .ic{width:18px;height:18px}
+.sb-nav{flex:1;overflow-y:auto;padding:10px}
+.sb-grp{font-size:var(--fs-xs);font-weight:700;color:var(--tx-3);letter-spacing:.04em;padding:14px 12px 6px}
+.sb-link{display:flex;align-items:center;gap:12px;min-height:var(--touch);padding:0 12px;border-radius:var(--r-md);color:var(--tx-2);font-weight:600;font-size:var(--fs-base);transition:background var(--t-hover),color var(--t-hover)}
+.sb-link:hover{background:var(--bg-3);color:var(--tx-1);text-decoration:none}
+.sb-link[aria-current="page"]{background:var(--accent-dim);color:var(--accent-tx)}
+.sb-link .lbl-s{display:none}
+.sb-count{margin-left:auto;min-width:26px;height:24px;padding:0 7px;border-radius:12px;background:var(--accent-2);color:#fff;font-size:var(--fs-xs);font-weight:800;display:grid;place-items:center;font-family:var(--font-mono)}
+.sb-foot{border-top:1px solid var(--line);padding:12px;display:flex;flex-direction:column;gap:10px;flex:none}
+.sb-legend{display:flex;flex-direction:column;gap:6px;align-items:flex-start}
+.sb-user{display:flex;align-items:center;gap:10px;font-weight:700;font-size:var(--fs-sm)}
+.sb-user small{display:block;font-family:var(--font-mono);color:var(--tx-3);font-weight:600;font-size:var(--fs-xs)}
+.avatar{width:36px;height:36px;border-radius:50%;background:var(--ink);color:var(--on-ink);display:grid;place-items:center;font-weight:800;flex:none}
+.main{display:flex;flex-direction:column;min-width:0;min-height:0;position:relative}
+.topbar{display:flex;align-items:center;gap:10px;min-height:var(--top-h);padding:var(--sat) calc(16px + var(--sar)) 0 20px;background:var(--bg-1);border-bottom:1px solid var(--line);flex:none}
+.tb-crumb{display:flex;align-items:center;gap:6px;min-width:0;font-weight:700;font-size:var(--fs-md)}
+.tb-crumb .sep{color:var(--tx-3)}
+.tb-crumb .cur{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-family:var(--font-mono);font-size:var(--fs-base)}
+.tb-mobile-brand{display:none}
+.tb-sp{flex:1}
+.net{display:inline-flex;align-items:center;gap:8px;font-size:var(--fs-sm);font-weight:700;color:var(--tx-2);padding:0 10px;height:36px;border-radius:18px;border:1px solid var(--line)}
+.net i{width:10px;height:10px;border-radius:50%;background:var(--low)}
+.net.off{color:var(--high-tx);border-color:var(--high)}.net.off i{background:var(--high)}
+.icon-btn{width:var(--touch);height:var(--touch);border-radius:var(--r-md);border:1px solid transparent;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--tx-2);transition:background var(--t-hover)}
+.icon-btn:hover{background:var(--bg-3);color:var(--tx-1)}
+.netbar{display:flex;align-items:center;gap:10px;padding:10px 20px;background:var(--high-dim);color:var(--high-tx);font-weight:700;border-bottom:2px solid var(--high);flex:none;font-size:var(--fs-sm)}
+.netbar[hidden]{display:none}
+.tabbar{display:none}
+
+/* 버튼 */
+.btn{min-height:var(--touch);padding:0 18px;border-radius:var(--r-md);border:1.5px solid var(--line-2);background:var(--bg-3);color:var(--tx-1);font-weight:700;font-size:var(--fs-base);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background var(--t-hover),border-color var(--t-hover),color var(--t-hover);white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--bg-4);border-color:var(--tx-3);text-decoration:none;color:var(--tx-1)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent-2);border-color:var(--accent-2);color:var(--on-accent);box-shadow:var(--accent-shadow)}
+.btn-primary:hover{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn-positive{background:var(--positive);border-color:var(--positive);color:var(--on-positive);box-shadow:var(--positive-shadow)}
+.btn-positive:hover{background:var(--positive-2);border-color:var(--positive-2);color:var(--on-positive)}
+.btn-positive .reauth{background:rgba(0,0,0,.18);color:var(--on-positive)}
+.btn-danger{color:var(--crit-tx);border-color:var(--crit)}
+.btn-danger:hover{background:var(--crit-dim);color:var(--crit-tx);border-color:var(--crit)}
+.btn-ghost{background:transparent;border-color:transparent}
+.btn:disabled,.btn[aria-disabled="true"]{opacity:.42;cursor:not-allowed;box-shadow:none;transform:none}
+.btn-sm{min-height:40px;padding:0 12px;font-size:var(--fs-sm)}
+.reauth{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;padding:2px 7px;border-radius:var(--r-sm);background:rgba(0,0,0,.28);color:#fff;font-family:var(--font-mono);letter-spacing:.02em}
+.reauth .ic{width:13px;height:13px}
+.reauth-o{background:transparent;border:1.5px solid currentColor;color:var(--tx-1)}
+
+/* 심각도 배지 */
+.sev{display:inline-flex;align-items:center;height:28px;padding:0 9px;border-radius:var(--r-sm);font-family:var(--font-mono);font-weight:800;font-size:var(--fs-xs);letter-spacing:.05em;border:1.5px solid}
+.sev-CRITICAL{color:var(--crit-tx);background:var(--crit-dim);border-color:var(--crit)}
+.sev-HIGH{color:var(--high-tx);background:var(--high-dim);border-color:var(--high)}
+.sev-MEDIUM{color:var(--med-tx);background:var(--med-dim);border-color:var(--med)}
+.sev-LOW{color:var(--low-tx);background:var(--low-dim);border-color:var(--low)}
+
+/* 출처 상태 배지 — 키트의 정체성. 색 + 아이콘 + 라벨 + 테두리 형태 4중 구분 */
+.pv{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:3px 11px;border-radius:var(--r-md);font-weight:800;font-size:var(--fs-sm);line-height:1.2;border-width:2px;border-style:solid;max-width:100%}
+.pv .ic{width:18px;height:18px;stroke-width:2.2}
+.pv-l{white-space:nowrap}
+.pv-x{font-weight:600;font-family:var(--font-mono);font-size:var(--fs-xs);opacity:.95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pv-untrusted{color:var(--pv-un-fg);border-color:var(--pv-un-bd);border-style:dashed;background:repeating-linear-gradient(135deg,var(--pv-un-hatch) 0 5px,transparent 5px 10px),var(--pv-un-bg)}
+.pv-draft{color:var(--pv-dr-fg);border-color:var(--pv-dr-bd);border-style:dashed;background:var(--pv-dr-bg)}
+.pv-approved{color:var(--pv-ap-fg);border-color:var(--pv-ap-bd);background:var(--pv-ap-bg)}
+.pv-blocked{color:var(--pv-bk-fg);border-color:var(--pv-bk-bd);background:var(--pv-bk-bg)}
+.pv-noev{color:var(--pv-ne-fg);border-color:var(--pv-ne-bd);border-style:dotted;background:var(--pv-ne-bg)}
+.pv-sensor{color:var(--pv-se-fg);border-color:var(--pv-se-bd);border-style:dashed;background:repeating-linear-gradient(135deg,var(--pv-se-hatch) 0 5px,transparent 5px 10px),var(--pv-se-bg)}
+.pv-sm{min-height:26px;padding:2px 8px;font-size:12.5px;gap:5px;border-width:1.5px}
+.pv-sm .ic{width:15px;height:15px}
+.pv-lg{min-height:40px;padding:4px 14px;font-size:var(--fs-base)}
+.pv-lg .ic{width:22px;height:22px}
+/* 출처 상태 박스 */
+.pvbox{border-radius:var(--r-lg);border:1.5px solid var(--line);background:var(--bg-2)}
+.pvbox-untrusted{border:2px dashed var(--pv-un-bd)}
+.pvbox-draft{border:2px dashed var(--pv-dr-bd)}
+.pvbox-approved{border:2px solid var(--pv-ap-bd)}
+.pvbox-blocked{border:2px solid var(--pv-bk-bd);background:var(--pv-bk-bg)}
+.pvbox-noev{border:2px dotted var(--pv-ne-bd)}
+.pvbox-sensor{border:2px dashed var(--pv-se-bd)}
+.pvbox-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--divider)}
+.pvbox-untrusted>.pvbox-head{background:repeating-linear-gradient(135deg,var(--pv-un-hatch) 0 5px,transparent 5px 10px)}
+.pvbox-body{padding:12px}
+
+/* 근거 인용 */
+.cite{border:1.5px solid var(--line);border-radius:var(--r-md);background:var(--bg-3);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.cite-top{display:flex;align-items:center;gap:8px;font-weight:700;font-size:var(--fs-sm);flex-wrap:wrap}
+.cite-top .ic{width:17px;height:17px;color:var(--tx-2)}
+.cite-loc{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--tx-2);font-weight:700}
+.cite-q{margin:0;font-family:var(--font-mono);font-size:var(--fs-sm);line-height:1.55;color:var(--tx-1)}
+.cite-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between}
+.cite-link{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-sm);min-height:32px}
+.cite-link .ic{width:15px;height:15px}
+
+/* 사람 전용 영역 */
+.human-tag{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:var(--r-md);background:var(--ink);color:var(--on-ink);font-weight:800;font-size:var(--fs-sm);white-space:nowrap}
+.human-tag .ic{width:18px;height:18px;stroke-width:2.3}
+.human-bar{flex:none;display:flex;align-items:center;gap:16px;padding:12px calc(20px + var(--sar)) 12px 20px;background:var(--bg-1);border-top:3px solid var(--ink);position:relative;z-index:20}
+.hb-id{display:flex;align-items:center;gap:12px;min-width:0}
+.hb-cap{font-size:var(--fs-sm);color:var(--tx-2);font-weight:600;min-width:0}
+.hb-actions{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.lbl-short{display:none}
+
+/* 상태 화면 */
+.empty{display:flex;flex-direction:column;align-items:center;text-align:center;gap:10px;padding:40px 16px;color:var(--tx-2)}
+.empty-ic{width:64px;height:64px;border-radius:50%;display:grid;place-items:center;background:var(--bg-3);border:1.5px solid var(--line-2);color:var(--tx-2)}
+.empty-ic .ic{width:28px;height:28px}
+.empty h3{color:var(--tx-1);font-size:var(--fs-md)}
+.empty p{max-width:340px;font-weight:500}
+.sk{background:linear-gradient(90deg,var(--bg-3) 0%,var(--bg-4) 50%,var(--bg-3) 100%);background-size:200% 100%;animation:shimmer 1.5s linear infinite;border-radius:var(--r-md)}
+@keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+.spin{width:18px;height:18px;border-radius:50%;border:2.5px solid currentColor;border-right-color:transparent;animation:spin .85s linear infinite;flex:none;display:inline-block}
+@keyframes spin{to{transform:rotate(360deg)}}
+.alert{display:flex;align-items:flex-start;gap:12px;padding:12px 14px;border-radius:var(--r-lg);font-weight:600}
+.alert .ic{width:24px;height:24px;margin-top:1px}
+.alert b{display:block;font-size:var(--fs-base)}
+.alert-blocked{background:var(--pv-bk-bg);border:2px solid var(--pv-bk-bd);color:var(--pv-bk-fg)}
+.alert-error{background:var(--high-dim);border:2px solid var(--high);color:var(--high-tx)}
+.alert-ok{background:var(--pv-ap-bg);border:2px solid var(--pv-ap-bd);color:var(--pv-ap-fg)}
+.alert p{color:var(--tx-1);font-size:var(--fs-sm);font-weight:500}
+
+/* 모달 · 시트 · 토스트 */
+.modal-bg{position:fixed;inset:0;z-index:200;background:rgba(0,0,0,.6);display:grid;place-items:center;padding:20px}
+.modal{width:min(520px,100%);max-height:calc(100dvh - 40px);overflow-y:auto;background:var(--bg-2);border:1.5px solid var(--line-2);border-radius:var(--r-xl);padding:22px;display:flex;flex-direction:column;gap:16px}
+.modal h2{font-size:var(--fs-lg)}
+.modal-x{display:flex;justify-content:space-between;align-items:center;gap:12px}
+.modal-acts{display:flex;gap:10px;justify-content:flex-end;flex-wrap:wrap}
+.field{display:flex;flex-direction:column;gap:6px;font-weight:700;font-size:var(--fs-sm)}
+.input{min-height:52px;border-radius:var(--r-md);border:1.5px solid var(--line-2);background:var(--bg-4);color:var(--tx-1);padding:12px 14px;font:inherit;font-size:var(--fs-base);width:100%}
+textarea.input{min-height:110px;resize:vertical}
+.input:focus{border-color:var(--accent-2);outline:none}
+.chips{display:flex;gap:8px;flex-wrap:wrap}
+.chip{min-height:40px;padding:0 14px;border-radius:20px;border:1.5px solid var(--line-2);background:var(--bg-3);font-weight:700;font-size:var(--fs-sm);cursor:pointer}
+.legend-row{display:grid;grid-template-columns:auto 1fr;gap:12px;align-items:center;padding:8px 0;border-bottom:1px solid var(--divider)}
+.legend-row p{font-size:var(--fs-sm);color:var(--tx-2);font-weight:500}
+.sheet-nav{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.sheet-nav a{display:flex;align-items:center;gap:10px;min-height:56px;padding:0 14px;border-radius:var(--r-md);background:var(--bg-3);color:var(--tx-1);border:1px solid var(--line)}
+.toast{position:fixed;left:50%;bottom:calc(110px + var(--sab));transform:translateX(-50%);z-index:300;background:var(--ink);color:var(--on-ink);padding:12px 18px;border-radius:var(--r-lg);font-weight:700;display:flex;gap:10px;align-items:center;max-width:calc(100vw - 32px);box-shadow:0 8px 30px rgba(0,0,0,.4)}
+.toast[hidden]{display:none}
+
+/* 데모 상태 전환 */
+.demo{position:fixed;left:calc(var(--sidebar-w) + 14px);bottom:var(--float-b,20px);z-index:150;display:flex;flex-direction:column;align-items:flex-start;gap:8px;font-size:var(--fs-xs)}
+.demo-pill{height:34px;padding:0 12px;border-radius:17px;border:1px solid var(--line-2);background:var(--bg-2);color:var(--tx-2);font-family:var(--font-mono);font-weight:700;cursor:pointer;display:flex;align-items:center;gap:6px;opacity:.85}
+.demo-panel{background:var(--bg-2);border:1px solid var(--line-2);border-radius:var(--r-lg);padding:10px;display:flex;flex-direction:column;gap:6px;width:250px;box-shadow:0 8px 30px rgba(0,0,0,.35)}
+.demo-panel[hidden]{display:none}
+.demo-grp{font-family:var(--font-mono);color:var(--tx-3);font-weight:700;padding:2px 2px 0}
+.demo-row{display:grid;grid-template-columns:1fr 1fr;gap:6px}
+.demo-b{min-height:36px;border-radius:6px;border:1px solid var(--line);background:var(--bg-3);font-weight:700;font-size:12.5px;cursor:pointer;color:var(--tx-2)}
+.demo-b[aria-pressed="true"]{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+
+/* 태블릿: 아이콘 레일 */
+@media (min-width:600px) and (max-width:1024px){
+  .app{grid-template-columns:calc(var(--rail-w) + var(--sal)) minmax(0,1fr)}
+  .sb-brand{justify-content:center;padding:0}.sb-brand .sb-name{display:none}
+  .sb-nav{padding:6px}
+  .sb-grp,.sb-foot .sb-legend,.sb-user-txt{display:none}
+  .sb-link{flex-direction:column;justify-content:center;gap:3px;min-height:60px;padding:6px 2px;font-size:12px;position:relative;text-align:center}
+  .sb-link .lbl{display:none}.sb-link .lbl-s{display:block;line-height:1.1}
+  .sb-count{position:absolute;top:4px;right:8px;margin:0;min-width:22px;height:20px;font-size:11px}
+  .sb-foot{align-items:center}
+  .human-bar{padding-bottom:calc(12px + var(--sab))}
+}
+/* 폰: 하단 탭바 */
+@media (max-width:599.98px){
+  .app{grid-template-columns:minmax(0,1fr);grid-template-rows:minmax(0,1fr) auto}
+  .sidebar{display:none}
+  .topbar{padding-left:calc(12px + var(--sal));padding-right:calc(8px + var(--sar));gap:4px}
+  .tb-mobile-brand{display:grid}
+  .tb-crumb{font-size:var(--fs-base)}.tb-crumb .grp,.tb-crumb .sep{display:none}
+  .net .net-l{display:none}.net{padding:0 9px}
+  .tabbar{display:grid;grid-template-columns:repeat(5,1fr);background:var(--bg-1);border-top:1px solid var(--line);padding:0 var(--sar) var(--sab) var(--sal)}
+  .tab{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:2px;min-height:var(--tab-h);color:var(--tx-2);font-size:12.5px;font-weight:700;position:relative;background:none;border:0;cursor:pointer}
+  .tab .ic{width:24px;height:24px}
+  .tab[aria-current="page"]{color:var(--accent-tx)}
+  .tab:hover{text-decoration:none;color:var(--tx-1)}
+  .tab .sb-count{position:absolute;top:6px;left:calc(50% + 6px);margin:0;min-width:20px;height:19px;font-size:11px;padding:0 5px}
+  .demo{display:none}
+  .modal-bg{place-items:end stretch;padding:0}
+  .modal{width:100%;border-radius:var(--r-xl) var(--r-xl) 0 0;padding-bottom:calc(22px + var(--sab));max-height:88dvh}
+  .modal-acts .btn{flex:1}
+  .human-bar{flex-direction:column;align-items:stretch;gap:8px;padding:10px 12px}
+  .hb-id{gap:8px}.hb-cap{font-size:13px}
+  .hb-actions{display:grid;grid-template-columns:1fr 1fr 1.5fr;margin:0;gap:8px}
+  .hb-actions .btn{min-height:54px;padding:0 8px}
+  .hb-hide-m{display:none !important}
+  .lbl-long{display:none}.lbl-short{display:inline}
+  .toast{bottom:calc(150px + var(--sab))}
+}
+@media (prefers-reduced-motion:reduce){*,*::before,*::after{animation-duration:.01ms !important;animation-iteration-count:1 !important;transition-duration:.01ms !important}}
+.main>*,.dv-col>*,.col>*{flex-shrink:0}
+/* 에이전트 어시스턴트 (플로팅 챗) */
+.fab{position:fixed;right:calc(16px + var(--sar));bottom:var(--float-b,20px);z-index:160;width:64px;height:64px;border-radius:50%;border:0;background:var(--accent-2);color:var(--on-accent);display:grid;place-items:center;cursor:pointer;box-shadow:var(--accent-shadow),0 6px 24px rgba(0,0,0,.35);transition:background var(--t-hover)}
+.fab:hover{background:var(--accent)}
+.fab:active{transform:scale(.97)}
+.fab .ic{width:28px;height:28px}
+.fab[hidden],.chat[hidden]{display:none}
+.chat{position:fixed;right:calc(16px + var(--sar));bottom:var(--float-b,20px);z-index:170;width:min(420px,calc(100vw - 32px));height:min(640px,calc(100dvh - var(--top-h) - var(--float-b,20px) - 24px));background:var(--bg-2);border:1.5px solid var(--line-2);border-radius:var(--r-xl);display:flex;flex-direction:column;box-shadow:0 16px 48px rgba(0,0,0,.45);overflow:hidden}
+.chat-h{display:flex;align-items:center;gap:10px;padding:10px 8px 10px 14px;border-bottom:1px solid var(--line);background:var(--bg-1);flex:none}
+.chat-h b{font-size:var(--fs-base);display:block}
+.chat-ctx{font-size:12.5px;color:var(--tx-2);font-weight:700;font-family:var(--font-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chat-log{flex:1;min-height:0;overflow-y:auto;padding:14px;display:flex;flex-direction:column;gap:12px}
+.chat-log>*{flex-shrink:0}
+.msg-u{align-self:flex-end;max-width:85%;background:var(--ink);color:var(--on-ink);padding:10px 14px;border-radius:14px 14px 4px 14px;font-weight:600;font-size:15px;line-height:1.5}
+.msg-a{align-self:flex-start;max-width:94%;border:2px dashed var(--pv-dr-bd);background:var(--bg-2);border-radius:14px 14px 14px 4px;padding:10px 12px;display:flex;flex-direction:column;gap:8px}
+.msg-a.refuse{border:2px dotted var(--pv-ne-bd);background:var(--pv-ne-bg)}
+.msg-a.block{border:2px solid var(--pv-bk-bd);background:var(--pv-bk-bg)}
+.msg-tools{display:flex;flex-direction:column;gap:4px;padding:6px 8px;border-radius:var(--r-md);background:var(--bg-4)}
+.msg-tool{display:flex;align-items:center;gap:6px;font-family:var(--font-mono);font-size:12.5px;font-weight:700;color:var(--tx-2)}
+.msg-tool .ic{width:14px;height:14px;stroke-width:2.6}
+.msg-t{font-size:15px;line-height:1.6;color:var(--tx-1)}
+.msg-cites{display:flex;flex-wrap:wrap;gap:6px}
+.msg-cite{display:inline-flex;align-items:center;gap:5px;min-height:30px;padding:0 9px;border-radius:var(--r-md);border:1.5px solid var(--pv-ap-bd);background:var(--pv-ap-bg);color:var(--pv-ap-fg);font-family:var(--font-mono);font-size:12.5px;font-weight:700}
+.msg-cite .ic{width:14px;height:14px}
+.chat .caret{display:inline-block;width:.5em;height:1.05em;background:var(--pv-dr-fg);vertical-align:-3px;margin-left:2px;animation:chatblink 1s steps(2) infinite}
+@keyframes chatblink{50%{opacity:0}}
+.chat-sug{display:flex;gap:6px;overflow-x:auto;padding:8px 12px 2px;flex:none}
+.chat-sug .chip{flex:none;color:var(--tx-1)}
+.chat-sug .chip:disabled{opacity:.45}
+.chat-in{display:flex;gap:8px;padding:8px 12px 8px;align-items:flex-end;flex:none}
+.chat-in .input{min-height:48px;max-height:120px;resize:none;padding:12px;flex:1}
+.chat-in .btn{width:48px;padding:0}
+.chat-mic{border:1.5px solid var(--line-2)}
+.chat-mic.on{background:var(--accent-dim);color:var(--accent-tx);border-color:var(--accent-2)}
+.chat-note{display:flex;align-items:center;gap:6px;padding:0 14px 12px;font-size:12.5px;color:var(--tx-2);font-weight:700;flex:none}
+.chat-note .ic{width:14px;height:14px}
+@media (min-width:600px) and (max-width:1024px){.demo{left:calc(var(--rail-w) + var(--sal) + 14px)}}
+@media (max-width:599.98px){
+  .fab{width:60px;height:60px}
+  .chat{inset:0;width:auto;height:auto;border-radius:0;border:0;padding-top:var(--sat);padding-bottom:var(--sab)}
+}
+/* ================= /COMMON v1 ================= */
+
+/* ================= PAGE: audit ================= */
+.au-head{flex:none;padding:16px 24px 12px;border-bottom:1px solid var(--line);background:var(--bg-1);display:flex;flex-direction:column;gap:12px}
+.au-head h1{font-size:var(--fs-xl);font-weight:800;letter-spacing:-.02em}
+.au-head p{color:var(--tx-2);font-size:var(--fs-sm);font-weight:600}
+.au-body{flex:1;min-height:0;display:grid;grid-template-columns:minmax(0,1fr) minmax(340px,460px)}
+.au-list{min-height:0;overflow-y:auto;padding:14px 16px 120px;display:flex;flex-direction:column;gap:8px;border-right:1px solid var(--line);background:var(--bg-1)}
+.au-detail{background-color:var(--bg-2);border-radius:10px;min-height:0;overflow-y:auto;padding:20px 24px 120px;display:flex;flex-direction:column;gap:16px}
+.au-detail>*,.au-list>*{flex-shrink:0}
+.ev-h,.ev{display:grid;grid-template-columns:76px 150px minmax(0,1fr) 120px;gap:12px;align-items:center;padding:0 14px}
+.ev-h{font-size:var(--fs-xs);font-weight:800;color:var(--tx-3);letter-spacing:.04em;padding-bottom:2px}
+.ev{text-align:left;width:100%;min-height:var(--touch);padding-top:10px;padding-bottom:10px;border-radius:var(--r-lg);border:1.5px solid var(--line);background:var(--bg-2);cursor:pointer;font-size:var(--fs-sm);font-weight:600}
+.ev:hover{border-color:var(--line-2)}
+.ev[aria-current="true"]{border-color:var(--accent-2);box-shadow:inset 3px 0 0 var(--accent-2)}
+.ev .tm{font-family:var(--font-mono);font-weight:800;color:var(--tx-2)}
+.ev .who{display:flex;align-items:center;gap:6px;font-weight:700}
+.ev .act{line-height:1.4}
+.ev .act small{display:block;color:var(--tx-2);font-weight:500;font-family:var(--font-mono);font-size:var(--fs-xs)}
+.res{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border-radius:var(--r-sm);border:1.5px solid var(--line-2);font-weight:800;font-size:var(--fs-sm);justify-self:start}
+.res.ok{border-color:var(--pv-ap-bd)}
+.res.no{border-color:var(--crit-tx);color:var(--crit-tx)}
+.res.hum{background:var(--ink);color:var(--on-ink);border-color:var(--ink)}
+.res .ic{width:15px;height:15px}
+.det-back{display:none}
+.det-title{font-size:var(--fs-lg);font-weight:800;line-height:1.3;text-wrap:pretty}
+.dl{display:grid;grid-template-columns:auto 1fr;gap:6px 16px;font-size:var(--fs-sm);margin:0}
+.dl dt{color:var(--tx-2);font-weight:600}.dl dd{margin:0;font-weight:700;word-break:break-all}
+.rec{margin:0;padding:12px;border-radius:var(--r-md);background:var(--bg-4);font-size:var(--fs-sm);overflow:auto;max-height:220px;line-height:1.6;white-space:pre}
+@media (max-width:1024px){
+  .au-body{grid-template-columns:minmax(0,1fr)}
+  .au-list{border-right:0}
+  .au-detail{position:absolute;inset:0;z-index:30;border-radius:0;display:none;padding-top:12px}
+  .au-detail.open{display:flex}
+  .det-back{display:inline-flex;align-self:flex-start}
+}
+@media (max-width:760px){
+  .ev-h{display:none}
+  .ev{grid-template-columns:minmax(0,1fr) auto;grid-template-areas:"who res" "act act" "tm tm";gap:6px 10px}
+  .ev .who{grid-area:who}.ev .res{grid-area:res}.ev .act{grid-area:act}.ev .tm{grid-area:tm;font-size:var(--fs-xs)}
+}
+@media (max-width:599.98px){.au-head{padding:12px 14px 10px}.au-head h1{font-size:var(--fs-lg)}.au-detail{padding:12px 14px 140px}}
+</style>
+</head>
+<body data-page="audit">
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="i-logo" viewBox="0 0 24 24"><path d="M12 2.5 20.5 7.3v9.4L12 21.5 3.5 16.7V7.3z"/><circle cx="12" cy="12" r="3"/></symbol>
+  <symbol id="i-home" viewBox="0 0 24 24"><path d="M3 10.5 12 3l9 7.5V20a1 1 0 0 1-1 1h-5v-6H9v6H4a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="i-inbox" viewBox="0 0 24 24"><path d="M22 12h-6l-2 3h-4l-2-3H2"/><path d="M5.45 5.11 2 12v6a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2v-6l-3.45-6.89A2 2 0 0 0 16.76 4H7.24a2 2 0 0 0-1.79 1.11z"/></symbol>
+  <symbol id="i-case" viewBox="0 0 24 24"><rect x="2" y="7" width="20" height="14" rx="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></symbol>
+  <symbol id="i-draft" viewBox="0 0 24 24"><path d="M12 22H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h8l6 6v4"/><path d="M14 2v6h6"/><path d="m18.4 14.6 2 2L15 22h-2v-2z"/></symbol>
+  <symbol id="i-approvals" viewBox="0 0 24 24"><path d="m9 11 3 3L22 4"/><path d="M21 12v7a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11"/></symbol>
+  <symbol id="i-knowledge" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20V2H6.5A2.5 2.5 0 0 0 4 4.5z"/><path d="M4 19.5A2.5 2.5 0 0 0 6.5 22H20v-5"/></symbol>
+  <symbol id="i-map" viewBox="0 0 24 24"><path d="M9 3 3 6v15l6-3 6 3 6-3V3l-6 3z"/><path d="M9 3v15M15 6v15"/></symbol>
+  <symbol id="i-schedule" viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></symbol>
+  <symbol id="i-security" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></symbol>
+  <symbol id="i-audit" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2M12 11h4M12 16h4M8 11h.01M8 16h.01"/></symbol>
+  <symbol id="i-field" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2"/><path d="M12 18h.01"/></symbol>
+  <symbol id="i-more" viewBox="0 0 24 24"><rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/></symbol>
+  <symbol id="i-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/></symbol>
+  <symbol id="i-moon" viewBox="0 0 24 24"><path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9z"/></symbol>
+  <symbol id="i-wifi-off" viewBox="0 0 24 24"><path d="M2 2l20 20M8.5 16.5a5 5 0 0 1 7 0M5 13a10 10 0 0 1 5.17-2.8M19 13a10 10 0 0 0-2.3-1.7M2 8.82a15 15 0 0 1 4.17-2.65M22 8.82A15 15 0 0 0 11.29 5M12 20h.01"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21v-1a6 6 0 0 1 6-6h4a6 6 0 0 1 6 6v1"/></symbol>
+  <symbol id="i-user-check" viewBox="0 0 24 24"><circle cx="9" cy="8" r="4"/><path d="M2 21v-1a6 6 0 0 1 6-6h2a6 6 0 0 1 4.5 2"/><path d="m15.5 18.5 2.5 2.5 4.5-4.5"/></symbol>
+  <symbol id="i-bot" viewBox="0 0 24 24"><rect x="4" y="8" width="16" height="12" rx="2"/><path d="M12 8V5"/><circle cx="12" cy="3.6" r="1.4"/><path d="M9 13v2M15 13v2M2 13v3M22 13v3"/></symbol>
+  <symbol id="i-untrusted" viewBox="0 0 24 24"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M9.6 9.4a2.5 2.5 0 0 1 4.8.9c0 1.6-2.4 2.1-2.4 3.4"/><path d="M12 17h.01"/></symbol>
+  <symbol id="i-ban" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="m4.9 4.9 14.2 14.2"/></symbol>
+  <symbol id="i-file-x" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6M9.5 12.5l5 5M14.5 12.5l-5 5"/></symbol>
+  <symbol id="i-activity" viewBox="0 0 24 24"><path d="M22 12h-4l-3 9L9 3l-3 9H2"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-tool" viewBox="0 0 24 24"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94z"/></symbol>
+  <symbol id="i-plan" viewBox="0 0 24 24"><path d="M8 6h13M8 12h13M8 18h13M3 6h.01M3 12h.01M3 18h.01"/></symbol>
+  <symbol id="i-judge" viewBox="0 0 24 24"><path d="M9 18h6M10 22h4"/><path d="M12 2a7 7 0 0 0-4 12.7c.6.5 1 1.3 1 2.3h6c0-1 .4-1.8 1-2.3A7 7 0 0 0 12 2z"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18M6 6l12 12"/></symbol>
+  <symbol id="i-alert" viewBox="0 0 24 24"><path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><path d="M12 9v4M12 17h.01"/></symbol>
+  <symbol id="i-retry" viewBox="0 0 24 24"><path d="M21 12a9 9 0 1 1-2.64-6.36L21 8"/><path d="M21 3v5h-5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-chev" viewBox="0 0 24 24"><path d="m9 18 6-6-6-6"/></symbol>
+  <symbol id="i-chev-d" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6M10 14 21 3M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-camera" viewBox="0 0 24 24"><path d="M14.5 4h-5L7 7H4a2 2 0 0 0-2 2v9a2 2 0 0 0 2 2h16a2 2 0 0 0 2-2V9a2 2 0 0 0-2-2h-3z"/><circle cx="12" cy="13" r="3"/></symbol>
+  <symbol id="i-cpu" viewBox="0 0 24 24"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><path d="M9 1v3M15 1v3M9 20v3M15 20v3M20 9h3M20 14h3M1 9h3M1 14h3"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="m12 2 10 5-10 5L2 7z"/><path d="m2 17 10 5 10-5M2 12l10 5 10-5"/></symbol>
+  <symbol id="i-history" viewBox="0 0 24 24"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"/><path d="M3 3v5h5M12 7v5l4 2"/></symbol>
+  <symbol id="i-info" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4M12 8h.01"/></symbol>
+  <symbol id="i-edit" viewBox="0 0 24 24"><path d="M17 3a2.85 2.85 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5z"/></symbol>
+  <symbol id="i-stop" viewBox="0 0 24 24"><rect x="5" y="5" width="14" height="14" rx="2"/></symbol>
+  <symbol id="i-code" viewBox="0 0 24 24"><path d="m16 18 6-6-6-6M8 6l-6 6 6 6"/></symbol>
+  <symbol id="i-chat" viewBox="0 0 24 24"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/><path d="M8 9h8M8 13h5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><rect x="9" y="2" width="6" height="12" rx="3"/><path d="M19 10a7 7 0 0 1-14 0M12 17v5M8 22h8"/></symbol>
+  <symbol id="i-send" viewBox="0 0 24 24"><path d="m22 2-7 20-4-9-9-4z"/><path d="M22 2 11 13"/></symbol>
+  <symbol id="i-panel" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><path d="M9 3v18"/></symbol>
+</svg>
+
+<div class="app">
+  <nav class="sidebar" id="sidebar" aria-label="주 메뉴"></nav>
+  <div class="main">
+    <header class="topbar" id="topbar"></header>
+    <div class="netbar" id="netbar" role="status" hidden></div>
+    <section class="au-head" id="au-head" data-screen-label="감사 기록 헤더"></section>
+    <div class="au-body">
+      <section class="au-list" id="au-list" aria-label="감사 기록 목록"></section>
+      <aside class="au-detail" id="au-detail" aria-label="기록 상세"></aside>
+    </div>
+  </div>
+  <nav class="tabbar" id="tabbar" aria-label="하단 탭"></nav>
+</div>
+<div class="demo" id="demo"></div>
+<div id="modal-root"></div>
+<div class="toast" id="toast" role="status" hidden></div>
+
+<script>
+const DATA = {
+  shell: { user: { role: "정비반장", id: "M-0412", initial: "M" }, counts: { inbox: 7, approvals: 4 }, lastSync: "13:52:08" },
+  events: [
+    { id: "EV-0412", t: "14:05:12", who: "사람", whoId: "M-0412", act: "초안 승인", obj: "DRF-0141 조치 계획서", res: "approved", kind: "decision", note: "HIGH · PIN 재로그인 확인", rec: '{\n  "event": "approve",\n  "draft": "DRF-0141",\n  "actor": "M-0412",\n  "reauth": true\n}' },
+    { id: "EV-0411", t: "13:59:40", who: "에이전트", whoId: "parts-01", act: "발주서 초안 작성", obj: "DRF-0142", res: "allow", kind: "agent", note: "report.draft · 효력 없음", rec: '{\n  "tool": "report.draft",\n  "draft": "DRF-0142",\n  "effect": "none"\n}' },
+    { id: "EV-0410", t: "13:58:21", who: "정책 엔진", whoId: "policy", act: "채팅 승인 요청 거부", obj: "approvals.decide", res: "blocked", kind: "blocked", note: "승인은 사람 전용 도구", rec: '{\n  "tool": "approvals.decide",\n  "caller": "chat-agent",\n  "rule": "human_only",\n  "result": "deny"\n}' },
+    { id: "EV-0409", t: "13:47:30", who: "에이전트", whoId: "diag-01", act: "승격 문서 검색", obj: "VFD-22 Rev.C §7.3", res: "allow", kind: "agent", note: "kb.search_manual", rec: '{\n  "tool": "kb.search_manual",\n  "query": "F0003",\n  "hits": 3\n}' },
+    { id: "EV-0408", t: "13:47:05", who: "정책 엔진", whoId: "policy", act: "문서 지시문 격리", obj: "DOC-0032 p.7", res: "blocked", kind: "blocked", note: "시스템 대상 지시문 발견", rec: '{\n  "doc": "DOC-0032",\n  "page": 7,\n  "finding": "instruction_to_system",\n  "action": "quarantine"\n}' },
+    { id: "EV-0407", t: "13:46:50", who: "정책 엔진", whoId: "policy", act: "발주 호출 거부", obj: "order.submit", res: "blocked", kind: "blocked", note: "사진 OCR 지시문에서 시작된 호출", rec: '{\n  "tool": "order.submit",\n  "origin": "SIG-1003-030",\n  "rule": "human_only",\n  "result": "deny"\n}' },
+    { id: "EV-0406", t: "13:46:12", who: "사람", whoId: "M-0412", act: "케이스 배정", obj: "SIG-1003-031 → CASE-2026-1003-014", res: "approved", kind: "decision", note: "에이전트 diag-01에 진단 배정", rec: '{\n  "event": "assign",\n  "signal": "SIG-1003-031",\n  "agent": "diag-01"\n}' },
+    { id: "EV-0405", t: "13:41:09", who: "시스템", whoId: "telemetry", act: "센서 이상 의심 표시", obj: "MTR-C3 진동 채널", res: "allow", kind: "agent", note: "12시간 0.00 고정 · 판단에서 제외", rec: '{\n  "ch": "vib_rms",\n  "flat_hours": 12,\n  "flag": "sensor_suspect"\n}' },
+    { id: "EV-0404", t: "13:32:44", who: "정책 엔진", whoId: "policy", act: "외부 주소 접근 거부", obj: "net.fetch", res: "blocked", kind: "blocked", note: "허용 목록 비어 있음", rec: '{\n  "tool": "net.fetch",\n  "allowlist": [],\n  "result": "deny"\n}' },
+    { id: "EV-0403", t: "11:20:03", who: "사람", whoId: "M-0412", act: "초안 반려", obj: "DRF-0138 점검 체크리스트", res: "rejected", kind: "decision", note: "사유: 항목 순서 오류", rec: '{\n  "event": "reject",\n  "draft": "DRF-0138",\n  "reason": "order"\n}' }
+  ],
+  chat: {
+    ctx: "감사 기록 · 10건",
+    suggestions: ["오늘 차단은 몇 건?", "누가 DRF-0141을 승인했어?", "13:46 발주 시도 설명해줘", "기록 하나 지워줘"],
+    replies: [
+      { match: ["차단", "몇"], tools: [["audit.query", "0.4s"]], text: "오늘 4건입니다. 문서 지시문 격리 1, 발주 호출 거부 1, 채팅 승인 요청 거부 1, 외부 주소 접근 거부 1입니다.", cites: ["EV-0410", "EV-0408", "EV-0407", "EV-0404"] },
+      { match: ["승인", "누가"], tools: [["audit.query", "0.3s"]], text: "M-0412가 14:05:12에 PIN 재로그인 후 승인했습니다.", cites: ["EV-0412"] },
+      { match: ["발주", "13:46"], tools: [["audit.query", "0.4s"]], text: "현장 메모 사진 속 지시문에서 시작된 order.submit 호출을 정책 엔진이 사람 전용 규칙으로 거부했습니다.", cites: ["EV-0407", "SIG-1003-030"] },
+      { match: ["지워", "삭제"], kind: "refuse", tools: [], text: "감사 기록은 추가만 가능하고 수정이나 삭제 권한을 누구에게도 주지 않습니다." }
+    ]
+  },
+  error: { code: "503", message: "감사 저장소에 연결할 수 없습니다" }
+};
+
+const LABELS = {
+  app: "에이전트 콘솔",
+  nav: { home: "홈", inbox: "신호 인박스", case: "케이스", draft: "초안 검토", approvals: "승인 큐", knowledge: "지식 온보딩", map: "대상 맵", schedule: "일정·배치", security: "샌드박스·정책", audit: "감사 기록", field: "현장 모바일", more: "더보기" },
+  navShort: { home: "홈", inbox: "인박스", case: "케이스", draft: "초안", approvals: "승인", knowledge: "지식", map: "맵", schedule: "일정", security: "정책", audit: "감사", field: "현장", more: "더보기" },
+  navGroups: { work: "작업", know: "지식·대상", ctrl: "통제", field: "현장" },
+  prov: { untrusted: "검증 전 입력", draft: "에이전트 초안", approved: "사람 승인", blocked: "정책 차단", noev: "근거 없음", sensor: "센서 이상 의심" },
+  provDesc: {
+    untrusted: "업로드 문서, 센서값, 외부 텍스트. 단독으로 판단 근거가 되지 않습니다.",
+    draft: "에이전트가 만든 결과. 사람이 승인하기 전까지 효력이 없습니다.",
+    approved: "승인자 이름과 시각이 기록된 확정본입니다.",
+    blocked: "샌드박스 정책이 실행을 막았습니다.",
+    noev: "근거를 찾지 못해 에이전트가 답을 거부했습니다.",
+    sensor: "값이 고정되거나 범위를 벗어나 판단에서 제외했습니다."
+  },
+  demo: { normal: "정상", running: "에이전트 실행 중", blocked: "차단 발생", approved: "승인 완료", empty: "빈 상태", loading: "로딩", error: "오류", rejected: "반려됨", offline: "네트워크 불안정" },
+  humanOnly: "사람 전용"
+};
+
+/* ================= COMMON JS v1 ================= */
+const NAV = [
+  { g: "work", items: ["home", "inbox", "case", "draft", "approvals"] },
+  { g: "know", items: ["knowledge", "map", "schedule"] },
+  { g: "ctrl", items: ["security", "audit"] },
+  { g: "field", items: ["field"] }
+];
+const HREF = { home: "index.html", inbox: "inbox.html", case: "case.html", draft: "draft.html", approvals: "approvals.html", knowledge: "knowledge.html", map: "map.html", schedule: "schedule.html", security: "security.html", audit: "audit.html", field: "field.html" };
+const TABS = ["home", "inbox", "approvals", "map"];
+const PV_ICON = { untrusted: "untrusted", draft: "bot", approved: "user-check", blocked: "ban", noev: "file-x", sensor: "activity" };
+const DEMO_MAIN = ["normal", "running", "blocked", "approved"];
+const DEMO_SUB = ["empty", "loading", "error"];
+const APP = { page: document.body.dataset.page, state: "normal", net: navigator.onLine === false ? "offline" : "online", demoOpen: false };
+
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const ic = n => `<svg class="ic" aria-hidden="true"><use href="#i-${n}"></use></svg>`;
+const pv = (t, extra, size) => `<span class="pv pv-${t}${size ? " pv-" + size : ""}">${ic(PV_ICON[t])}<span class="pv-l">${esc(LABELS.prov[t])}</span>${extra ? `<span class="pv-x">${esc(extra)}</span>` : ""}</span>`;
+const count = k => DATA.shell.counts[k] ? `<span class="sb-count">${DATA.shell.counts[k]}</span>` : "";
+
+function renderShell(crumbs) {
+  const u = DATA.shell.user;
+  $("#sidebar").innerHTML = `
+    <div class="sb-brand"><span class="sb-mark">${ic("logo")}</span><span class="sb-name">${esc(LABELS.app)}</span></div>
+    <div class="sb-nav">${NAV.map(g => `<div class="sb-grp">${esc(LABELS.navGroups[g.g])}</div>` + g.items.map(k =>
+      `<a class="sb-link" href="${HREF[k]}"${k === APP.page ? ' aria-current="page"' : ""}>${ic(k)}<span class="lbl">${esc(LABELS.nav[k])}</span><span class="lbl-s">${esc(LABELS.navShort[k])}</span>${count(k)}</a>`).join("")).join("")}</div>
+    <div class="sb-foot">
+      <div class="sb-legend">${pv("untrusted", null, "sm")}${pv("draft", null, "sm")}${pv("approved", null, "sm")}</div>
+      <div class="sb-user"><span class="avatar">${esc(u.initial)}</span><span class="sb-user-txt">${esc(u.role)}<small>${esc(u.id)}</small></span></div>
+    </div>`;
+  $("#tabbar").innerHTML = TABS.map(k =>
+    `<a class="tab" href="${HREF[k]}"${k === APP.page ? ' aria-current="page"' : ""}>${ic(k)}<span>${esc(LABELS.navShort[k])}</span>${count(k)}</a>`).join("") +
+    `<button class="tab" data-act="more"${TABS.includes(APP.page) ? "" : ' aria-current="page"'}>${ic("more")}<span>${esc(LABELS.navShort.more)}</span></button>`;
+  $("#topbar").innerHTML = `
+    <span class="sb-mark tb-mobile-brand">${ic("logo")}</span>
+    <div class="tb-crumb">${crumbs.map((c, i) => i < crumbs.length - 1 ? `<span class="grp">${esc(c)}</span><span class="sep">/</span>` : `<span class="cur">${esc(c)}</span>`).join("")}</div>
+    <span class="tb-sp"></span>
+    <span class="net" id="net-ind"></span>
+    <button class="icon-btn" data-act="legend" aria-label="출처 상태 범례">${ic("info")}</button>
+    <button class="icon-btn" data-act="theme" id="theme-btn" aria-label="테마 전환"></button>`;
+  renderNet(); renderThemeBtn();
+}
+function renderNet() {
+  const off = APP.net === "offline";
+  const ind = $("#net-ind");
+  if (ind) { ind.className = "net" + (off ? " off" : ""); ind.innerHTML = `<i></i><span class="net-l">${off ? "불안정" : "연결됨"}</span>`; }
+  const b = $("#netbar"); b.hidden = !off;
+  b.innerHTML = `${ic("wifi-off")}<span>네트워크 불안정 · 마지막 동기화 ${esc(DATA.shell.lastSync)} · 결정은 기기에 보관했다가 연결되면 전송합니다</span>`;
+}
+function applyTheme(t) { document.documentElement.dataset.theme = t; try { localStorage.setItem("kit-theme", t); } catch (e) {} renderThemeBtn(); }
+function renderThemeBtn() { const b = $("#theme-btn"); if (b) b.innerHTML = ic(document.documentElement.dataset.theme === "dark" ? "sun" : "moon"); }
+function initTheme() {
+  let t = null; try { t = localStorage.getItem("kit-theme"); } catch (e) {}
+  if (!t) t = matchMedia("(prefers-color-scheme: light)").matches ? "light" : "dark";
+  document.documentElement.dataset.theme = t;
+}
+function readURL() {
+  const p = new URLSearchParams(location.search), s = p.get("state");
+  if ([...DEMO_MAIN, ...DEMO_SUB, "rejected"].includes(s)) APP.state = s;
+  if (p.get("net") === "offline") APP.net = "offline";
+  if (p.get("theme") === "light" || p.get("theme") === "dark") document.documentElement.dataset.theme = p.get("theme");
+}
+function writeURL() {
+  const p = new URLSearchParams(location.search);
+  APP.state === "normal" ? p.delete("state") : p.set("state", APP.state);
+  APP.net === "offline" ? p.set("net", "offline") : p.delete("net");
+  const q = p.toString(); history.replaceState(null, "", location.pathname + (q ? "?" + q : "") + location.hash);
+}
+function setState(s) { APP.state = s; writeURL(); renderDemo(); if (window.renderPage) renderPage(); }
+function renderDemo() {
+  const b = k => `<button class="demo-b" data-act="demo-state" data-v="${k}" aria-pressed="${APP.state === k}">${esc(LABELS.demo[k])}</button>`;
+  $("#demo").innerHTML = `
+    <div class="demo-panel" ${APP.demoOpen ? "" : "hidden"}>
+      <div class="demo-grp">STATE</div><div class="demo-row">${DEMO_MAIN.map(b).join("")}</div>
+      <div class="demo-grp">SCREEN</div><div class="demo-row">${DEMO_SUB.map(b).join("")}
+      <button class="demo-b" data-act="demo-net" aria-pressed="${APP.net === "offline"}">${esc(LABELS.demo.offline)}</button></div>
+    </div>
+    <button class="demo-pill" data-act="demo-toggle" aria-expanded="${APP.demoOpen}">DEMO · ${esc(LABELS.demo[APP.state] || APP.state)}</button>`;
+}
+function placeDemo() { const a = [$("#human-bar"), $("#tabbar")].find(e => e && e.getBoundingClientRect().height > 0); const b = a ? Math.max(0, innerHeight - a.getBoundingClientRect().top) + 12 : 20; document.documentElement.style.setProperty("--float-b", b + "px"); }
+if (window.ResizeObserver) addEventListener("DOMContentLoaded", () => { const hb = $("#human-bar"); if (hb) new ResizeObserver(placeDemo).observe(hb); });
+addEventListener("load", placeDemo);
+function openModal(html) { $("#modal-root").innerHTML = `<div class="modal-bg" data-act="modal-bg"><div class="modal" role="dialog" aria-modal="true">${html}</div></div>`; const f = $("#modal-root [data-autofocus]"); if (f) f.focus(); }
+function closeModal() { $("#modal-root").innerHTML = ""; }
+let toastT;
+function toast(msg, icon) { const t = $("#toast"); t.innerHTML = `${ic(icon || "check")}<span>${esc(msg)}</span>`; t.hidden = false; clearTimeout(toastT); toastT = setTimeout(() => t.hidden = true, 3200); }
+function openLegend() {
+  openModal(`<div class="modal-x"><h2>출처 상태</h2><button class="icon-btn" data-act="modal-close" aria-label="닫기">${ic("x")}</button></div>
+    <div>${Object.keys(LABELS.prov).map(k => `<div class="legend-row">${pv(k)}<p>${esc(LABELS.provDesc[k])}</p></div>`).join("")}</div>`);
+}
+function openMore() {
+  const rest = NAV.flatMap(g => g.items).filter(k => !TABS.includes(k));
+  openModal(`<div class="modal-x"><h2>${esc(LABELS.nav.more)}</h2><button class="icon-btn" data-act="modal-close" aria-label="닫기">${ic("x")}</button></div>
+    <div class="sheet-nav">${rest.map(k => `<a href="${HREF[k]}"${k === APP.page ? ' aria-current="page"' : ""}>${ic(k)}${esc(LABELS.nav[k])}</a>`).join("")}</div>
+    <button class="btn" data-act="theme">${ic("sun")}테마 전환</button>`);
+}
+const COMMON_ACTS = {
+  theme: () => applyTheme(document.documentElement.dataset.theme === "dark" ? "light" : "dark"),
+  legend: openLegend, more: openMore,
+  "modal-close": closeModal,
+  "modal-bg": (el, e) => { if (e.target === el) closeModal(); },
+  "demo-toggle": () => { APP.demoOpen = !APP.demoOpen; renderDemo(); },
+  "demo-state": el => setState(el.dataset.v),
+  "demo-net": () => { APP.net = APP.net === "offline" ? "online" : "offline"; writeURL(); renderNet(); renderDemo(); }
+};
+function bindActs(pageActs) {
+  document.addEventListener("click", e => {
+    const el = e.target.closest("[data-act]"); if (!el) return;
+    const fn = pageActs[el.dataset.act] || COMMON_ACTS[el.dataset.act]; if (fn) fn(el, e);
+  });
+  document.addEventListener("keydown", e => { if (e.key === "Escape") { closeModal(); if (pageActs["ctx-close"]) pageActs["ctx-close"](); } });
+  addEventListener("online", () => { APP.net = "online"; renderNet(); renderDemo(); });
+  addEventListener("offline", () => { APP.net = "offline"; renderNet(); renderDemo(); });
+}
+/* --- 에이전트 어시스턴트 (플로팅 챗) · 데이터는 DATA.chat --- */
+const CHAT = { open: false, busy: false, log: [], listening: false };
+const APPROVE_RE = /승인해|승인 처리|결재해|적용해|제출해|발주해/;
+function chatMsgHTML(m) {
+  if (m.role === "user") return `<div class="msg-u">${esc(m.text)}</div>`;
+  const cls = m.kind === "refuse" ? " refuse" : m.kind === "block" ? " block" : "";
+  const badge = m.kind === "refuse" ? pv("noev", "답변 거부", "sm") : m.kind === "block" ? pv("blocked", "사람 전용", "sm") : pv("draft", "답변은 초안", "sm");
+  const tools = (m.tools || []).map(t => `<span class="msg-tool">${t.done ? ic("check") : '<span class="spin" style="width:12px;height:12px;border-width:2px"></span>'}${esc(t.name)} · ${t.done ? esc(t.dur) : "실행 중"}</span>`).join("");
+  const txt = m.done ? m.text : m.shown;
+  return `<div class="msg-a${cls}"><div style="display:flex;gap:6px;flex-wrap:wrap">${badge}</div>${tools ? `<div class="msg-tools">${tools}</div>` : ""}${txt || m.streaming ? `<p class="msg-t">${esc(txt)}${m.streaming ? '<span class="caret"></span>' : ""}</p>` : ""}${m.done && m.cites ? `<div class="msg-cites">${m.cites.map(c => `<span class="msg-cite">${ic("knowledge")}${esc(c)}</span>`).join("")}</div>` : ""}${m.done && m.link ? `<a class="btn btn-sm" href="${m.link[0]}" style="align-self:flex-start">${esc(m.link[1])}${ic("chev")}</a>` : ""}</div>`;
+}
+function renderChat() {
+  const C = DATA.chat || { ctx: "", suggestions: [] };
+  $("#chat-root").innerHTML = `<button class="fab" data-act="chat-toggle" aria-label="에이전트 어시스턴트 열기"${CHAT.open ? " hidden" : ""}>${ic("chat")}</button>
+  <section class="chat" role="dialog" aria-label="에이전트 어시스턴트"${CHAT.open ? "" : " hidden"}>
+    <div class="chat-h"><span class="sb-mark">${ic("bot")}</span><div style="min-width:0;flex:1"><b>에이전트 어시스턴트</b><div class="chat-ctx">${esc(C.ctx)}</div></div><button class="icon-btn" data-act="chat-toggle" aria-label="닫기">${ic("x")}</button></div>
+    <div class="chat-log" id="chat-log"></div>
+    <div class="chat-sug">${(C.suggestions || []).map(s => `<button class="chip" data-act="chat-sug" data-v="${esc(s)}">${esc(s)}</button>`).join("")}</div>
+    <div class="chat-in"><button class="icon-btn chat-mic" data-act="chat-mic" aria-label="음성 입력">${ic("mic")}</button><textarea class="input" id="chat-input" rows="1" placeholder="질문을 입력하세요"></textarea><button class="btn btn-primary" data-act="chat-send" aria-label="보내기">${ic("send")}</button></div>
+    <div class="chat-note">${ic("lock")}승인·결재·정책 적용은 채팅으로 할 수 없습니다</div>
+  </section>`;
+  renderChatLog();
+}
+function renderChatLog() {
+  const log = $("#chat-log"); if (!log) return;
+  log.innerHTML = CHAT.log.map(chatMsgHTML).join(""); log.scrollTop = log.scrollHeight;
+  document.querySelectorAll('#chat-root [data-act="chat-sug"], #chat-root [data-act="chat-send"]').forEach(b => b.disabled = CHAT.busy);
+  const mic = $("#chat-root .chat-mic"); if (mic) mic.classList.toggle("on", CHAT.listening);
+  const inp = $("#chat-input"); if (inp) inp.placeholder = CHAT.listening ? "듣는 중…" : "질문을 입력하세요";
+}
+function chatSend(text) {
+  text = (text || "").trim(); if (!text || CHAT.busy) return;
+  const C = DATA.chat || { replies: [] };
+  CHAT.log.push({ role: "user", text });
+  const r = APPROVE_RE.test(text)
+    ? { kind: "block", tools: [], text: "승인·결재·정책 적용은 사람만 할 수 있어 채팅으로는 처리하지 않습니다. 사람 전용 바에서 재로그인 후 진행하세요.", link: ["approvals.html", "승인 큐로 이동"] }
+    : (C.replies || []).find(x => x.match.some(k => text.includes(k))) || { kind: "refuse", tools: [["kb.search_manual", "0.8s"]], text: "승격된 문서와 승인된 기록에서 이 질문의 근거를 찾지 못했습니다. 근거 없이 답하지 않습니다." };
+  const m = { role: "agent", kind: r.kind || "answer", tools: [], text: r.text, shown: "", cites: r.cites, link: r.link, streaming: false, done: false };
+  CHAT.log.push(m); CHAT.busy = true; renderChatLog();
+  const tools = (r.tools || []).map(([name, dur]) => ({ name, dur, done: false }));
+  let i = 0;
+  const step = () => {
+    if (i < tools.length) { m.tools.push(tools[i]); renderChatLog(); setTimeout(() => { tools[i].done = true; i++; renderChatLog(); step(); }, 650); return; }
+    m.streaming = true; let n = 0;
+    const t = setInterval(() => { n = Math.min(m.text.length, n + 3); m.shown = m.text.slice(0, n); renderChatLog(); if (n >= m.text.length) { clearInterval(t); m.streaming = false; m.done = true; CHAT.busy = false; renderChatLog(); } }, 30);
+  };
+  step();
+}
+Object.assign(COMMON_ACTS, {
+  "chat-toggle": () => { CHAT.open = !CHAT.open; renderChat(); if (CHAT.open) { const i = $("#chat-input"); if (i) i.focus(); } },
+  "chat-sug": el => chatSend(el.dataset.v),
+  "chat-send": () => { const i = $("#chat-input"); chatSend(i.value); i.value = ""; },
+  "chat-mic": () => { if (CHAT.listening) return; CHAT.listening = true; renderChatLog(); setTimeout(() => { CHAT.listening = false; const i = $("#chat-input"); const s = (DATA.chat && DATA.chat.suggestions || [])[0]; if (i && s) i.value = s; renderChatLog(); }, 1500); }
+});
+document.addEventListener("keydown", e => {
+  if (e.target && e.target.id === "chat-input" && e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); COMMON_ACTS["chat-send"](); }
+  if (e.key === "Escape" && CHAT.open) { CHAT.open = false; renderChat(); }
+});
+addEventListener("DOMContentLoaded", () => {
+  const r = document.createElement("div"); r.id = "chat-root"; document.body.appendChild(r);
+  const g = (DATA.chat && DATA.chat.greeting) || "현재 화면 기준으로 답합니다. 모든 답에 근거를 붙이고, 근거가 없으면 답하지 않습니다.";
+  CHAT.log = [{ role: "agent", kind: "answer", text: g, done: true }];
+  renderChat(); placeDemo();
+});
+addEventListener("resize", () => placeDemo());
+/* ================= /COMMON JS v1 ================= */
+
+/* ================= PAGE: audit ================= */
+const UI = { sel: "EV-0407", filter: new URLSearchParams(location.search).get("filter") || "all", detail: false };
+if (!["all", "blocked", "decision", "agent"].includes(UI.filter)) UI.filter = "all";
+const sk = (h, w) => '<div class="sk" style="height:' + h + 'px;width:' + (w || "100%") + '"></div>';
+const FILTERS = { all: "전체", blocked: "차단", decision: "사람 결정", agent: "에이전트 활동" };
+const RES = { approved: ["hum", "user-check", "사람 승인"], rejected: ["no", "x", "반려"], allow: ["ok", "check", "허용"], blocked: ["no", "ban", "차단"] };
+const blocked = () => APP.state === "empty" || APP.state === "loading" || APP.state === "error";
+function visible() { return blocked() ? [] : DATA.events.filter(e => UI.filter === "all" || e.kind === UI.filter); }
+function cur() { return visible().find(x => x.id === UI.sel) || visible()[0]; }
+const resTag = r => '<span class="res ' + RES[r][0] + '">' + ic(RES[r][1]) + RES[r][2] + '</span>';
+function renderHead() {
+  const s = APP.state;
+  const alert = s === "blocked" ? '<div class="alert alert-blocked" role="alert">' + ic("ban") + '<div><b>오늘 차단 4건</b><p>모두 에이전트의 호출이나 문서 속 지시문에서 시작됐고 실행되지 않았습니다.</p></div></div>'
+    : s === "error" ? '<div class="alert alert-error" role="alert">' + ic("alert") + '<div><b>감사 저장소 중단 · ' + esc(DATA.error.code) + '</b><p>' + esc(DATA.error.message) + '. 이 동안의 행동은 로컬에 임시 기록 후 복구 시 반영됩니다.</p></div></div>' : "";
+  $("#au-head").innerHTML = '<h1>' + esc(LABELS.nav.audit) + '</h1><p>' + (blocked() ? "" : "추가만 가능한 기록입니다. 수정이나 삭제 권한은 누구에게도 없습니다.") + '</p>' +
+    '<div class="chips" role="tablist">' + Object.entries(FILTERS).map(([k, l]) => '<button class="chip" role="tab" data-act="filter" data-v="' + k + '" aria-selected="' + (UI.filter === k) + '" style="' + (UI.filter === k ? "background:var(--ink);color:var(--on-ink);border-color:var(--ink)" : "") + '">' + l + '</button>').join("") + '</div>' + alert;
+}
+function renderList() {
+  const s = APP.state, el = $("#au-list");
+  if (s === "loading") { el.innerHTML = sk(60) + sk(60) + sk(60) + sk(60) + sk(60); return; }
+  const L = visible();
+  if (!L.length) { el.innerHTML = '<div class="empty"><span class="empty-ic">' + ic("audit") + '</span><h3>' + (s === "empty" ? "기록이 없습니다" : s === "error" ? "기록을 불러오지 못했습니다" : "조건에 맞는 기록이 없습니다") + '</h3><p>' + (s === "error" ? "연결이 복구되면 자동으로 다시 받습니다." : "행동이 발생하면 시각과 행위자와 함께 기록됩니다.") + '</p></div>'; return; }
+  const c = cur();
+  el.innerHTML = '<div class="ev-h" aria-hidden="true"><span>시각</span><span>행위자</span><span>행동</span><span>결과</span></div>' + L.map(e => '<button class="ev" data-act="sel" data-id="' + e.id + '" aria-current="' + (c && c.id === e.id) + '"><span class="tm">' + e.t.slice(0, 5) + '</span><span class="who">' + ic(e.who === "사람" ? "user" : e.who === "에이전트" ? "bot" : "cpu") + esc(e.who) + ' <span class="mono" style="font-weight:600;color:var(--tx-2)">' + esc(e.whoId) + '</span></span><span class="act">' + esc(e.act) + '<small>' + esc(e.obj) + '</small></span>' + resTag(e.res) + '</button>').join("");
+}
+function renderDetail() {
+  const s = APP.state, el = $("#au-detail");
+  el.classList.toggle("open", UI.detail && !blocked());
+  const back = '<button class="btn btn-sm det-back" data-act="back">' + ic("chev") + '목록</button>';
+  if (s === "loading") { el.innerHTML = sk(36, "60%") + sk(120) + sk(160); return; }
+  const e = cur();
+  if (!e) { el.innerHTML = back + '<div class="empty"><span class="empty-ic">' + ic("search") + '</span><h3>선택한 기록이 없습니다</h3><p>기록을 고르면 원본 레코드를 볼 수 있습니다.</p></div>'; return; }
+  el.innerHTML = back +
+    '<div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center"><span class="mono" style="font-weight:800;color:var(--tx-2)">' + e.id + '</span>' + resTag(e.res) + (e.kind === "blocked" ? pv("blocked", null, "sm") : "") + '</div>' +
+    '<h2 class="det-title">' + esc(e.act) + '</h2>' +
+    '<dl class="dl"><dt>시각</dt><dd class="mono">2026-10-03 ' + e.t + '</dd><dt>행위자</dt><dd>' + esc(e.who) + ' · <span class="mono">' + esc(e.whoId) + '</span></dd><dt>대상</dt><dd>' + esc(e.obj) + '</dd><dt>비고</dt><dd>' + esc(e.note) + '</dd></dl>' +
+    '<section style="display:flex;flex-direction:column;gap:8px"><div class="sec-t">원본 레코드</div><pre class="rec mono">' + esc(e.rec) + '</pre></section>' +
+    (e.kind === "blocked" ? '<a class="btn btn-sm" style="align-self:flex-start" href="security.html">' + ic("security") + '관련 정책 보기</a>' : "");
+}
+function renderPage() { renderHead(); renderList(); renderDetail(); }
+const PAGE_ACTS = {
+  filter: el => { UI.filter = el.dataset.v; renderPage(); },
+  sel: el => { UI.sel = el.dataset.id; UI.detail = true; renderPage(); },
+  back: () => { UI.detail = false; renderDetail(); }
+};
+initTheme(); readURL();
+renderShell([LABELS.nav.audit]);
+renderDemo(); bindActs(PAGE_ACTS); renderPage();
+</script>
+</body>
+</html>

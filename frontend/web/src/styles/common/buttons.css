@@ -1,0 +1,17 @@
+/* 버튼 */
+.btn{min-height:var(--touch);padding:0 18px;border-radius:var(--r-md);border:1.5px solid var(--line-2);background:var(--bg-3);color:var(--tx-1);font-weight:700;font-size:var(--fs-base);display:inline-flex;align-items:center;justify-content:center;gap:8px;cursor:pointer;transition:background var(--t-hover),border-color var(--t-hover),color var(--t-hover);white-space:nowrap;text-decoration:none}
+.btn:hover{background:var(--bg-4);border-color:var(--tx-3);text-decoration:none;color:var(--tx-1)}
+.btn:active{transform:scale(.98)}
+.btn-primary{background:var(--accent-2);border-color:var(--accent-2);color:var(--on-accent);box-shadow:var(--accent-shadow)}
+.btn-primary:hover{background:var(--accent);border-color:var(--accent);color:var(--on-accent)}
+.btn-positive{background:var(--positive);border-color:var(--positive);color:var(--on-positive);box-shadow:var(--positive-shadow)}
+.btn-positive:hover{background:var(--positive-2);border-color:var(--positive-2);color:var(--on-positive)}
+.btn-positive .reauth{background:rgba(0,0,0,.18);color:var(--on-positive)}
+.btn-danger{color:var(--crit-tx);border-color:var(--crit)}
+.btn-danger:hover{background:var(--crit-dim);color:var(--crit-tx);border-color:var(--crit)}
+.btn-ghost{background:transparent;border-color:transparent}
+.btn:disabled,.btn[aria-disabled="true"]{opacity:.42;cursor:not-allowed;box-shadow:none;transform:none}
+.btn-sm{min-height:40px;padding:0 12px;font-size:var(--fs-sm)}
+.reauth{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:800;padding:2px 7px;border-radius:var(--r-sm);background:rgba(0,0,0,.28);color:#fff;font-family:var(--font-mono);letter-spacing:.02em}
+.reauth .ic{width:13px;height:13px}
+.reauth-o{background:transparent;border:1.5px solid currentColor;color:var(--tx-1)}

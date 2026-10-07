@@ -1,0 +1,63 @@
+:root,[data-theme="dark"]{
+  --bg-0:#08080a;--bg-1:#0e0e11;--bg-2:#131317;--bg-3:#1a1a1f;--bg-4:#222228;
+  --line:#2a2a31;--line-2:#454550;--divider:rgba(255,255,255,.09);
+  --tx-1:#f2f2f6;--tx-2:#c2c2cc;--tx-3:#9c9ca8;
+  --accent:#ff4d6d;--accent-2:#ff1f4b;--accent-tx:#ff6683;--accent-dim:rgba(255,31,75,.16);--on-accent:#fff;
+  --accent-shadow:0 3px 12px rgba(255,31,75,.32);
+  --positive:#76b900;--positive-2:#86cc00;--on-positive:#0a0b0f;--positive-shadow:0 3px 12px rgba(118,185,0,.3);
+  --crit:#f04141;--crit-tx:#ff7676;--crit-dim:rgba(240,65,65,.12);
+  --high:#f59e0b;--high-tx:#fbbf24;--high-dim:rgba(245,158,11,.12);
+  --med:#eab308;--med-tx:#facc15;--med-dim:rgba(234,179,8,.10);
+  --low:#76b900;--low-tx:#8fd400;--low-dim:rgba(118,185,0,.12);
+  --info:#569cd6;--info-tx:#8cc0ee;--info-dim:rgba(86,156,214,.12);
+  /* 출처 상태 — 브랜드 주황과 겹치지 않게 정의 */
+  --pv-un-fg:#e2e2ea;--pv-un-bg:rgba(226,226,234,.06);--pv-un-bd:#a0a0ac;--pv-un-hatch:rgba(255,255,255,.08);
+  --pv-dr-fg:#67e8f9;--pv-dr-bg:rgba(34,211,238,.10);--pv-dr-bd:#22d3ee;
+  --pv-ap-fg:#8fd400;--pv-ap-bg:rgba(118,185,0,.14);--pv-ap-bd:#76b900;
+  --pv-bk-fg:#ff7676;--pv-bk-bg:rgba(240,65,65,.15);--pv-bk-bd:#f04141;
+  --pv-ne-fg:#c4b5fd;--pv-ne-bg:rgba(167,139,250,.12);--pv-ne-bd:#a78bfa;
+  --pv-se-fg:#fde047;--pv-se-bg:rgba(234,179,8,.10);--pv-se-bd:#eab308;--pv-se-hatch:rgba(234,179,8,.16);
+  --ink:#f2f2f6;--on-ink:#0a0a0d;
+  --font-sans:-apple-system,BlinkMacSystemFont,"Apple SD Gothic Neo","Malgun Gothic","Noto Sans KR","Segoe UI",system-ui,sans-serif;
+  --font-mono:ui-monospace,"SF Mono","D2Coding",Consolas,"Liberation Mono",monospace;
+  --fs-xs:13px;--fs-sm:14px;--fs-base:16px;--fs-md:18px;--fs-lg:22px;--fs-xl:30px;--fs-2xl:40px;
+  --sp-1:4px;--sp-2:8px;--sp-3:12px;--sp-4:16px;--sp-5:20px;--sp-6:24px;--sp-8:32px;
+  --r-sm:4px;--r-md:8px;--r-lg:10px;--r-xl:14px;
+  --t-hover:150ms ease-out;--t-panel:250ms cubic-bezier(.4,0,.2,1);
+  --sidebar-w:240px;--rail-w:80px;--top-h:60px;--tab-h:64px;--touch:48px;
+  --sat:env(safe-area-inset-top,0px);--sab:env(safe-area-inset-bottom,0px);--sal:env(safe-area-inset-left,0px);--sar:env(safe-area-inset-right,0px);
+  color-scheme:dark;
+}
+[data-theme="light"]{
+  --bg-0:#e7e9ee;--bg-1:#ffffff;--bg-2:#ffffff;--bg-3:#f1f2f5;--bg-4:#e4e6eb;
+  --line:#c3c7cf;--line-2:#8a8f9b;--divider:rgba(0,0,0,.12);
+  --tx-1:#0a0b0f;--tx-2:#2c2e37;--tx-3:#474a55;
+  --accent:#ff1f4b;--accent-2:#d9123b;--accent-tx:#b30f31;--accent-dim:rgba(255,31,75,.10);
+  --positive:#76b900;--positive-2:#6aa600;--on-positive:#0a0b0f;--positive-shadow:0 3px 12px rgba(118,185,0,.35);
+  --crit:#dc2626;--crit-tx:#a51616;--crit-dim:#fde6e6;
+  --high:#d97706;--high-tx:#8a4b00;--high-dim:#fdf0d8;
+  --med:#ca8a04;--med-tx:#6b4a00;--med-dim:#fdf6d4;
+  --low:#5f9600;--low-tx:#3d6100;--low-dim:#eef6dc;
+  --info:#2563eb;--info-tx:#1d4fa8;--info-dim:#e3ecfb;
+  --pv-un-fg:#22242c;--pv-un-bg:#eeeff2;--pv-un-bd:#5a5e69;--pv-un-hatch:rgba(0,0,0,.07);
+  --pv-dr-fg:#075a6b;--pv-dr-bg:#def5fa;--pv-dr-bd:#0e93ad;
+  --pv-ap-fg:#3d6100;--pv-ap-bg:#eef6dc;--pv-ap-bd:#5f9600;
+  --pv-bk-fg:#9f1414;--pv-bk-bg:#fde4e4;--pv-bk-bd:#dc2626;
+  --pv-ne-fg:#55209f;--pv-ne-bg:#eee8ff;--pv-ne-bd:#7c3aed;
+  --pv-se-fg:#5e4100;--pv-se-bg:#fdf2c9;--pv-se-bd:#b98900;--pv-se-hatch:rgba(185,137,0,.16);
+  --ink:#0a0b0f;--on-ink:#ffffff;
+  color-scheme:light;
+}
+*,*::before,*::after{box-sizing:border-box}
+html,body{margin:0;height:100%}
+body{background:var(--bg-0);color:var(--tx-1);font-family:var(--font-sans);font-size:var(--fs-base);line-height:1.55;-webkit-font-smoothing:antialiased;-webkit-tap-highlight-color:transparent;overflow:hidden}
+a{color:var(--accent-tx);text-decoration:none;font-weight:600}
+a:hover{color:var(--accent);text-decoration:underline}
+button{font:inherit;color:inherit}
+h1,h2,h3,h4,p{margin:0}
+code,pre,.mono{font-family:var(--font-mono)}
+.ic{width:20px;height:20px;flex:none;fill:none;stroke:currentColor;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+::-webkit-scrollbar{width:8px;height:8px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--line-2);border-radius:4px}
+*{scrollbar-width:thin;scrollbar-color:var(--line-2) transparent}
+*:focus-visible{outline:3px solid var(--accent-2);outline-offset:2px;border-radius:6px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}

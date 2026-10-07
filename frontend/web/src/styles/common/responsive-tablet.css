@@ -1,0 +1,12 @@
+/* 태블릿: 아이콘 레일 */
+@media (min-width:600px) and (max-width:1024px){
+  .app{grid-template-columns:calc(var(--rail-w) + var(--sal)) minmax(0,1fr)}
+  .sb-brand{justify-content:center;padding:0}.sb-brand .sb-name{display:none}
+  .sb-nav{padding:6px}
+  .sb-grp,.sb-foot .sb-legend,.sb-user-txt{display:none}
+  .sb-link{flex-direction:column;justify-content:center;gap:3px;min-height:60px;padding:6px 2px;font-size:12px;position:relative;text-align:center}
+  .sb-link .lbl{display:none}.sb-link .lbl-s{display:block;line-height:1.1}
+  .sb-count{position:absolute;top:4px;right:8px;margin:0;min-width:22px;height:20px;font-size:11px}
+  .sb-foot{align-items:center}
+  .human-bar{padding-bottom:calc(12px + var(--sab))}
+}

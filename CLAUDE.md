@@ -1,6 +1,7 @@
 # nvidia-hackathon
 
-NVIDIA 에이전트 스택(OpenShell · NemoClaw · NVIDIA Agent Skills) 위에서 만드는 프로젝트. 제품 도메인은 아직 미정 —
+NVIDIA 에이전트 스택(OpenShell · NemoClaw · NVIDIA Agent Skills) 위에서 만드는 프로젝트. 팀 까딱이.
+방향: 한국의 문화와 역사를 새롭게 탐색·해석·활용하는 에이전트 (OpenShell 사용이 목적). 세부 주제는 미정 —
 정해지면 이 문서 맨 위에 한 줄 소개와 절대 규칙을 추가한다.
 참고: `/home/hyun/MaintQ-NVIDIA` 는 같은 스택을 쓴 선행 프로젝트다. 코드는 가져오지 않고, 필요할 때만 패턴을 참고한다.
 

@@ -1,0 +1,6 @@
+/* 심각도 배지 */
+.sev{display:inline-flex;align-items:center;height:28px;padding:0 9px;border-radius:var(--r-sm);font-family:var(--font-mono);font-weight:800;font-size:var(--fs-xs);letter-spacing:.05em;border:1.5px solid}
+.sev-CRITICAL{color:var(--crit-tx);background:var(--crit-dim);border-color:var(--crit)}
+.sev-HIGH{color:var(--high-tx);background:var(--high-dim);border-color:var(--high)}
+.sev-MEDIUM{color:var(--med-tx);background:var(--med-dim);border-color:var(--med)}
+.sev-LOW{color:var(--low-tx);background:var(--low-dim);border-color:var(--low)}

@@ -1,0 +1,8 @@
+/* 사람 전용 영역 */
+.human-tag{display:inline-flex;align-items:center;gap:7px;height:34px;padding:0 12px;border-radius:var(--r-md);background:var(--ink);color:var(--on-ink);font-weight:800;font-size:var(--fs-sm);white-space:nowrap}
+.human-tag .ic{width:18px;height:18px;stroke-width:2.3}
+.human-bar{flex:none;display:flex;align-items:center;gap:16px;padding:12px calc(20px + var(--sar)) 12px 20px;background:var(--bg-1);border-top:3px solid var(--ink);position:relative;z-index:20}
+.hb-id{display:flex;align-items:center;gap:12px;min-width:0}
+.hb-cap{font-size:var(--fs-sm);color:var(--tx-2);font-weight:600;min-width:0}
+.hb-actions{display:flex;align-items:center;gap:10px;margin-left:auto;flex-wrap:wrap;justify-content:flex-end}
+.lbl-short{display:none}

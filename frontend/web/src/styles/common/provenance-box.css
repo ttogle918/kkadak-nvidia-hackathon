@@ -1,0 +1,11 @@
+/* 출처 상태 박스 */
+.pvbox{border-radius:var(--r-lg);border:1.5px solid var(--line);background:var(--bg-2)}
+.pvbox-untrusted{border:2px dashed var(--pv-un-bd)}
+.pvbox-draft{border:2px dashed var(--pv-dr-bd)}
+.pvbox-approved{border:2px solid var(--pv-ap-bd)}
+.pvbox-blocked{border:2px solid var(--pv-bk-bd);background:var(--pv-bk-bg)}
+.pvbox-noev{border:2px dotted var(--pv-ne-bd)}
+.pvbox-sensor{border:2px dashed var(--pv-se-bd)}
+.pvbox-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;padding:10px 12px;border-bottom:1px solid var(--divider)}
+.pvbox-untrusted>.pvbox-head{background:repeating-linear-gradient(135deg,var(--pv-un-hatch) 0 5px,transparent 5px 10px)}
+.pvbox-body{padding:12px}

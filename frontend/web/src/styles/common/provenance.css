@@ -1,0 +1,15 @@
+/* 출처 상태 배지 — 키트의 정체성. 색 + 아이콘 + 라벨 + 테두리 형태 4중 구분 */
+.pv{display:inline-flex;align-items:center;gap:7px;min-height:32px;padding:3px 11px;border-radius:var(--r-md);font-weight:800;font-size:var(--fs-sm);line-height:1.2;border-width:2px;border-style:solid;max-width:100%}
+.pv .ic{width:18px;height:18px;stroke-width:2.2}
+.pv-l{white-space:nowrap}
+.pv-x{font-weight:600;font-family:var(--font-mono);font-size:var(--fs-xs);opacity:.95;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.pv-untrusted{color:var(--pv-un-fg);border-color:var(--pv-un-bd);border-style:dashed;background:repeating-linear-gradient(135deg,var(--pv-un-hatch) 0 5px,transparent 5px 10px),var(--pv-un-bg)}
+.pv-draft{color:var(--pv-dr-fg);border-color:var(--pv-dr-bd);border-style:dashed;background:var(--pv-dr-bg)}
+.pv-approved{color:var(--pv-ap-fg);border-color:var(--pv-ap-bd);background:var(--pv-ap-bg)}
+.pv-blocked{color:var(--pv-bk-fg);border-color:var(--pv-bk-bd);background:var(--pv-bk-bg)}
+.pv-noev{color:var(--pv-ne-fg);border-color:var(--pv-ne-bd);border-style:dotted;background:var(--pv-ne-bg)}
+.pv-sensor{color:var(--pv-se-fg);border-color:var(--pv-se-bd);border-style:dashed;background:repeating-linear-gradient(135deg,var(--pv-se-hatch) 0 5px,transparent 5px 10px),var(--pv-se-bg)}
+.pv-sm{min-height:26px;padding:2px 8px;font-size:12.5px;gap:5px;border-width:1.5px}
+.pv-sm .ic{width:15px;height:15px}
+.pv-lg{min-height:40px;padding:4px 14px;font-size:var(--fs-base)}
+.pv-lg .ic{width:22px;height:22px}

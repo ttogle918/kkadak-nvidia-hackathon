@@ -1,0 +1,15 @@
+/* 모든 페이지 공통 스타일 — 순서가 곧 캐스케이드 순서 */
+@import "./common/base.css";
+@import "./common/layout.css";
+@import "./common/buttons.css";
+@import "./common/severity.css";
+@import "./common/provenance.css";
+@import "./common/provenance-box.css";
+@import "./common/citation.css";
+@import "./common/human-bar.css";
+@import "./common/states.css";
+@import "./common/modal.css";
+@import "./common/demo.css";
+@import "./common/responsive-tablet.css";
+@import "./common/responsive-phone.css";
+@import "./common/chat.css";

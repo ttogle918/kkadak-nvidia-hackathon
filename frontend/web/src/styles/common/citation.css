@@ -1,0 +1,9 @@
+/* 근거 인용 */
+.cite{border:1.5px solid var(--line);border-radius:var(--r-md);background:var(--bg-3);padding:10px 12px;display:flex;flex-direction:column;gap:6px}
+.cite-top{display:flex;align-items:center;gap:8px;font-weight:700;font-size:var(--fs-sm);flex-wrap:wrap}
+.cite-top .ic{width:17px;height:17px;color:var(--tx-2)}
+.cite-loc{font-family:var(--font-mono);font-size:var(--fs-xs);color:var(--tx-2);font-weight:700}
+.cite-q{margin:0;font-family:var(--font-mono);font-size:var(--fs-sm);line-height:1.55;color:var(--tx-1)}
+.cite-foot{display:flex;align-items:center;gap:8px;flex-wrap:wrap;justify-content:space-between}
+.cite-link{display:inline-flex;align-items:center;gap:4px;font-size:var(--fs-sm);min-height:32px}
+.cite-link .ic{width:15px;height:15px}
