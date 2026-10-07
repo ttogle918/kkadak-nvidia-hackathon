@@ -2,6 +2,7 @@ import json
 from pathlib import Path
 
 import httpx
+import pytest
 
 from domains.kcontext.contract.records import Blocked, event_from_dict
 from domains.kcontext.ingest.events import web_run
@@ -117,3 +118,10 @@ def test_problems_are_printed_to_stderr(tmp_path, capsys):
     web_run.run(["--source", "junggu", "--month", "2026-10", "--fixture", str(FIXTURE),
                  "--collected-at", "2026-10-07"], screen=fake_screen)
     assert "problem:" in capsys.readouterr().err
+
+
+@pytest.mark.parametrize("bad", ["2026-13-01", "2026-02-30", "어제", "2026/10/07"])
+def test_invalid_collected_at_exits_2(bad, capsys):
+    rc = web_run.run(["--source", "junggu", "--month", "2026-10", "--fixture", str(FIXTURE),
+                      "--collected-at", bad], screen=fake_screen)
+    assert rc == 2 and "--collected-at" in capsys.readouterr().err

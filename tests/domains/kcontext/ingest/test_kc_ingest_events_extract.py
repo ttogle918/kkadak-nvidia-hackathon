@@ -380,3 +380,151 @@ def test_explicit_other_year_blocks_inference():
 
 def test_prompt_asks_for_posted_date():
     assert "posted_date" in build_messages("본문")[0]["content"]
+
+
+# ---- 3차 reviewer: 기간 표현·연도 표기·지난·게시일 모호성·collected_at ----
+from datetime import date
+
+from domains.kcontext.ingest.events.extract import (
+    _date_basis,
+    _nearest_posted,
+    _squash,
+    _verified_posted,
+)
+
+POSTED = date(2026, 10, 7)
+
+
+def basis(text: str, target: str, posted: date | None = POSTED, year: int = 2026):
+    return _date_basis(target, _squash(text), year, posted)
+
+
+@pytest.mark.parametrize("text,target", [
+    ("1일 3회 공연", "2026-11-01"),
+    ("3일간 열린다", "2026-11-03"),
+    ("2일 이상 운영", "2026-11-02"),
+    ("30일 이내 신청", "2026-10-30"),
+    ("7일 전까지 접수", "2026-10-07"),
+    ("1박2일 일정", "2026-11-02"),
+    ("○○ 5일장이 열린다", "2026-11-05"),
+    ("1일차 행사", "2026-11-01"),
+    ("2일째 진행", "2026-11-02"),
+    ("총 3일 운영", "2026-11-03"),
+    ("약 3일 소요", "2026-11-03"),
+    ("최대 5일 이용", "2026-11-05"),
+    ("주 3일 운영", "2026-11-03"),
+    ("5일 동안 열린다", "2026-11-05"),
+    ("10일 후 마감", "2026-10-10"),
+    ("1일 2식 제공", "2026-11-01"),
+])
+def test_duration_and_count_expressions_are_not_dates(text, target):
+    assert basis(text, target) is None
+
+
+@pytest.mark.parametrize("text,target", [
+    ("○○ 마라톤 16일 저녁 개최", "2026-10-16"),
+    ("○○ 마라톤 16일까지 접수", "2026-10-16"),
+    ("○○ 마라톤 16일(수) 개최", "2026-10-16"),
+    ("○○ 마라톤 16일부터 시작", "2026-10-16"),
+    ("○○ 마라톤 16일 오후 2시", "2026-10-16"),
+    ("○○ 마라톤 16일 14시 출발", "2026-10-16"),
+    ("○○ 마라톤 16~18일 개최", "2026-10-18"),
+    ("○○ 마라톤 16~18일 개최", "2026-10-16"),
+])
+def test_real_day_expressions_are_still_accepted(text, target):
+    assert basis(text, target) == "inferred"
+
+
+@pytest.mark.parametrize("text", [
+    "2025 정동야행 10월 15일",
+    "2025정동야행 10월 15일",
+    "'25년 10월 15일",
+    "2025학년도 10월 15일",
+    "2025시즌 10월 15일",
+])
+def test_year_written_without_the_year_suffix_blocks_a_different_year(text):
+    assert basis(text, "2026-10-15", posted=None) is None
+    assert basis(text, "2026-10-15") is None
+    assert basis(text.replace("2025", "2026").replace("'25", "'26"), "2026-10-15",
+                 posted=None) == "explicit"
+
+
+def test_numbers_that_look_like_years_do_not_block():
+    assert basis("참가비 2000원 10월 15일 개최", "2026-10-15", posted=None) == "explicit"
+    assert basis("정원 2000명 10월 15일 개최", "2026-10-15", posted=None) == "explicit"
+    assert basis("참가비 2000-3000원 10월 15일", "2026-10-15", posted=None) == "explicit"
+
+
+def test_two_different_years_make_a_yearless_date_ambiguous():
+    q = "작년(2025년) 10월 15일 열렸고 올해(2026년)는 11월 개최"
+    assert basis(q, "2026-10-15", posted=None) is None
+    assert basis(q, "2025-10-15", posted=None) is None
+
+
+def test_last_day_expression_reads_as_past_after_the_posting_date():
+    p = date(2026, 10, 20)
+    assert basis("지난 16일 ○○ 행사가 열렸다", "2026-10-16", posted=p) == "inferred"
+    assert basis("지난 16일 ○○ 행사가 열렸다", "2026-11-16", posted=p) is None
+    assert basis("지난달 25일 ○○ 행사가 열렸다", "2026-09-25", posted=POSTED) == "inferred"
+    assert basis("지난 25일 ○○ 행사가 열렸다", "2026-09-25", posted=POSTED) == "inferred"
+
+
+def test_last_month_day_expression_across_year_end():
+    p = date(2027, 1, 7)
+    assert basis("지난 25일 열렸다", "2026-12-25", posted=p) == "inferred"
+    assert basis("지난달 25일 열렸다", "2026-12-25", posted=p) == "inferred"
+
+
+def test_last_month_day_with_month_reads_the_most_recent_past():
+    assert basis("지난 8월 1일 열렸다", "2026-08-01") == "inferred"
+    assert basis("지난 8월 1일 열렸다", "2027-08-01") is None
+    assert basis("8월 1일 열린다", "2027-08-01") == "inferred"  # 미래 문맥은 이전 규칙(60일)
+
+
+def test_boundaries_fail_toward_no_date():
+    assert basis("30일 개최", "2026-02-30", posted=date(2026, 1, 31)) is None
+    assert basis("2월 29일 개최", "2027-02-29", posted=POSTED) is None
+    assert basis("7일 개최", "2026-10-07") == "inferred"  # d == 게시일의 일 → 같은 날
+
+
+def posted_pick(hay: str, quote: str):
+    return _nearest_posted(_squash(hay), _squash(quote))
+
+
+def test_labelled_posting_date_wins_over_a_nearer_unlabelled_date():
+    q = "○○ 걷기대회 16일 저녁 개최"
+    assert posted_pick(f"작성일 2026-10-07 {q} 행사일정 2026-10-06 안내", q) == "2026-10-07"
+    assert posted_pick(f"{q} 등록일: 2026-10-07 다음글 2026-10-06", q) == "2026-10-07"
+
+
+def test_two_labelled_dates_are_ambiguous():
+    q = "○○ 걷기대회 16일 저녁 개최"
+    assert posted_pick(f"작성일 2026-10-07 {q} 작성일 2026-10-06", q) is None
+
+
+def test_adjacent_rows_with_equal_distance_are_ambiguous():
+    q = "○○ 걷기대회 16일 저녁 개최"
+    assert posted_pick(f"앞 행 제목 2026-10-06 {q} 2026-10-07 다음 행", q) is None
+
+
+def test_clearly_nearest_unlabelled_date_is_accepted():
+    q = "○○ 걷기대회 16일 저녁 개최"
+    assert posted_pick(f"{q} 2026-10-07 {'가' * 30} 다른 소식 2026-10-06", q) == "2026-10-07"
+
+
+def test_quote_repeated_must_agree_everywhere():
+    q = "○○ 걷기대회 16일 저녁 개최"
+    same = f"작성일 2026-10-07 {q} {'가' * 400} 작성일 2026-10-07 {q}"
+    diff = f"작성일 2026-10-07 {q} {'가' * 400} 작성일 2026-10-05 {q}"
+    assert posted_pick(same, q) == "2026-10-07"
+    assert posted_pick(diff, q) is None
+
+
+def test_invalid_collected_at_is_not_a_crash_in_verified_posted():
+    hay = _squash("작성일 2026-10-07 ○○ 걷기대회 16일")
+    assert _verified_posted("2026-10-07", hay, _squash("○○ 걷기대회 16일"), "2026-13-01") is None
+
+
+def test_prompt_warns_that_durations_are_not_dates():
+    msg = build_messages("본문")[0]["content"]
+    assert "3일간" in msg and "날짜가 아니다" in msg

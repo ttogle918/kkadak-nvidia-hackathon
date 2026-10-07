@@ -20,6 +20,7 @@ from pathlib import Path
 import httpx
 from dotenv import dotenv_values
 
+from domains.kcontext.contract.text import is_date
 from domains.kcontext.index.store import LocalIndex
 from domains.kcontext.paths import repo_root
 from domains.kcontext.regions import load_regions
@@ -142,8 +143,8 @@ def run(
                           "dropped_urls": dropped_urls, "problems": len(problems)}))
         return 0
 
-    if not a.collected_at:
-        return _fail("--collected-at YYYY-MM-DD 가 필요하다")
+    if not a.collected_at or not is_date(a.collected_at):
+        return _fail("--collected-at YYYY-MM-DD(실제 있는 날짜)가 필요하다")
     scr = screen or _default_screen()
     if scr is None:
         return _fail("주입 차단(domains.kcontext.judge.inject.screen, T211b)이 아직 없다 — "
