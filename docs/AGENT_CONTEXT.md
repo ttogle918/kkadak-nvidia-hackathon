@@ -159,6 +159,14 @@
 - `user_state`: 제안됨 / 일정에 추가 / 다녀옴 / 건너뜀. 여행 기록은 `visited`와 `added`만 본문에 넣는다.
 - 필드를 추가·변경하려면 두 사람이 합의하고 이 문서를 먼저 고친다.
 
+#### 3.3 보충 (2026-10-07 합의)
+1. **좌표 순서**: `geometry.coords` 의 원소는 `[lat, lng]` 이다(`space` 가 `"geo"` 일 때).
+2. **`geometry.space`**: `"geo"`(기본, `[lat, lng]`) | `"schematic"`(목업 좌표계 `[x, y]`, viewBox 0 0 600 700). 한 화면에 두 값이 섞이면 화면은 `geo` 만 그린다.
+3. **카드 확장 필드(모두 선택)**: `era`(str) · `facts[{text, ref}]`(사실 층 문장, `ref` 는 카드 `sources` 안의 1부터 번호) · `alternatives[{label, text}]`(이설 병기) · `checks[{level: "ok"|"warn"|"bad", text}]` · `poster` · `only` · `warning` · `kind_label` · `sources[].bib`. `approx` geometry 는 `radius_m`(양수).
+4. **경로 확장 필드**: `segments[].coords`(카드 없는 연결 구간도 그린다) · `segments[].label_xy`(schematic 전용, 선택) · **`route.estimated: bool`** — 경로 시간 중 하나라도 추정값이면 `true`, 화면은 "예상"을 붙인다(D9).
+5. **`narration` 은 `null` 허용**: 몰입 층이 없으면 `null` 이고, 화면은 몰입 층 토글을 숨긴다. 내레이션을 지어 채우지 않는다.
+6. 입력 확장(선택): `walk_request: {from: {name, lat, lng}, to: {name, lat, lng}, budget_min}`. 없으면 첫 빈 시간의 `near` → 숙소로 경로를 만든다.
+
 **출력 — 경로** (이야기 길)
 
 ```json
