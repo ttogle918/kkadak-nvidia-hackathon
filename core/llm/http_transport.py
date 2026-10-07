@@ -8,6 +8,9 @@ reasoning 모델이 content 를 비우고 reasoning_content 만 채워도 그 �
 
 from __future__ import annotations
 
+import asyncio
+import logging
+import re
 from collections.abc import Sequence
 from typing import Any
 from urllib.parse import urlsplit
@@ -16,6 +19,9 @@ import httpx
 
 from core.llm.client import Message, TransportResponse
 from core.llm.config import ProviderConfig
+
+_log = logging.getLogger(__name__)
+_FINISH = re.compile(r"[A-Za-z_]{1,32}")
 
 __all__ = ["HttpxTransport", "extract_content"]
 
@@ -36,6 +42,14 @@ def extract_content(payload: Any) -> str:
         raise ValueError("응답 형식 오류")  # noqa: TRY004
     content = msg.get("content")
     return content.strip() if isinstance(content, str) else ""
+
+
+def _finish_reason(payload: Any) -> str:
+    try:
+        fr = payload["choices"][0].get("finish_reason")
+    except (KeyError, IndexError, TypeError, AttributeError):
+        return "?"
+    return fr if isinstance(fr, str) and _FINISH.fullmatch(fr) else "?"
 
 
 def _endpoint(base_url: str) -> str:
@@ -76,9 +90,13 @@ class HttpxTransport:
             "max_tokens": self._max_tokens,
             "stream": False,
         }
-        async with httpx.AsyncClient(
-            timeout=provider.timeout_s, transport=self._transport, follow_redirects=False
-        ) as http:
+        # httpx timeout 은 읽기 간격 단위라 천천히 계속 보내는 응답은 못 막는다. 전체 시간 상한을 따로 둔다(W7).
+        async with (
+            asyncio.timeout(provider.timeout_s),
+            httpx.AsyncClient(
+                timeout=provider.timeout_s, transport=self._transport, follow_redirects=False
+            ) as http,
+        ):
             resp = await http.post(url, json=body, headers=headers)
         if not 200 <= resp.status_code < 300:
             return TransportResponse(resp.status_code)
@@ -86,4 +104,8 @@ class HttpxTransport:
             payload = resp.json()
         except ValueError:
             raise ValueError("응답 JSON 파싱 실패") from None
-        return TransportResponse(resp.status_code, extract_content(payload))
+        text = extract_content(payload)
+        if not text:
+            # reasoning-only 등 빈 응답의 원인 파악용. finish_reason(짧은 영문 토큰)만 남기고 본문·키는 남기지 않는다(W9).
+            _log.warning("LLM 빈 응답 finish_reason=%s", _finish_reason(payload))
+        return TransportResponse(resp.status_code, text)

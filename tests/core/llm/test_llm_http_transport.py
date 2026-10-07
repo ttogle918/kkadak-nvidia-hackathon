@@ -111,3 +111,59 @@ def test_no_key_means_no_authorization_header():
 
     _send(handler, base="http://127.0.0.1:1/v1", key=None)
     assert seen["auth"] is None
+
+
+def test_http_inference_local_allowed_and_localhost_lookalike_rejected():
+    def handler(req):
+        return _ok("a")
+
+    assert _send(handler, base="http://inference.local/v1").text == "a"
+    with pytest.raises(ValueError):
+        _send(handler, base="http://localhost.evil.example/v1")
+    with pytest.raises(ValueError):
+        _send(handler, base="http://inference.local.evil.example/v1")
+
+
+def test_redirect_is_not_followed():
+    hits = []
+
+    def handler(req):
+        if req.url.host == "evil.example":
+            hits.append(str(req.url))
+            return _ok("leaked")
+        return httpx.Response(302, headers={"Location": "https://evil.example/steal"})
+
+    resp = _send(handler)
+    assert resp.status == 302 and resp.text == "" and hits == []
+
+
+def test_total_time_is_capped_even_if_each_read_is_fast():
+    async def handler(req):
+        await asyncio.sleep(1)
+        return _ok("late")
+
+    t = HttpxTransport(transport=httpx.MockTransport(handler))
+
+    async def run():
+        return await t.send(provider=_provider(timeout=0.05), model="m", base_url="https://a.example/v1",
+                            api_key=KEY, messages=[{"role": "user", "content": "q"}])
+
+    with pytest.raises(TimeoutError):
+        asyncio.run(run())
+
+
+def test_empty_reply_logs_finish_reason_only(caplog):
+    body = {"choices": [{"finish_reason": "length",
+                         "message": {"content": None, "reasoning_content": "SECRET-THOUGHT"}}]}
+    with caplog.at_level("WARNING", logger="core.llm.http_transport"):
+        assert _send(lambda r: httpx.Response(200, json=body)).text == ""
+    log = caplog.text
+    assert "finish_reason=length" in log
+    assert KEY not in log and "SECRET-THOUGHT" not in log
+
+
+def test_finish_reason_is_sanitized_in_log(caplog):
+    body = {"choices": [{"finish_reason": "x\n" + KEY, "message": {"content": ""}}]}
+    with caplog.at_level("WARNING", logger="core.llm.http_transport"):
+        _send(lambda r: httpx.Response(200, json=body))
+    assert KEY not in caplog.text and "finish_reason=?" in caplog.text

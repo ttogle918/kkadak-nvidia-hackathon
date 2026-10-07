@@ -31,10 +31,17 @@ def get_messages(request: Request) -> list[dict]:
 
 @router.post("/messages")
 async def post_message(request: Request):
-    try:
-        body = await request.json()
-    except ValueError:
-        body = None
+    # Content-Type 이 application/json 이 아니면 거절한다. text/plain 등은 CORS preflight 없이 보낼 수 있는
+    # 'simple request' 라 다른 사이트의 폼이 로컬 backend 로 대화를 보낼 수 있기 때문이다(W6).
+    # 상태 코드는 415 대신 422 bad_text 를 쓴다 — sprint-2 §5.1 계약에 본문 오류 코드가 bad_text 하나뿐이고
+    # 프론트 ERROR_MESSAGES 도 이를 안다. 415 는 새 오류 코드가 되어 계약 변경이 필요하다.
+    ctype = request.headers.get("content-type", "").split(";")[0].strip().lower()
+    body = None
+    if ctype == "application/json":
+        try:
+            body = await request.json()
+        except ValueError:
+            body = None
     text = body.get("text") if isinstance(body, dict) and set(body) == {"text"} else None
     if not isinstance(text, str) or not text.strip() or len(text) > MAX_TEXT_CHARS:
         return _err(422, "bad_text", f"text 는 1~{MAX_TEXT_CHARS}자 문자열이어야 한다")
