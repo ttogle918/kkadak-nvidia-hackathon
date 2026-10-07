@@ -341,3 +341,50 @@ def test_invalid_trip_is_reported_and_period_filter_skipped():
     j = judge([past], sit={"trip": {"from": "2026-10-7", "to": "2026-10-18"}})
     assert j.problems and len(j.decisions) == 1 and j.rejected == ()
     assert judge([past]).problems == ()
+
+
+# ---- 2차 reviewer 차단(X1) 재발 방지: 비공식 출처로 채운 값은 "확인됨"을 만들지 않는다 ----
+def web(id="web", **over):
+    over.setdefault("fetched_from", "web")
+    over.setdefault("lat", None)
+    over.setdefault("lng", None)
+    src = {"tier": "C", "published": None, "collected_at": "2026-10-07", **over.pop("source", {})}
+    return ev(id, source=src, **over)
+
+
+def test_place_filled_only_by_web_record_is_not_confirmed():
+    official = ev("off", place_name="", lat=None, lng=None, source={"tier": "B"})
+    j = judge([official, web(place_name="○○ 광장")])
+    d = j.decisions[0]
+    assert d.primary.place_name == "○○ 광장"  # 값은 보여 주되
+    assert d.badge == "확인 필요"  # 확인됨 으로 올리지 않는다
+    assert any("장소" in c and "비공식" in c for c in d.caveats)
+    assert "공식 출처에서 날짜·장소가 확인" not in d.verdicts[0]["reason"]
+    assert d.verdicts[0]["verdict"] == "unverified"
+
+
+def test_start_date_filled_only_by_web_record_is_not_confirmed():
+    official = ev("off", start_date=None, end_date=None, lat=None, lng=None,
+                  source={"tier": "A"})
+    d = judge([official, web(start_date="2026-10-16", end_date=None)]).decisions[0]
+    assert d.primary.start_date == "2026-10-16" and d.badge == "확인 필요"
+    assert any("시작일" in c and "비공식" in c for c in d.caveats)
+
+
+def test_official_values_still_confirm_when_a_web_record_only_repeats_them():
+    official = ev("off", lat=None, lng=None)
+    d = judge([official, web(place_name="○○ 광장")]).decisions[0]
+    assert d.badge == "확인됨" and not any("비공식(검색 수집)" in c for c in d.caveats)
+
+
+def test_place_filled_by_another_official_record_still_confirms():
+    top = ev("top", place_name="", lat=None, lng=None, source={"tier": "A"})
+    other = ev("oth", place_name="○○ 마당", lat=None, lng=None, source={"tier": "B"})
+    assert judge([top, other]).decisions[0].badge == "확인됨"
+
+
+def test_start_time_from_web_only_does_not_block_confirmation_but_is_noted():
+    official = ev("off", start_time=None, lat=None, lng=None)
+    d = judge([official, web(start_time="21:00")]).decisions[0]
+    assert d.primary.start_time == "21:00" and d.badge == "확인됨"
+    assert any("시작 시간" in c and "비공식" in c for c in d.caveats)

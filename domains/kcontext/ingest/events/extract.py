@@ -45,6 +45,7 @@ _FENCE = re.compile(r"^```(?:json)?\s*|\s*```$", re.IGNORECASE)
 _TAG = re.compile(r"</?\s*본문\s*>")
 # 공백을 지운 글에서 찾는다. 연도 있는 날짜 · "10월15일" · "10.15" 세 꼴만 날짜로 본다.
 _FULL = re.compile(r"(?<!\d)(\d{4})[.\-/년](\d{1,2})[.\-/월](\d{1,2})(?!\d)")
+_YEAR_KO = re.compile(r"(?<!\d)(20\d{2})년")  # "2025년 제10회", "작년(2025년)" 처럼 날짜와 떨어진 연도 표기
 _MD_KO = re.compile(r"(?<!\d)(\d{1,2})월(\d{1,2})(?!\d)")
 _MD_NUM = re.compile(r"(?<![\d.\-/])(\d{1,2})[./](\d{1,2})(?![\d.\-/]|[A-Za-z]|[층명개원만천억호번회세분초시대건%])")
 
@@ -96,12 +97,13 @@ def _date_in_text(date: str, text: str, default_year: int | None) -> bool:
     """공백 제거한 글 안에서 날짜가 확인되는지. 연도가 적힌 글에서는 그 연도만 인정한다.
 
     "10월 15일" 처럼 연도가 없는 글은 ``default_year``(수집 대상 달의 연도)와 같을 때만 인정한다.
+    "2025년 제10회 … 10월 15일" 처럼 연도가 날짜와 떨어져 적힌 글도 그 연도(2025)만 인정한다.
     """
     y, m, d = (int(x) for x in date.split("-"))
     fulls = [(int(a), int(b), int(c)) for a, b, c in _FULL.findall(text)]
     if (y, m, d) in fulls:
         return True
-    years = {a for a, _, _ in fulls}
+    years = {a for a, _, _ in fulls} | {int(x) for x in _YEAR_KO.findall(text)}
     if not ((y in years) if years else (y == default_year)):
         return False
     return any(

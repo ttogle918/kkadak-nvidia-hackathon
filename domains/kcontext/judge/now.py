@@ -228,17 +228,20 @@ def _src_entry(s: SourceRef, stance: str = "support", says: str | None = None) -
 
 def _adopt_single_values(
     members: Sequence[EventRecord], primary: EventRecord, conflicted: set[str]
-) -> tuple[dict[str, str], list[str]]:
+) -> tuple[dict[str, str], list[str], set[str]]:
     """충돌은 없지만 대표 레코드에 값이 없는 필드를 다른 레코드에서 채운다.
 
-    C·D 출처의 취소·변경은 적용하지 않고 caveat 로만 남긴다.
+    C·D 출처의 취소·변경은 적용하지 않고 caveat 로만 남긴다. 비공식(C·D) 출처에서 채운 필드는
+    세 번째 값(필드 이름 집합)으로 알려 준다 — 그 필드는 공식 출처가 확인한 값이 아니다.
     """
     adopt: dict[str, str] = {}
     notes: list[str] = []
+    unofficial: set[str] = set()
     for f in _CONFLICT_FIELDS:
         if f in conflicted or _value(primary, f) is not None:
             continue
-        have = [(m, _value(m, f)) for m in members if _value(m, f)]
+        have = sorted(((m, _value(m, f)) for m in members if _value(m, f)),
+                      key=lambda mv: (not _official(mv[0]), _rank(mv[0])))
         if not have:
             continue
         m, v = have[0]
@@ -246,7 +249,10 @@ def _adopt_single_values(
             notes.append(f"비공식 출처에 '{v}' 정보가 있음 — 확인 필요")
             continue
         adopt[f] = v  # type: ignore[assignment]
-    return adopt, notes
+        if not _official(m):
+            unofficial.add(f)
+            notes.append(f"{_FIELD_LABEL[f]}은(는) 비공식(검색 수집) 출처에서만 확인")
+    return adopt, notes, unofficial
 
 
 def judge_events(records: Sequence[EventRecord], situation: Mapping, *, now: date,
@@ -338,7 +344,7 @@ def judge_events(records: Sequence[EventRecord], situation: Mapping, *, now: dat
         conflicts = tuple(conflicts_l)
         resolved = {c.field: c.chosen for c in conflicts if c.chosen is not None}
         unresolved = [c for c in conflicts if c.chosen is None]
-        adopted, adopt_notes = _adopt_single_values(
+        adopted, adopt_notes, from_unofficial = _adopt_single_values(
             ordered, primary, {c.field for c in conflicts})
         resolved = {**adopted, **resolved}
         primary = dataclasses.replace(primary, **resolved) if resolved else primary
@@ -370,7 +376,10 @@ def judge_events(records: Sequence[EventRecord], situation: Mapping, *, now: dat
             stale = bool(official_src) and latest < now - timedelta(days=cfg.fresh_days)
             if stale:
                 caveats.append(f"{(now - latest).days}일 전 갱신")
-            ok = official_src and primary.start_date and primary.place_name and not stale
+            # 날짜·장소가 비공식 출처에서만 나왔으면 공식 출처가 확인한 것이 아니다.
+            core_from_unofficial = bool(from_unofficial & {"start_date", "place_name"})
+            ok = (official_src and primary.start_date and primary.place_name and not stale
+                  and not core_from_unofficial)
             badge = "확인됨" if ok else "확인 필요"
 
         official_only = any(s.tier in _OFFICIAL for s in sources)
