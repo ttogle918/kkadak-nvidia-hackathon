@@ -79,7 +79,7 @@ def codes(b):
 
 def test_full_round(idx, book):
     b = run_story_pipeline(TEXT, complete=fake(reply()), db=idx, trip=TRIP, places=book, now=NOW)
-    assert b["schema"] == "kc-bundle/v1" and b["generated_at"] == "2026-10-07T01:02:03Z"
+    assert b["schema"] == "kc-chat-bundle/v1" and b["generated_at"] == "2026-10-07T01:02:03Z"
     assert b["trip"] == {"from": "2026-10-15", "to": "2026-10-16"}
     a = {x["name"]: x for x in b["itinerary"]["anchors"]}
     assert (a["○○궁"]["lat"], a["○○궁"]["lng"]) == (37.5, 127.0)
@@ -136,7 +136,7 @@ def test_write_refuses_overwrite(tmp_path, idx, book):
     b = run_story_pipeline(TEXT, complete=fake(reply()), db=idx, trip=TRIP, places=book)
     out = tmp_path / "o"
     p = write_bundle(b, out)
-    assert json.loads(p.read_text(encoding="utf-8"))["schema"] == "kc-bundle/v1"
+    assert json.loads(p.read_text(encoding="utf-8"))["schema"] == "kc-chat-bundle/v1"
     with pytest.raises(BundleExistsError):
         write_bundle(b, out)
     assert [f.name for f in out.iterdir()] == ["bundle.json"]  # 임시 파일이 남지 않는다
@@ -192,3 +192,16 @@ def test_cli_llm_unavailable(tmp_path, monkeypatch, capsys):
     rc = cli.main(["--text-file", str(txt), "--trip-from", TRIP[0], "--trip-to", TRIP[1],
                    "--db", str(db), "--out", str(tmp_path / "o")])  # fmt: skip
     assert rc == 2 and not (tmp_path / "o").exists()
+
+
+def test_cli_trip_is_optional_but_not_half(tmp_path, monkeypatch, capsys):
+    db, txt = tmp_path / "i.db", tmp_path / "t.txt"
+    make_db(db)
+    txt.write_text(TEXT, encoding="utf-8")
+    monkeypatch.setattr(cli, "_make_complete", lambda: fake(reply()))
+    base = ["--text-file", str(txt), "--db", str(db)]
+    assert cli.main([*base, "--out", str(tmp_path / "a")]) == 0
+    b = json.loads((tmp_path / "a" / "bundle.json").read_text(encoding="utf-8"))
+    assert b["trip"] is None
+    assert cli.main([*base, "--out", str(tmp_path / "b"), "--trip-from", TRIP[0]]) == 2
+    assert not (tmp_path / "b").exists()

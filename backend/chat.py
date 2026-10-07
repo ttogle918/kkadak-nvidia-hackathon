@@ -6,6 +6,7 @@ audit 에는 모델명·메시지 수·백엔드만 남고 사용자 본문·키
 
 from __future__ import annotations
 
+import asyncio
 import os
 import re
 import threading
@@ -15,8 +16,18 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
+from backend.catalog_runner import run_catalog
+from backend.chat_story import (
+    BadBundle,
+    attach_events,
+    clean_bundle,
+    counts,
+    reply_text,
+)
+from backend.schedule_gate import looks_like_schedule
 from backend.security_log import entries_from_events
 from backend.settings import REPO_ROOT, Settings
+from backend.story_runner import StoryRunnerError, run_story
 from core.audit import AuditEvent, AuditLog, JsonlSink
 from core.guard import Verdict, scan
 from core.llm import (
@@ -106,6 +117,7 @@ class ChatUnavailable(Exception):
 class ChatResult:
     reply: dict[str, Any]
     logs: list[dict[str, Any]]
+    bundle: dict[str, Any] | None = None  # 일정 흐름일 때만(kc-chat-bundle/v1)
 
 
 class _TeeSink:
@@ -153,6 +165,7 @@ class ChatService:
         self._audit = AuditLog(self._sink, run_id=self._run_id, actor="backend:chat")
         self._lock = threading.Lock()
         self._seq = 0
+        self._story_lock = threading.Lock()  # 일정 흐름은 한 번에 1건(ChatBusy)
         # (공개 메시지, LLM 맥락에 넣을지). 차단된 입력·답은 맥락에서 뺀다.
         self._history: deque[tuple[dict[str, Any], bool]] = deque(maxlen=MAX_STORED)
 
@@ -214,7 +227,59 @@ class ChatService:
             self._history.append((reply, False))
         return ChatResult(reply, logs)
 
-    async def send(self, text: str) -> ChatResult:
+    # ---- 일정 흐름 ----
+    def _search_events(self, args: dict[str, Any]) -> dict[str, Any]:
+        # 검색 본문 검증은 /api/events/search 와 같은 모델로 한다
+        from backend.routers.events import SearchBody
+
+        body = SearchBody.model_validate(args)
+        return run_catalog(self._settings.catalog_dir, "search", body.model_dump(by_alias=True, exclude_none=False))
+
+    def _story_fallback(self, kind: str) -> None:
+        """일정 흐름을 못 썼다 — 사유 종류만 audit 에 남기고(본문·경로 없음) 일반 챗봇으로 간다."""
+        cid = self._audit.call("kc_chat_story", {"stage": "fallback"})
+        self._audit.error(cid, StoryRunnerError(kind))
+
+    async def _story(self, text: str, context: dict[str, Any] | None) -> ChatResult | None:
+        """None 이면 일반 챗봇으로 폴백(사유는 audit)."""
+        if not self._story_lock.acquire(blocking=False):
+            raise ChatBusy
+        try:
+            if not self._settings.index_db.is_file():
+                self._story_fallback("index_missing")
+                return None
+            trip = context["trip"] if context else None
+            mark = self._sink.mark()
+            cid = self._audit.call("kc_chat_story", {"chars": len(text), "trip": trip is not None})
+            try:
+                raw = await asyncio.to_thread(run_story, text, trip, self._settings.index_db)
+                bundle = clean_bundle(raw)
+            except StoryRunnerError as exc:
+                self._audit.error(cid, exc)
+                return None
+            except BadBundle:
+                self._audit.error(cid, StoryRunnerError("bad_shape"))
+                return None
+            if bundle["status"] == "no_anchors":
+                self._audit.error(cid, StoryRunnerError("no_anchors"))
+                return None
+            bt = bundle.get("trip")
+            if isinstance(bt, dict) and isinstance(bt.get("from"), str) and isinstance(bt.get("to"), str):
+                trip = (bt["from"], bt["to"])
+            await asyncio.to_thread(attach_events, bundle, trip, self._search_events)
+            n, m, k = counts(bundle)
+            self._audit.result(cid, {"anchors": n, "mentions": m, "events": k, "problems": len(bundle["problems"])})
+            user = self._new("user", text)
+            reply = self._new("agent", reply_text(bundle))
+            with self._lock:
+                self._history.append((user, False))  # 고정 문구는 LLM 맥락에 넣지 않는다
+                self._history.append((reply, False))
+            logs = entries_from_events(self._sink.since(mark), run_id=self._run_id)
+            return ChatResult(reply, logs, bundle)
+        finally:
+            self._story_lock.release()
+
+    async def send(self, text: str, context: dict[str, Any] | None = None) -> ChatResult:
         res = scan(text)
         if res.verdict is Verdict.INJECTION:
             ids = ",".join(sorted({f.rule_id for f in res.findings}))
@@ -224,6 +289,10 @@ class ChatService:
             return self._block(
                 text, PathDenied(f"파일 읽기 요청 거부 · {path} · 허용된 폴더 밖 (앱 차단)")
             )
+        if looks_like_schedule(text):
+            story = await self._story(text, context)
+            if story is not None:
+                return story
         client = self._get_client()
         if client.busy(FEATURE):
             raise ChatBusy

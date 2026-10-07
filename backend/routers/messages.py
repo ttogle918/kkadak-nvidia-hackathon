@@ -8,6 +8,7 @@ from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
 from backend.chat import MAX_TEXT_CHARS, ChatBusy, ChatService, ChatUnavailable
+from backend.chat_story import BadContext, validate_context
 
 router = APIRouter(prefix="/api")
 _log = logging.getLogger(__name__)
@@ -42,11 +43,19 @@ async def post_message(request: Request):
             body = await request.json()
         except ValueError:
             body = None
-    text = body.get("text") if isinstance(body, dict) and set(body) == {"text"} else None
+    # 허용 키는 text(필수)와 context(선택, chat-context/v1). 그 밖의 키는 그대로 422 다.
+    ok_keys = isinstance(body, dict) and "text" in body and set(body) <= {"text", "context"}
+    text = body.get("text") if ok_keys else None
     if not isinstance(text, str) or not text.strip() or len(text) > MAX_TEXT_CHARS:
         return _err(422, "bad_text", f"text 는 1~{MAX_TEXT_CHARS}자 문자열이어야 한다")
+    context = None
+    if "context" in body:
+        try:
+            context = validate_context(body["context"])
+        except BadContext:
+            return _err(422, "bad_text", "context 가 올바르지 않다")
     try:
-        result = await _service(request).send(text)
+        result = await _service(request).send(text, context)
     except ChatBusy:
         return _err(429, "busy", "다른 요청을 처리하는 중이다")
     except ChatUnavailable:
@@ -54,4 +63,7 @@ async def post_message(request: Request):
     except Exception as exc:  # noqa: BLE001 - LlmCallError·transport 오류 모두 같은 응답
         _log.warning("chat 실패: %s", type(exc).__name__)  # 본문·키는 남기지 않는다
         return _err(502, "pipeline_failed", "답을 만들지 못했다")
-    return {"reply": result.reply, "logs": result.logs}
+    out = {"reply": result.reply, "logs": result.logs}
+    if result.bundle is not None:
+        out["bundle"] = result.bundle
+    return out

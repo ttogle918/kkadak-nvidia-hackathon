@@ -52,3 +52,13 @@ backend 는 `domains`·`mcp_server` 를 import 하지 않는다(D3·D10). 파이
 - 실록 언급은 "실록에 이런 기록이 있어요" — 이야기라고 쓰지 않는다. 한문 원문 구절과 "한글 요약(원문 아님)"을 구분해 보이고, 누르면 실록 원문 링크(`url`, http/https 만)로 간다. 국역 없음 표시.
 - 지도: 좌표 있는 앵커에 핀, 누르면 정보창(textContent). 옛길 선은 이번 범위 밖.
 - 행사가 비어 있으면 "주변 행사를 아직 찾지 못했어요(데이터 준비 중)" 처럼 사실대로 보인다. 지어내지 않는다.
+
+## 구현 메모 (backend, 2026-10-07)
+- 파일: `backend/schedule_gate.py`(게이트) · `backend/story_runner.py`(별도 프로세스 실행) · `backend/chat_story.py`(context 검증·bundle 정리·행사 검색 요청·고정 문구) · `backend/chat.py`(흐름 연결) · `backend/routers/messages.py`.
+- 게이트: **시각·날짜 표현 하나 + (일정 어휘 또는 장소 이름) 하나 이상**일 때만 일정 흐름. 장소 이름은 `backend/fixtures/chat_places.json`(demo_places.json 의 사본; 사전이 바뀌면 같이 갱신). 한계: "10/15 경복궁은 어때?" 같은 질문은 오탐(비용은 파이프라인 1회, 앵커 0개면 일반 챗봇으로 폴백). 날짜·시각이 없는 일정 글("경복궁 갔다가 익선동 갈 거야")은 미탐 — 일반 챗봇이 답한다.
+- 환경변수: `KC_INDEX_DB`(기본 `var/index/kcontext.db`, 없으면 일반 챗봇으로 폴백하고 audit 에 `index_missing`). 자식에게는 `PATH HOME LANG LC_ALL PYTHONPATH VIRTUAL_ENV NVIDIA_API_KEY(_A/_B) CHAT_MODEL SCHEDULE_MODEL KC_TARGET_REGION KC_DATA_DIR LLM_BACKEND*` 와 `APP_PROCESS_ROLE=agent` 만 넘긴다(`.env` 는 자식이 core.llm 허용 목록 로더로 직접 읽음).
+- 실행: 임시 디렉터리에 text.txt 를 쓰고 `python -m domains.kcontext.pipeline --text-file --db --out [--trip-from --trip-to]`. 타임아웃 90초, bundle.json 1MB 상한, schema 가 `kc-chat-bundle/v1` 이 아니면 거부, 끝나면 임시 디렉터리 삭제. 실패는 종류(timeout/exit/no_output/too_large/bad_json/bad_schema)만 audit 에 남기고 **502 대신 일반 챗봇으로 폴백**한다(자식 출력은 노출·기록하지 않음).
+- `context` 가 없으면 `--trip-*` 을 넘기지 않는다(파이프라인 CLI 의 trip 인자를 선택으로 바꿨다). 이때 연도 없는 날짜는 파이프라인이 problems 로 보고하고 앵커 날짜가 비므로 행사 검색 기간을 정할 수 없어 `events: null` + `EVENTS_UNAVAILABLE` 이 될 수 있다. 앵커에 완전한 날짜가 있으면 그 최소~최대 날짜(31일 이내)를 trip 으로 쓴다.
+- 행사 검색: 방문(visit) 앵커 중 날짜·시작 시각이 있는 것만 Plan 으로(끝 시각이 없으면 시작+60분 가정, `end_assumed: true`). 숙소는 Plan 에서 뺀다. free_slots 는 `{date, from, to}` 로 변환(자정을 넘기면 23:59 까지). 카탈로그가 비어 0건이어도 정상(`events.events == []`).
+- 상한: 앵커 20 · 앵커당 언급 5 · 카드 100 · problems 100, 넘으면 잘라서 `TRUNCATED`. 동시 실행은 일정 흐름 1건(`ChatBusy` 429), LLM 은 부르지 않는다.
+- 일정 흐름 대화는 다음 턴 LLM 맥락에 넣지 않는다(고정 문구·bundle 은 맥락 아님). bundle 은 서버에 보관하지 않는다.

@@ -1,0 +1,4 @@
+{
+  "note": "일정 게이트용 장소 이름. domains/kcontext/data/places/demo_places.json 의 name·aliases 사본(backend 는 domains 를 import 하지 않는다, D3). 사전이 바뀌면 같이 갱신한다.",
+  "names": ["창덕궁", "Changdeokgung", "익선동", "Ikseon-dong", "경복궁", "Gyeongbokgung", "광화문", "Gwanghwamun", "종로3가", "Jongno 3-ga"]
+}

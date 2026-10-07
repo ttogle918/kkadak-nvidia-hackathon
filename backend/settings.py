@@ -25,6 +25,7 @@ class Settings:
     catalog_dir: Path | None = None  # 행사 카탈로그(수집 프로세스가 쓰고 이 프로세스는 별도 프로세스로 읽는다)
     admin_token: str = ""  # 관리자 화면·API 용. 비어 있으면 관리자 API 는 닫혀 있다
     screen_fixture_dir: Path = REPO_ROOT / "backend" / "fixtures" / "screen"  # 화면용 카드·출처·근거 JSON(D10)
+    index_db: Path = REPO_ROOT / "var" / "index" / "kcontext.db"  # 실록 색인(읽기 전용, 파이프라인 프로세스가 연다)
 
     def __post_init__(self) -> None:
         rid = self.reviewer_id.strip() if isinstance(self.reviewer_id, str) else ""
@@ -53,4 +54,5 @@ class Settings:
             catalog_dir=Path(e["KC_CATALOG_DIR"]) if e.get("KC_CATALOG_DIR") else var / "catalog",
             admin_token=e.get("KC_ADMIN_TOKEN", ""),
             screen_fixture_dir=Path(e.get("KC_SCREEN_FIXTURE_DIR") or REPO_ROOT / "backend" / "fixtures" / "screen"),
+            index_db=Path(e.get("KC_INDEX_DB") or var / "index" / "kcontext.db"),
         )

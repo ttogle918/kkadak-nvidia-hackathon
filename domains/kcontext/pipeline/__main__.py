@@ -1,6 +1,6 @@
 """일정 글 → 앵커별 실록 언급 → OUT/bundle.json. 호스트 에이전트 프로세스 전용(D1·D10).
 
-    python -m domains.kcontext.pipeline --text-file F --trip-from YYYY-MM-DD --trip-to YYYY-MM-DD \
+    python -m domains.kcontext.pipeline --text-file F [--trip-from YYYY-MM-DD --trip-to YYYY-MM-DD] \
         --db PATH --out DIR [--limit N] [--force]
 
 표준출력은 요약 한 줄 JSON 뿐. 종료 코드: 0 묶음을 썼다(앵커가 0개면 status=no_anchors) · 2 실행 조건 미충족.
@@ -31,13 +31,15 @@ def _fail(msg: str) -> int:
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m domains.kcontext.pipeline")
     ap.add_argument("--text-file", type=Path, required=True)
-    ap.add_argument("--trip-from", required=True)
-    ap.add_argument("--trip-to", required=True)
+    ap.add_argument("--trip-from")
+    ap.add_argument("--trip-to")
     ap.add_argument("--db", type=Path, required=True)
     ap.add_argument("--out", type=Path, required=True)
     ap.add_argument("--limit", type=int, default=DEFAULT_LIMIT)
     ap.add_argument("--force", action="store_true", help="OUT/bundle.json 이 있으면 교체")
     a = ap.parse_args(argv)
+    if bool(a.trip_from) != bool(a.trip_to):
+        return _fail("--trip-from 과 --trip-to 는 함께 줘야 한다")
     try:
         text = a.text_file.read_text(encoding="utf-8")
     except (OSError, ValueError) as e:
@@ -60,7 +62,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             text,
             complete=complete,
             db=a.db,
-            trip=(a.trip_from, a.trip_to),
+            trip=(a.trip_from, a.trip_to) if a.trip_from else None,
             limit=a.limit,
             places=book,
         )

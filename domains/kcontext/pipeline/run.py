@@ -1,4 +1,4 @@
-"""일정 글 → 앵커(좌표 부착) → 앵커별 실록 언급 → 출력 묶음(``kc-bundle/v1``) 한 파일.
+"""일정 글 → 앵커(좌표 부착) → 앵커별 실록 언급 → 출력 묶음(``kc-chat-bundle/v1``) 한 파일.
 
 호스트 에이전트 프로세스 전용(D10): backend 는 이 모듈을 import 하지 않는다. LLM 은 주입한다(``complete``).
 좌표는 장소 사전(places.py)에 있는 이름만 붙이고, 없으면 null + COORD_UNKNOWN 이다(추측 없음).
@@ -29,7 +29,7 @@ __all__ = [
     "write_bundle",
 ]
 
-BUNDLE_SCHEMA = "kc-bundle/v1"
+BUNDLE_SCHEMA = "kc-chat-bundle/v1"
 BUNDLE_FILE = "bundle.json"
 MENTION_SCHEMA = "kc-mention/v1"
 
