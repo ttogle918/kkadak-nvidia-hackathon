@@ -15,7 +15,8 @@ from pathlib import Path
 from core.llm.envfile import load_allowed_keys
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-_BASE_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "KC_TARGET_REGION", "KC_DATA_DIR")
+_BASE_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "KC_TARGET_REGION", "KC_DATA_DIR",
+             "KC_ROUTE_PROVIDER", "KC_OSM_ROUTER_URL")  # 마지막 둘은 비밀이 아닌 경로 설정
 # 수동 재수집에는 그 출처가 쓰는 키 하나만 넘긴다(다른 출처의 키·추론 키는 넘기지 않는다).
 _SOURCE_KEYS = {
     "seoul_openapi": ("SEOUL_OPENAPI_KEY",),

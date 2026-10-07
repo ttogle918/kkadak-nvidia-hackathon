@@ -108,6 +108,7 @@
      "url": "https://example.invalid/x"
     }
    ],
+   "time_cost_estimated": false,
    "time_cost_min": 7,
    "time_cost_unknown": false,
    "title": {
@@ -262,6 +263,7 @@
      "url": "https://example.invalid/x"
     }
    ],
+   "time_cost_estimated": false,
    "time_cost_min": 0,
    "time_cost_unknown": true,
    "title": {
@@ -412,6 +414,7 @@
      "url": "https://example.invalid/x"
     }
    ],
+   "time_cost_estimated": false,
    "time_cost_min": 0,
    "time_cost_unknown": true,
    "title": {
@@ -583,6 +586,7 @@
      "url": "https://example.invalid/x"
     }
    ],
+   "time_cost_estimated": false,
    "time_cost_min": 0,
    "time_cost_unknown": true,
    "title": {

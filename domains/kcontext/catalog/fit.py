@@ -123,6 +123,7 @@ def fit_event(
             else:
                 before_c, basis_prev = None, "none"
             nxt_c = _coord(nxt) if nxt is not None else None
+            getattr(provider, "begin", lambda: None)()  # 공급자가 한 계산 단위로 기록을 비울 수 있게
             a = _leg(provider, before_c, venue)
             b = _leg(provider, venue, nxt_c)
             c = _leg(provider, before_c, nxt_c)
@@ -156,6 +157,12 @@ def fit_event(
             if status == "fit" and cfg.assumed_duration_min and not (is_hhmm(s.get("end_time")) and _m(s["end_time"]) > start):
                 reasons.append(_reason("duration_assumed", f"종료 시각을 모르는 회차 — 사용자가 정한 {cfg.assumed_duration_min}분으로 계산함",
                                        f"The session end is unknown; calculated with your {cfg.assumed_duration_min} min"))
+            if bool(provider.estimated) and any(x is not None for x in (a, b, c)):
+                # 추정값(직선 거리 등)은 경로 서비스의 결과가 아니다 — 시간표에 맞아 보여도 "넣을 수 있음"을 내지 않는다
+                if status == "fit":
+                    status = "check_needed"
+                reasons.append(_reason("travel_estimated", "예상 시간(경로 서비스 값이 아님) — 확인 필요",
+                                       "Estimated time (not from a route service) — needs checking"))
             if a is not None and prev is not None and start - _m(prev["end"]) < a:
                 status = "no_fit"
                 reasons.append(_reason("not_enough_time_before", "앞 일정에서 이동할 시간이 부족함",

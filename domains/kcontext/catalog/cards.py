@@ -105,6 +105,8 @@ def _checks(ev: Mapping, sug: Mapping | None) -> list[dict]:
                     r["status"], _t("예약 여부 확인 필요", "Reservation status needs checking"))})
     if sug is None or sug["extra_minutes"] is None:  # 추가 이동시간을 계산하지 못했으면(회차 없음·경로 없음 포함) 알린다
         out.append({"level": "warn", "text": _t("이동시간 확인 필요", "Travel time needs checking")})
+    elif sug["route"]["estimated"]:
+        out.append({"level": "warn", "text": _t("예상 시간 — 경로 서비스 값이 아님", "Estimated time — not from a route service")})
     return out
 
 
@@ -214,6 +216,7 @@ def build_now_cards(
                 "slot": slot,
                 "time_cost_min": sug["extra_minutes"] if known else (None if null_unknown_time_cost else 0),
                 "time_cost_unknown": not known,
+                "time_cost_estimated": bool(known and sug["route"]["estimated"]),
                 "valid": {"from": ev["schedule"]["start_date"], "to": ev["schedule"]["end_date"],
                           "as_of": (ev["last_verified_at"] or ev["collected_at"])[:10]},
                 "user_state": "added" if ev["id"] in added else "proposed",  # 일정에 넣은 행사는 화면이 보낸 일정으로 안다
@@ -235,7 +238,8 @@ def _rationale(card: Mapping, funnel: Mapping, result: Mapping) -> dict:
     ev = next(e for e in result["events"] if e["id"] == card["entry_id"])
     n_src = len({s["id"] for s in card["sources"]})
     detour = (_t("● 이동시간 확인 필요", "● Travel time needs checking") if card["time_cost_unknown"]
-              else _t(f"● 동선 +{card['time_cost_min']}분", f"● +{card['time_cost_min']} min detour"))
+              else _t(f"● 동선 +{card['time_cost_min']}분" + (" (예상 시간)" if card["time_cost_estimated"] else ""),
+                      f"● +{card['time_cost_min']} min detour" + (" (estimated)" if card["time_cost_estimated"] else "")))
     chips = [
         {"key": "funnel", "tone": "now", "label": _t(f"● 후보 {funnel['candidates']}건 중 채택 {funnel['adopted']}",
                                                      f"● {funnel['adopted']} of {funnel['candidates']} candidates adopted")},
