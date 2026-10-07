@@ -1,0 +1,88 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- 출처: 국사편찬위원회 조선왕조실록 정보_실록원문 (data.go.kr) · 내려받은 날짜: 2026-08-21 · 이용허락: 공공누리 1유형(출처표시) · 원본 2nd_wca_107.xml 의 기사 wca_10705009_002 발췌, 기사 요소는 무수정, 상위 level 의 다른 기사는 제거 -->
+<!DOCTYPE level2 SYSTEM "history.dtd">
+<level2 id="wca_107">
+  <front>
+    <biblioData type="L">
+      <title>
+        <mainTitle>太宗實錄 七年</mainTitle>
+      </title>
+      <date>
+        <dateOccured date="1407" type="서기"/>
+        <dateOccured type="간지">丁亥</dateOccured>
+        <dateOccured type="재위연도">태종 7</dateOccured>
+        <dateOccured type="개국연호">조선 개국(開國) 16</dateOccured>
+        <dateOccured type="중국연호">명 영락(永樂) 5</dateOccured>
+        <dateOccured type="단기">3740</dateOccured>
+        <dateOccured type="일본연호"/>
+        <dateOccured type="display">명 영락(永樂) 5</dateOccured>
+      </date>
+    </biblioData>
+  </front>
+  <text>
+    <content>
+      <paragraph align="center"> 七年(1407)<annotation type="원주">
+          <noteContent>【<index num="0029940_0" sort="K" type="지명">大明</index>
+            <index num="0029941_0" type="연호">永樂</index>五年】</noteContent>
+        </annotation>
+      </paragraph>
+    </content>
+  </text>
+  <level3 id="wca_107050">
+    <front>
+      <biblioData type="L">
+        <title>
+          <mainTitle>太宗實錄 七年 五月</mainTitle>
+        </title>
+      </biblioData>
+    </front>
+    <text>
+      <content>
+        <paragraph align="center"> 七年 五月</paragraph>
+      </content>
+    </text>
+    <level4 id="wca_10705009">
+      <front>
+        <biblioData type="L">
+          <title>
+            <mainTitle>太宗 7年 5月 9日</mainTitle>
+          </title>
+          <date>
+            <dateOccured date="1407-05-09L0" type="서기"/>
+            <dateOccured type="간지">壬戌</dateOccured>
+            <dateOccured type="재위연도">태종 7년 5월 9일</dateOccured>
+            <dateOccured type="개국연호">조선 개국(開國) 16년 5월 9일</dateOccured>
+            <dateOccured type="중국연호">명 영락(永樂) 5년 5월 9일</dateOccured>
+            <dateOccured type="단기">3740년 5월 9일</dateOccured>
+            <dateOccured type="일본연호">년 5월 9일</dateOccured>
+            <dateOccured type="display">명 영락(永樂)5년 5월 9일</dateOccured>
+          </date>
+        </biblioData>
+      </front>
+      <level5 id="wca_10705009_002">
+        <front>
+          <biblioData type="T">
+            <title>
+              <mainTitle>사신 풍근 등을 숭례문 밖에서 전송하다</mainTitle>
+            </title>
+            <docNo level="n" name="titleno">002</docNo>
+            <date>
+              <dateOccured date="1407-05-09L0" type="서기"/>
+            </date>
+            <source>
+              <mainTitle type="태백산사고본">太宗實錄 5책 13권</mainTitle>
+              <page begin="23장 B면"/>
+            </source>
+            <source>
+              <mainTitle type="국편영인본">太宗實錄 1책</mainTitle>
+              <page begin="393면"/>
+            </source>
+            <subjectClass>외교-명(明)</subjectClass>
+          </biblioData>
+        </front>
+        <text>
+          <content>
+            <paragraph align="center">○<index num="0030590_0" ref="M_0008916" sort="A" sort2="明" type="이름">馮謹</index>還, <index num="0030591_0" ref="M_0033550" sort="K" type="이름">鄭昇</index>、<index num="0030592_0" ref="M_0062364" sort="K" type="이름">金角</index>等六人, 各歸鄕貫省親, 上出餞于<index num="0030593_0" sort="K" type="지명">崇禮門</index>外。 上贈<index num="0030594_0" ref="M_0008916" sort="A" type="이름">謹</index>苧麻布, <index num="0030595_0" ref="M_0008916" sort="A" type="이름">謹</index>辭不受, 潛語通事曰: "予有佛堂, 何以得石燈盞?" 上知其意, 乃贈四事。</paragraph>
+          </content>
+        </text>
+      </level5></level4></level3></level2>
