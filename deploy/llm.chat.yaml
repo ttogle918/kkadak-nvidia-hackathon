@@ -1,0 +1,8 @@
+# 챗봇 최소판 설정. 비밀 없음 — 키는 env 변수 **이름**만 적는다(D5).
+# 호스트에서는 NVIDIA 공개 엔드포인트(키 필요), 샌드박스 안에서는 D1 에 따라 base_url 을
+# https://inference.local/v1 로 바꿔 끼운다(키는 게이트웨이 provider 가 주입).
+# 모델은 env CHAT_MODEL 로 덮어쓴다. 기본값은 /v1/models 에 있는 것을 확인했다(2026-10-07).
+providers:
+  nvidia: {api_key_envs: [NVIDIA_API_KEY], base_url: "https://integrate.api.nvidia.com/v1", max_concurrency: 2, timeout_s: 60}
+features:
+  chat: {provider: nvidia, model: "openai/gpt-oss-20b"}

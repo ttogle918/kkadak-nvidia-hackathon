@@ -12,10 +12,14 @@ from core.llm.config import (
     resolve_backend,
     resolve_keys,
 )
+from core.llm.envfile import ALLOWED_KEY_NAMES, load_allowed_keys, resolve_env
+from core.llm.http_transport import HttpxTransport
 from core.llm.pool import KeyLease, KeyPool
 
 __all__ = [
+    "ALLOWED_KEY_NAMES",
     "FeatureConfig",
+    "HttpxTransport",
     "KeyLease",
     "KeyPool",
     "LlmCallError",
@@ -29,8 +33,10 @@ __all__ = [
     "Transport",
     "TransportResponse",
     "UnknownFeature",
+    "load_allowed_keys",
     "load_config",
     "parse_config",
     "resolve_backend",
+    "resolve_env",
     "resolve_keys",
 ]
