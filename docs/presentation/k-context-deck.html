@@ -1,0 +1,188 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>K-Context 발표자료 — 팀 까딱이</title>
+<style>
+  :root {
+    --bg: #f6f2ea; --paper: #fffdf8; --ink: #1d1b16; --sub: #5d574a; --line: #ddd5c4;
+    --accent: #8a3b2a; --accent2: #2f5d7c; --ok: #2d6a4f; --warn: #a15c07; --chip: #efe8d8;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root { --bg: #14120e; --paper: #1d1a14; --ink: #f3ede0; --sub: #b9b09c; --line: #3a3427;
+            --accent: #e08a73; --accent2: #7fb2d6; --ok: #7bc49c; --warn: #e3a64a; --chip: #2a261c; }
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; height: 100%; background: var(--bg); color: var(--ink);
+    font-family: "Pretendard", "Noto Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif; }
+  .stage { position: fixed; inset: 0; display: grid; place-items: center; }
+  .deck { width: 1280px; height: 720px; position: relative; transform-origin: center center; }
+  .slide { position: absolute; inset: 0; background: var(--paper); border: 1px solid var(--line); border-radius: 14px;
+    padding: 56px 72px; display: none; flex-direction: column; overflow: hidden; }
+  .slide.on { display: flex; }
+  .kicker { font-size: 18px; letter-spacing: .08em; color: var(--accent); font-weight: 700; margin: 0 0 10px; }
+  h1 { font-size: 64px; line-height: 1.12; margin: 0; letter-spacing: -.02em; }
+  h2 { font-size: 42px; line-height: 1.18; margin: 0 0 26px; letter-spacing: -.01em; }
+  p, li { font-size: 25px; line-height: 1.5; color: var(--ink); }
+  .sub { color: var(--sub); }
+  ul { margin: 0; padding-left: 1.1em; } li { margin: 0 0 10px; }
+  .grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 28px; }
+  .grid3 { display: grid; grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .card { background: var(--chip); border: 1px solid var(--line); border-radius: 12px; padding: 20px 22px; }
+  .card h3 { margin: 0 0 8px; font-size: 24px; }
+  .card p, .card li { font-size: 21px; margin: 0 0 6px; }
+  .tag { display: inline-block; font-size: 15px; line-height: 1; padding: 4px 8px; border-radius: 99px;
+    border: 1px solid var(--line); background: var(--paper); color: var(--sub); vertical-align: middle; }
+  .tag.ok { color: var(--ok); border-color: var(--ok); } .tag.warn { color: var(--warn); border-color: var(--warn); }
+  .flow { display: flex; align-items: stretch; gap: 10px; margin: 8px 0 22px; }
+  .node { flex: 1; background: var(--chip); border: 1px solid var(--line); border-radius: 10px; padding: 14px 14px; font-size: 20px; line-height: 1.35; }
+  .node b { display: block; font-size: 22px; margin-bottom: 4px; }
+  .arrow { align-self: center; font-size: 28px; color: var(--accent2); }
+  table { border-collapse: collapse; width: 100%; font-size: 21px; }
+  th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th { color: var(--sub); font-weight: 600; font-size: 18px; }
+  .quote { border-left: 4px solid var(--accent); padding: 8px 16px; background: var(--chip); border-radius: 0 10px 10px 0; font-size: 22px; }
+  .hanja { font-family: "Noto Serif KR", "Noto Serif CJK KR", serif; font-size: 24px; }
+  .bar { position: absolute; left: 0; bottom: 0; height: 4px; background: var(--accent); transition: width .2s; }
+  .count { position: absolute; right: 24px; bottom: 16px; font-size: 16px; color: var(--sub); }
+  .foot { position: absolute; left: 72px; bottom: 16px; font-size: 16px; color: var(--sub); }
+  .notes { display: none; position: fixed; left: 0; right: 0; bottom: 0; padding: 14px 24px; background: #000c; color: #fff;
+    font-size: 17px; line-height: 1.5; z-index: 5; }
+  body.shownotes .notes { display: block; }
+  .help { position: fixed; top: 10px; right: 14px; font-size: 13px; color: var(--sub); z-index: 4; }
+  @media print {
+    @page { size: 1280px 720px; margin: 0; }
+    html, body { background: #fff; height: auto; }
+    .stage { position: static; display: block; }
+    .deck { width: 1280px; height: auto; transform: none !important; }
+    .slide { display: flex !important; position: relative; height: 720px; page-break-after: always; border: none; border-radius: 0; }
+    .bar, .count, .help, .notes { display: none !important; }
+  }
+</style>
+</head>
+<body>
+<div class="help">← → 이동 · N 발표 메모 · F 전체화면 · 인쇄하면 PDF</div>
+<div class="stage"><div class="deck" id="deck">
+
+<!-- 1 표지 -->
+<section class="slide on" data-notes="[0:20] 안녕하세요, 팀 까딱이입니다. 내 일정 위에서 한국의 역사와 행사를 근거와 함께 보여 주는 에이전트, K-Context 입니다.">
+  <p class="kicker">NVIDIA OpenShell · NemoClaw · Nemotron</p>
+  <h1 style="margin-top:130px">K-Context</h1>
+  <p style="font-size:36px; margin:18px 0 0">검색하지 않으면 발견하지 못하는 <b>“그날의 한국”</b></p>
+  <p class="sub" style="position:absolute; left:72px; bottom:44px; font-size:22px">팀 까딱이</p>
+</section>
+
+<!-- 2 문제 + 해법 -->
+<section class="slide" data-notes="[0:20~1:10] 일정을 짜고 나면 그 장소의 역사와 지금 열리는 행사를 따로, 출처 모를 글에서 찾아야 합니다. 낡은 정보와 홍보 문구가 섞여 있습니다. 저희는 일정 한 줄이면 정리하고, 장소마다 실록 기록과 주변 행사를 출처와 함께 붙입니다.">
+  <p class="kicker">문제와 해법</p>
+  <h2>일정은 정했는데, 그 장소의 이야기와 행사는 따로 찾아야 한다</h2>
+  <div class="grid2" style="margin-bottom:28px">
+    <div class="card"><h3>문제</h3><ul><li>역사·행사·길이 흩어져 있다</li><li>낡은 글, 홍보 문구, 지어낸 설명이 섞인다</li></ul></div>
+    <div class="card"><h3>해법</h3><ul><li>말하면 <b>일정을 정리</b>한다</li><li>장소마다 <b>실록 기록</b>과 <b>주변 행사</b>를 붙인다</li><li>모두 출처와 함께, 모르면 “모른다”</li></ul></div>
+  </div>
+</section>
+
+<!-- 3 구조 -->
+<section class="slide" data-notes="[1:10~1:50] 구조는 단순합니다. 화면, 백엔드, 별도 프로세스의 에이전트. 자료는 호스트에서 미리 모아 로컬 색인에 두고, 에이전트는 그것만 읽습니다. 추론은 inference.local 하나입니다.">
+  <p class="kicker">구조</p>
+  <h2>자료는 미리 모으고, 에이전트는 색인만 읽는다</h2>
+  <div class="flow">
+    <div class="node"><b>화면</b>지도 · 카드 · 출처 태그</div><div class="arrow">→</div>
+    <div class="node"><b>백엔드</b>입력 가드 · 승인은 사람만</div><div class="arrow">→</div>
+    <div class="node"><b>에이전트</b>별도 프로세스 · 샌드박스</div><div class="arrow">→</div>
+    <div class="node"><b>Nemotron</b>inference.local</div>
+  </div>
+  <div class="card"><h3>호스트 수집기 (샌드박스 밖)</h3>
+    <p>조선왕조실록 673개 파일 · 38만 기사 → 지역 색인 · 서울 열린데이터광장·구청 공식 사이트 → 행사 카탈로그</p></div>
+</section>
+
+<!-- 4 데모 -->
+<section class="slide" data-notes="[1:50~3:10] 데모입니다. 이 문장 하나를 보냅니다. 일정이 정리되고 저녁 빈 시간이 계산됩니다. 창덕궁 핀을 누르면 한문 원문 구절과 원문 링크가 뜹니다. 행사가 없으면 없다고 말합니다.">
+  <p class="kicker">데모</p>
+  <h2>이 문장 하나로 시작한다</h2>
+  <div class="quote" style="margin-bottom:26px; font-size:26px">“10/15에 창덕궁 10시, 익선동 2시, 숙소는 종로3가야”</div>
+  <table>
+    <tr><td style="width:22%"><b>일정</b></td><td>앵커 카드 · 빈 시간(가정은 문구로 표시)</td></tr>
+    <tr><td><b>지도</b></td><td>좌표 검증된 장소만 핀 → 누르면 정보창</td></tr>
+    <tr><td><b>실록</b></td><td><span class="hanja">○上還昌德宮。</span> 한문 원문 · 한글 요약 · 링크</td></tr>
+    <tr><td><b>행사</b></td><td>기간·장소·공식 링크 · 안 되면 “미확인” / “아직 없음”</td></tr>
+  </table>
+</section>
+
+<!-- 5 신뢰 -->
+<section class="slide" data-notes="[3:10~3:40] 핵심은 믿을 수 있게 만드는 겁니다. 모델이 낸 값은 원문 인용이 있을 때만 인정하고, 시간 계산은 코드가 합니다. 실록은 원문을 그대로 보여 주고 요약과 구분합니다.">
+  <p class="kicker">신뢰 설계</p>
+  <h2>지어내지 않는다 — 코드가 막는다</h2>
+  <div class="grid3">
+    <div class="card"><h3>근거 검증</h3><p>모델이 낸 값은 <b>원문 인용이 있을 때만</b> 인정. 시간 계산은 코드.</p></div>
+    <div class="card"><h3>출처 표시</h3><p>카드마다 작은 출처 태그. 실록은 <b>원문과 요약을 구분</b>.</p></div>
+    <div class="card"><h3>입력 불신</h3><p>외부 문서 속 지시는 따르지 않는다. 승인은 사람만.</p></div>
+  </div>
+</section>
+
+<!-- 6 OpenShell -->
+<section class="slide" data-notes="[3:40~4:40] OpenShell 권한 설계입니다. 샌드박스를 만들고 22개 항목을 직접 시도했습니다. 외부 접속은 전부 막히고 inference.local 만 열립니다. 쓰기는 /tmp 만. 키는 샌드박스에 없습니다. 한 가지 한계: 입력 폴더 읽기 전용은 아직 chmod 로 보장합니다.">
+  <p class="kicker">OpenShell 권한 설계 · 실측</p>
+  <h2>기본 전부 차단 — 연 곳만 적고 직접 확인했다</h2>
+  <table>
+    <tr><td style="width:36%">외부 네트워크</td><td><span class="tag ok">차단</span> 업로드·메일·웹 모두 DENIED</td></tr>
+    <tr><td>추론</td><td><span class="tag ok">inference.local 1곳</span> 샌드박스에 <b>키 0건</b></td></tr>
+    <tr><td>파일 쓰기</td><td><span class="tag ok">/tmp 만</span> 그 밖은 Permission denied</td></tr>
+    <tr><td>restricted · secrets</td><td><span class="tag ok">미탑재</span> 경로 자체가 없다</td></tr>
+    <tr><td>입력 읽기 전용</td><td><span class="tag warn">chmod</span> 정책 강제는 다음 단계</td></tr>
+  </table>
+  <p class="sub" style="margin-top:16px; font-size:20px">수집(실록·행사)은 호스트에서만 — 샌드박스 안에서는 외부 API 를 부르지 않는다 · <code>policy.kculture.yaml</code></p>
+</section>
+
+<!-- 7 한계 -->
+<section class="slide" data-notes="[4:40~5:00] 한계는 4개 구, 국역 없이 원문, 옛길 선 보류입니다. 근거가 보이고 모르면 모른다고 말하는 에이전트. 감사합니다.">
+  <p class="kicker">한계와 다음</p>
+  <h2>솔직하게 — 지금 범위</h2>
+  <ul style="margin-bottom:34px">
+    <li>대상 지역: 중구 · 종로구 · 마포구 · 강남구</li>
+    <li>실록은 국역 없음 — 원문 제시까지</li>
+    <li>옛길 선은 근거 데이터가 없어 보류</li>
+  </ul>
+  <p style="font-size:34px; text-align:center"><b>근거가 보이고, 모르면 모른다고 말하는 문화 안내 에이전트</b></p>
+  <p class="sub" style="text-align:center">감사합니다 — 팀 까딱이</p>
+</section>
+
+<div class="bar" id="bar"></div><div class="count" id="count"></div>
+</div></div>
+<div class="notes" id="notes"></div>
+
+<script>
+(() => {
+  const slides = [...document.querySelectorAll('.slide')];
+  const deck = document.getElementById('deck');
+  const bar = document.getElementById('bar'), count = document.getElementById('count'), notes = document.getElementById('notes');
+  let i = 0;
+  const fromHash = parseInt(location.hash.slice(1), 10);
+  if (fromHash >= 1 && fromHash <= slides.length) i = fromHash - 1;
+  function show(n) {
+    i = Math.max(0, Math.min(slides.length - 1, n));
+    slides.forEach((s, k) => s.classList.toggle('on', k === i));
+    bar.style.width = ((i + 1) / slides.length * 100) + '%';
+    count.textContent = (i + 1) + ' / ' + slides.length;
+    notes.textContent = slides[i].dataset.notes || '';
+    try { history.replaceState(null, '', '#' + (i + 1)); } catch (e) {}
+  }
+  function fit() {
+    const s = Math.min(innerWidth / 1280, innerHeight / 720);
+    deck.style.transform = 'scale(' + s + ')';
+  }
+  addEventListener('resize', fit); fit(); show(i);
+  addEventListener('keydown', (e) => {
+    if (['ArrowRight', 'PageDown', ' ', 'Enter'].includes(e.key)) { e.preventDefault(); show(i + 1); }
+    else if (['ArrowLeft', 'PageUp', 'Backspace'].includes(e.key)) { e.preventDefault(); show(i - 1); }
+    else if (e.key === 'Home') show(0);
+    else if (e.key === 'End') show(slides.length - 1);
+    else if (e.key === 'n' || e.key === 'N') document.body.classList.toggle('shownotes');
+    else if (e.key === 'f' || e.key === 'F') { document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen?.(); }
+  });
+  document.querySelector('.stage').addEventListener('click', (e) => { show(e.clientX > innerWidth / 2 ? i + 1 : i - 1); });
+})();
+</script>
+</body>
+</html>
