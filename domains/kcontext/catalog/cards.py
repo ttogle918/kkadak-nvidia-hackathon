@@ -270,8 +270,11 @@ def _rationale(card: Mapping, funnel: Mapping, result: Mapping) -> dict:
                 "rows": [{"k": _t(f"[{s['tier']}] {s['name']}", f"[{s['tier']}] {s['name']}"), "v": s["locator"]}
                          for s in card["sources"]]},
         "detour": {"title": detour,
-                   "text": _t("추가 이동시간 = 앞→행사 + 행사→뒤 − 앞→뒤. 경로 서비스 결과만 쓰고 직선거리로 대신하지 않습니다.",
-                              "Extra travel = prev→event + event→next − prev→next, from a route service only (never straight-line)."),
+                   "text": (_t("추가 이동시간 = 앞→행사 + 행사→뒤 − 앞→뒤. 직선거리 기반 예상 시간이며 경로 서비스 값이 아닙니다.",
+                               "Extra travel = prev→event + event→next − prev→next. A straight-line based estimate, not a route-service value.")
+                            if card["time_cost_estimated"] else
+                            _t("추가 이동시간 = 앞→행사 + 행사→뒤 − 앞→뒤. 경로 서비스 결과만 쓰고 직선거리로 대신하지 않습니다.",
+                               "Extra travel = prev→event + event→next − prev→next, from a route service only (never straight-line).")),
                    "rows": []},
     }
     if ev["interest_match"]:

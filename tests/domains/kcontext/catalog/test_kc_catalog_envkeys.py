@@ -87,3 +87,10 @@ def test_names_outside_the_catalog_allow_list_are_never_looked_up(tmp_path):
     env = resolve_catalog_env(("NVIDIA_API_KEY", "SECRET_UNRELATED", "SEOUL_OPENAPI_KEY"), dotenv_path=p,
                               environ={"NVIDIA_API_KEY": "shell-nv"})
     assert env == {"SEOUL_OPENAPI_KEY": "seoul-from-file"}
+
+
+def test_agent_role_never_reads_dotenv(tmp_path):
+    env = tmp_path / ".env"
+    env.write_text("SEOUL_OPENAPI_KEY=abc\n")
+    assert resolve_catalog_env(dotenv_path=env, environ={"APP_PROCESS_ROLE": "agent"}) == {}
+    assert key_origin("SEOUL_OPENAPI_KEY", dotenv_path=env, environ={"APP_PROCESS_ROLE": "agent"}) == "missing"

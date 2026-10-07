@@ -8,7 +8,10 @@
 
 from __future__ import annotations
 
+import ipaddress
+import json
 import math
+import time
 from urllib.parse import urlsplit
 
 import httpx
@@ -18,6 +21,17 @@ from domains.kcontext.catalog.routes import LatLng
 __all__ = ["OsrmWalkProvider"]
 
 MAX_CALLS = 200  # 한 인스턴스(= 한 요청)에서 부르는 횟수 상한
+MAX_BODY = 64 * 1024  # 응답 본문 상한(바이트)
+BUDGET_S = 20.0  # 한 인스턴스가 쓸 수 있는 전체 시간(호출 프로세스 제한 60초보다 짧게)
+
+
+def _loopback(host: str) -> bool:
+    if host == "localhost":
+        return True
+    try:
+        return ipaddress.ip_address(host).is_loopback
+    except ValueError:
+        return False
 
 
 class OsrmWalkProvider:
@@ -30,9 +44,12 @@ class OsrmWalkProvider:
         u = urlsplit(base_url)
         if u.scheme not in ("http", "https") or not u.hostname or u.username or u.password:
             raise ValueError("base_url 은 사용자 정보가 없는 http(s) 주소여야 한다")
+        if u.scheme == "http" and not _loopback(u.hostname):
+            raise ValueError("원격 경로 엔진은 https 만 쓴다(좌표가 평문으로 나가지 않게). http 는 루프백만 허용")
         self._base = base_url.rstrip("/")
         self._profile = profile
-        self._client = client or httpx.Client(timeout=timeout)
+        self._client = client or httpx.Client(timeout=timeout, follow_redirects=False)
+        self._deadline = time.monotonic() + BUDGET_S
         self._max = max_calls
         self._calls = 0
         self._cache: dict[tuple, int | None] = {}
@@ -45,16 +62,21 @@ class OsrmWalkProvider:
             if not (all(isinstance(x, (int, float)) and math.isfinite(x) for x in p) and -90 <= p[0] <= 90
                     and -180 <= p[1] <= 180):
                 return None
-        if self._calls >= self._max:
+        if self._calls >= self._max or time.monotonic() > self._deadline:
             return None
         self._calls += 1
         url = f"{self._base}/route/v1/{self._profile}/{a[1]:.6f},{a[0]:.6f};{b[1]:.6f},{b[0]:.6f}"
         try:
-            r = self._client.get(url, params={"overview": "false", "alternatives": "false"})
-            r.raise_for_status()
-            data = r.json()
-            dur = data["routes"][0]["duration"] if data.get("code") == "Ok" else None
-        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError):
+            with self._client.stream("GET", url, params={"overview": "false", "alternatives": "false"}) as r:
+                r.raise_for_status()
+                body = b""
+                for chunk in r.iter_bytes():
+                    body += chunk
+                    if len(body) > MAX_BODY:
+                        raise ValueError("response too large")
+            data = json.loads(body)
+            dur = data["routes"][0]["duration"] if isinstance(data, dict) and data.get("code") == "Ok" else None
+        except (httpx.HTTPError, ValueError, KeyError, IndexError, TypeError, AttributeError):
             dur = None
         out = max(1, math.ceil(float(dur) / 60)) if isinstance(dur, (int, float)) and not isinstance(dur, bool) \
             and math.isfinite(dur) and dur >= 0 else None

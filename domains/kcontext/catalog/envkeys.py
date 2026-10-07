@@ -29,7 +29,7 @@ def resolve_catalog_env(
     names = [n for n in names if n in CATALOG_KEY_NAMES]  # 호출자가 다른 이름을 넘겨도 카탈로그 키 밖은 찾지 않는다
     out = {n: src[n] for n in names if src.get(n, "").strip()}
     missing = [n for n in names if n not in out]
-    if missing:
+    if missing and src.get("APP_PROCESS_ROLE") != "agent":  # 에이전트 역할 프로세스는 .env 를 읽지 않는다(D13⑨)
         path = dotenv_path if dotenv_path is not None else repo_root() / ".env"
         out.update(load_allowed_keys(path, allowed=missing))
     return out
@@ -44,5 +44,7 @@ def key_origin(
     src = os.environ if environ is None else environ
     if src.get(name, "").strip():
         return "shell"
+    if src.get("APP_PROCESS_ROLE") == "agent":
+        return "missing"
     path = dotenv_path if dotenv_path is not None else repo_root() / ".env"
     return "dotenv" if name in load_allowed_keys(path, allowed=(name,)) else "missing"

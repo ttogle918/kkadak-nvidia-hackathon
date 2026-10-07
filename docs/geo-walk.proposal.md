@@ -4,10 +4,11 @@
 
 ## 구현한 것
 - `KC_ROUTE_PROVIDER` = `none`(기본) | `estimate` | `osm` | `chain`. 모르는 값·잘못된 주소는 `none`.
-- `osm`: `KC_OSM_ROUTER_URL` 의 OSRM 호환 경로 엔진(`/route/v1/foot/...`). 호출 수 상한, 사용자 정보 포함 URL·http(s) 외 거부, 실패는 "모름".
+- **직선 추정은 잠겨 있다.** D13 ⑥ 이 바뀌기 전에는 `KC_ROUTE_ESTIMATE_APPROVED=1` 을 운영자가 명시해야만 켜진다(리뷰어 B1 반영).
+- `osm`: `KC_OSM_ROUTER_URL` 의 OSRM 호환 경로 엔진(`/route/v1/foot/...`). 호출 수 상한(200)·전체 시간 예산(20초)·응답 64KB 상한, 사용자 정보 포함 URL·http(s) 외 거부, 원격은 https 만(http 는 루프백), 실패·형식 불일치는 "모름".
 - `estimate`: 직선거리 × 1.3 ÷ 67 m/분(올림). 항상 `estimated=true`.
 - `chain`: 경로 엔진 → 직선 추정 순서. 한 구간이라도 추정이면 결과 전체가 추정.
-- `fit`: 추정값이 하나라도 쓰이면 `fit`(넣을 수 있음)을 내지 않고 `check_needed` + 사유 `travel_estimated`. 카드는 "예상 시간"으로 표시.
+- `fit`: 추정값이 하나라도 쓰이면 `fit`(넣을 수 있음)도 `no_fit`(맞지 않음)도 내지 않고 `check_needed` + 사유 `travel_estimated`. 카드는 "예상 시간"으로 표시.
 
 ## 구현하지 못한 것 (사실대로)
 - **카카오맵 MCP**: 호출 방식·키·약관을 확인하지 못했다. 연결하지 않았고, 연결한 것처럼 쓰지 않는다. 확인되면 `RouteProvider` 하나를 체인 맨 앞에 넣으면 된다.

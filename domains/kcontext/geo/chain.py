@@ -62,6 +62,7 @@ def make_route_provider(env: Mapping[str, str] | None = None) -> RouteProvider:
             chain.append(OsrmWalkProvider(url))
         except ValueError:
             pass  # 잘못된 주소는 쓰지 않는다
-    if mode in ("estimate", "chain"):
+    # D13 ⑥ 은 직선 추정을 금지한다. 결정이 바뀌기 전(docs/geo-walk.proposal.md)에는 운영자가 명시해야만 켠다.
+    if mode in ("estimate", "chain") and e.get("KC_ROUTE_ESTIMATE_APPROVED") == "1":
         chain.append(StraightLineEstimator())
     return ChainRouteProvider(chain) if chain else NullRouteProvider()

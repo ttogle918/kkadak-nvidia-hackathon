@@ -163,16 +163,17 @@ def fit_event(
                     status = "check_needed"
                 reasons.append(_reason("travel_estimated", "예상 시간(경로 서비스 값이 아님) — 확인 필요",
                                        "Estimated time (not from a route service) — needs checking"))
+            est = bool(provider.estimated)  # 추정값으로는 "맞지 않음"도 단정하지 않는다(확인 필요로만 남김)
             if a is not None and prev is not None and start - _m(prev["end"]) < a:
-                status = "no_fit"
+                status = "check_needed" if est and status != "no_fit" else ("no_fit" if not est else status)
                 reasons.append(_reason("not_enough_time_before", "앞 일정에서 이동할 시간이 부족함",
                                        "Not enough time to travel from the previous plan", needed=a))
             if b is not None and nxt is not None and _m(nxt["start"]) - end < b and dur_known:
-                status = "no_fit"
+                status = "check_needed" if est and status != "no_fit" else ("no_fit" if not est else status)
                 reasons.append(_reason("not_enough_time_after", "뒤 일정까지 이동할 시간이 부족함",
                                        "Not enough time to reach the next plan", needed=b))
             if extra is not None and extra > cfg.max_extra_minutes:
-                status = "no_fit"
+                status = "check_needed" if est and status != "no_fit" else ("no_fit" if not est else status)
                 reasons.append(_reason("too_far", f"추가 이동시간 {extra}분이 허용({cfg.max_extra_minutes}분)을 넘음",
                                        f"Extra travel {extra} min exceeds your limit ({cfg.max_extra_minutes} min)",
                                        extra=extra))

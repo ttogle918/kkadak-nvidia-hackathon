@@ -53,7 +53,7 @@ def test_osrm_provider_parses_duration_and_caches():
         seen.append(str(req.url))
         return httpx.Response(200, json={"code": "Ok", "routes": [{"duration": 301}]})
 
-    p = OsrmWalkProvider("http://router.local:5000", client=_client(h))
+    p = OsrmWalkProvider("https://router.local:5000", client=_client(h))
     assert p.estimated is False and p.minutes(A, V) == 6 and p.minutes(A, V) == 6
     assert len(seen) == 1 and "/route/v1/foot/126.995000,37.570000" not in seen[0] and "foot/126.990000,37.560000;126.995000,37.570000" in seen[0]
 
@@ -65,7 +65,7 @@ def test_osrm_provider_parses_duration_and_caches():
     httpx.Response(200, json={"code": "Ok", "routes": [{"duration": True}]}),
 ])
 def test_osrm_provider_failures_are_unknown_not_guesses(resp):
-    p = OsrmWalkProvider("http://router.local:5000", client=_client(lambda r: resp))
+    p = OsrmWalkProvider("https://router.local:5000", client=_client(lambda r: resp))
     assert p.minutes(A, V) is None
 
 
@@ -74,17 +74,20 @@ def test_osrm_rejects_credentials_in_url_and_caps_calls():
         OsrmWalkProvider("http://u:p@host")
     with pytest.raises(ValueError):
         OsrmWalkProvider("file:///etc/passwd")
-    p = OsrmWalkProvider("http://r", max_calls=1, client=_client(
+    with pytest.raises(ValueError):
+        OsrmWalkProvider("http://router.example.com")  # 원격 http 거부
+    OsrmWalkProvider("http://127.0.0.1:5000")  # 루프백 http 는 허용
+    p = OsrmWalkProvider("https://r", max_calls=1, client=_client(
         lambda r: httpx.Response(200, json={"code": "Ok", "routes": [{"duration": 60}]})))
     assert p.minutes(A, V) == 1 and p.minutes(V, B) is None
 
 
 def test_chain_prefers_engine_then_estimate_and_tracks_estimated():
-    eng = OsrmWalkProvider("http://r", client=_client(lambda r: httpx.Response(500)))
+    eng = OsrmWalkProvider("https://r", client=_client(lambda r: httpx.Response(500)))
     c = ChainRouteProvider([eng, StraightLineEstimator()])
     c.begin()
     assert c.minutes(A, V) is not None and c.estimated is True and c.name == "straight_line_estimate"
-    ok = OsrmWalkProvider("http://r", client=_client(
+    ok = OsrmWalkProvider("https://r", client=_client(
         lambda r: httpx.Response(200, json={"code": "Ok", "routes": [{"duration": 120}]})))
     c2 = ChainRouteProvider([ok, StraightLineEstimator()])
     c2.begin()
@@ -96,7 +99,8 @@ def test_make_provider_defaults_to_none_and_ignores_bad_config():
     assert isinstance(make_route_provider({"KC_ROUTE_PROVIDER": "weird"}), NullRouteProvider)
     assert isinstance(make_route_provider({"KC_ROUTE_PROVIDER": "osm"}), NullRouteProvider)  # URL 없음
     assert isinstance(make_route_provider({"KC_ROUTE_PROVIDER": "osm", "KC_OSM_ROUTER_URL": "ftp://x"}), NullRouteProvider)
-    est = make_route_provider({"KC_ROUTE_PROVIDER": "estimate"})
+    assert isinstance(make_route_provider({"KC_ROUTE_PROVIDER": "estimate"}), NullRouteProvider)  # 결정 승인 전 잠금
+    est = make_route_provider({"KC_ROUTE_PROVIDER": "estimate", "KC_ROUTE_ESTIMATE_APPROVED": "1"})
     assert est.estimated is False  # 아직 쓰지 않았다 — 값을 준 뒤에 추정 여부가 정해진다
     assert est.minutes(A, V) is not None and est.estimated is True
 
@@ -113,7 +117,26 @@ def _plan(id, s, e, loc):
 
 
 def test_fit_never_says_fit_from_estimated_times():
-    prov = make_route_provider({"KC_ROUTE_PROVIDER": "estimate"})
+    prov = make_route_provider({"KC_ROUTE_PROVIDER": "estimate", "KC_ROUTE_ESTIMATE_APPROVED": "1"})
     (s,) = fit_event(_event(), [_plan("낮", "10:00", "12:00", A), _plan("밤", "22:00", "23:00", B)], prov)
     assert s["route"]["estimated"] is True and s["extra_minutes"] is not None
     assert s["status"] != "fit" and any(r["code"] == "travel_estimated" for r in s["reasons"])
+
+
+def test_osrm_non_object_json_and_oversize_and_deadline_are_unknown(monkeypatch):
+    for resp in (httpx.Response(200, json=[1, 2]), httpx.Response(200, json="x"),
+                 httpx.Response(200, content=b"{" + b" " * 70_000 + b"}")):
+        p = OsrmWalkProvider("https://r", client=_client(lambda r, resp=resp: resp))
+        assert p.minutes(A, V) is None
+    from domains.kcontext.geo import osm
+    p = OsrmWalkProvider("https://r", client=_client(
+        lambda r: httpx.Response(200, json={"code": "Ok", "routes": [{"duration": 60}]})))
+    monkeypatch.setattr(osm.time, "monotonic", lambda: 1e12)
+    assert p.minutes(A, V) is None
+
+
+def test_estimated_values_do_not_make_no_fit():
+    prov = make_route_provider({"KC_ROUTE_PROVIDER": "estimate", "KC_ROUTE_ESTIMATE_APPROVED": "1"})
+    # 뒤 일정이 행사 직후라 시간 부족처럼 보여도 추정값만으로는 no_fit 이 아니다
+    (s,) = fit_event(_event(), [_plan("밤", "20:31", "22:00", B)], prov)
+    assert s["status"] == "check_needed"

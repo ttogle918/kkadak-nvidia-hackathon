@@ -40,10 +40,10 @@ def run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None
         # 그 출처의 키 하나만, 이 프로세스(backend)가 셸 env 에서 — 없으면 `.env` 의 허용 목록 이름에서 — 골라 넘긴다.
         # 자식(APP_PROCESS_ROLE=agent)은 `.env` 를 읽지 않는다. 허용 밖 이름은 읽지도 않는다.
         wanted = _SOURCE_KEYS.get(str(args.get("source_id")), ())
-        missing = [k for k in wanted if not os.environ.get(k)]
+        missing = [k for k in wanted if not os.environ.get(k, "").strip()]
         dotenv = load_allowed_keys(REPO_ROOT / ".env", allowed=missing) if missing else {}
         for k in wanted:
-            v = os.environ.get(k) or dotenv.get(k)
+            v = os.environ.get(k, "").strip() and os.environ[k] or dotenv.get(k)
             if v:
                 env[k] = v
     try:

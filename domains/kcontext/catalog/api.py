@@ -110,7 +110,8 @@ def handle(
         return _search(args, store, sources, now, provider)
     if op == "cards":
         res = _search(args, store, sources, now, provider)
-        out = build_now_cards(res, args, include_demo=bool(args.get("include_demo")))
+        out = build_now_cards(res, args, null_unknown_time_cost=True,
+                             include_demo=bool(args.get("include_demo")))
         out["coverage"], out["problems"] = res["coverage"], res["problems"]
         return out
     if op == "detail":
