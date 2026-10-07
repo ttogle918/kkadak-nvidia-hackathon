@@ -96,8 +96,8 @@ docs/                  이 문서들
 
 ### 4단계. NVIDIA 기술을 깊게
 
-- [ ] L40S에 로컬 NIM 올리기: 임베딩, 리랭커, 비전, 가드, 경량 ⚠ 미해결 충돌: D1·D6 와 어긋남 — 사람 결정 대기
-- [ ] 검색을 로컬 임베딩·리랭커로 바꾸기 — 임베딩 시험(예비, `docs/spikes/sillok_embedding.md`: 제목+본문 권장)과 벡터 저장·검색(`chunk_embeddings`)까지. 임베딩 호출 클라이언트·색인 채우기는 미구현. 이 PC 는 GPU 없음 ⚠ 미해결 충돌: D8 과 어긋남 — 사람 결정 대기
+- [ ] L40S에 로컬 NIM 올리기: 임베딩·리랭커는 제외(위 결정), 비전, 가드, 경량 ⚠ 미해결 충돌: D1·D6 와 어긋남 — 사람 결정 대기
+- [~] 검색을 로컬 임베딩·리랭커로 바꾸기 — **하지 않기로 했다(2026-10-07, 사용자 결정).** 자료를 가져와 입력으로 넣고 판단하는 방식(in → out)으로 가고, 검색은 D8 의 FTS5 trigram 을 그대로 쓴다. 이미 만든 `chunk_embeddings`·임베딩 시험(`docs/spikes/sillok_embedding.md`)은 쓰지 않는 채로 둔다(삭제하지 않음)
 - [x] 보안 로그 화면(`/api/audit`, 프론트 `securitylog`), 공격 프롬프트 차단(챗봇이 주입 질문에 거부 응답·audit `deny` 확인)
 - [ ] 새 출처 승인 시연 — 프론트 `decideAudit` 이 `ApiNotImplementedError`(백엔드 `/api/audit/{id}/decision` 는 있다)
 - [x] 키가 보이지 않는 것 — 샌드박스 환경변수에 키·토큰·시크릿 0건, 외부 접속 DENIED, `/tmp` 밖 쓰기 불가(`policy.kculture.yaml` 실측). 지식 DB 쓰기 금지는 미확인
