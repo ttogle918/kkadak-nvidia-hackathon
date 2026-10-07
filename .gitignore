@@ -27,3 +27,6 @@ var/
 domains/kcontext/data/raw/*
 !domains/kcontext/data/raw/.gitkeep
 frontend/k-context/config.local.js
+
+# 대회 제공 평가 패키지(별도 레포를 clone 한 것) — 올리지 않는다
+test_condition/
