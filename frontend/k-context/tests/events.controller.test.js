@@ -229,3 +229,16 @@ test('검색 경쟁: 먼저 시작한 느린 검색의 응답이 최신 결과�
   assert.deepEqual(get(x).result.events.map((e) => e.id), ['2026-10-17']);
   assert.equal(get(x).loading, false);
 });
+
+
+test('저장된 일정의 표시용 키가 틀려도 그 키만 버리고 일정은 남긴다', () => {
+  const storage = memStorage();
+  storage.setItem('kc.events.v1.demo', JSON.stringify({ itinerary: [
+    { id: 'a', title: '점심', date: '2026-10-16', start: '12:00', end: '13:00', source: 'evil', entry_id: 'x'.repeat(41), end_assumed: 'yes' },
+    { id: 'b', title: '행사', date: '2026-10-16', start: '19:00', end: '20:00', source: 'catalog', entry_id: 'demo:1', end_assumed: true },
+  ] }));
+  const x = setup(createMockEventsApi(), storage);
+  const [a, b] = get(x).itinerary;
+  assert.deepEqual([a.source, a.entry_id, a.end_assumed], [undefined, undefined, undefined]);
+  assert.deepEqual([b.source, b.entry_id, b.end_assumed], ['catalog', 'demo:1', true]);
+});

@@ -145,8 +145,15 @@ def fit_event(
             if basis == "none":
                 if status == "fit":
                     status = "check_needed"
-                reasons.append(_reason("no_reference", "비교할 앞뒤 일정과 출발 위치가 없어 이동시간을 계산하지 않음",
-                                       "No neighboring plan or starting point to compute travel from"))
+                if nxt is not None:
+                    reasons.append(_reason("no_before_reference", "앞 일정과 출발 위치가 없어 뒤 일정까지의 이동만 확인함",
+                                           "No earlier plan or starting point; only the trip to the next plan was checked"))
+                else:
+                    reasons.append(_reason("no_reference", "비교할 앞뒤 일정과 출발 위치가 없어 이동시간을 계산하지 않음",
+                                           "No neighboring plan or starting point to compute travel from"))
+            if status == "fit" and cfg.assumed_duration_min and not (is_hhmm(s.get("end_time")) and _m(s["end_time"]) > start):
+                reasons.append(_reason("duration_assumed", f"종료 시각을 모르는 회차 — 사용자가 정한 {cfg.assumed_duration_min}분으로 계산함",
+                                       f"The session end is unknown; calculated with your {cfg.assumed_duration_min} min"))
             if a is not None and prev is not None and start - _m(prev["end"]) < a:
                 status = "no_fit"
                 reasons.append(_reason("not_enough_time_before", "앞 일정에서 이동할 시간이 부족함",

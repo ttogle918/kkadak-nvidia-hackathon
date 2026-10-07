@@ -30,7 +30,14 @@ function cleanPlans(v) {
   if (!Array.isArray(v)) return [];
   const ok = v.filter((p) => p && typeof p === 'object' && typeof p.id === 'string' && p.id && p.id.length <= 80
     && validatePlan(p) && (p.lat == null || typeof p.lat === 'number') && (p.lng == null || typeof p.lng === 'number'));
-  return sortPlans(ok.slice(0, 60).map((p) => ({ ...p, title: String(p.title ?? '').slice(0, 120) })));
+  return sortPlans(ok.slice(0, 60).map((p) => {
+    const o = { ...p, title: String(p.title ?? '').slice(0, 120) };
+    // 서버가 받는 표시용 키는 허용 값만 남긴다(틀린 값 하나가 모든 검색을 422 로 막지 않게)
+    if (!['user', 'catalog', 'demo'].includes(o.source)) delete o.source;
+    if (typeof o.entry_id !== 'string' || o.entry_id.length > 40) delete o.entry_id;
+    if (typeof o.end_assumed !== 'boolean') delete o.end_assumed;
+    return o;
+  }));
 }
 function cleanSaved(v) {
   if (!v || typeof v !== 'object' || Array.isArray(v)) return {};

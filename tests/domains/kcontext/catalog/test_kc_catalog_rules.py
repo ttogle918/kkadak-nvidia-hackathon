@@ -227,3 +227,30 @@ def test_start_date_alone_never_means_ended():
     assert event_lifecycle(today, NOW) == "ongoing"
     future = EventEntry(id="ev:x", title="○○", schedule=Schedule(start_date="2026-10-20"))
     assert event_lifecycle(future, NOW) == "scheduled"
+
+
+# ---- 3차 검토(reviewer) 재발 방지: 참여조건 오탐 ----------------------------------------------
+@pytest.mark.parametrize("text", [
+    "역삼동 주민센터에서 접수", "○○동 주민자치회 주최", "대상 거주지 무관", "서울 거주지와 관계없이",
+    "서울시민청에서 진행", "국내외국인 거주자", "구민 만 65세 이상 무료", "구민 대상 할인",
+])
+def test_words_that_only_look_like_a_residency_condition_are_ignored(text):
+    assert parse_eligibility(text).resident_only == "unknown"
+
+
+@pytest.mark.parametrize("text", ["회원가입 없이 누구나", "인터파크 회원 할인", "비회원도 가능", "학부모 동반 가능", "회원 혜택 안내"])
+def test_member_words_in_signup_or_perk_phrases_are_not_restrictions(text):
+    assert not any(r["kind"] == "other" for r in parse_eligibility(text).restrictions)
+
+
+@pytest.mark.parametrize("text", ["회원 전용", "회원 누구나", "재학생 한정", "수강생 대상"])
+def test_member_exclusive_phrases_are_restrictions(text):
+    e = parse_eligibility(text)
+    assert any(r["kind"] == "other" for r in e.restrictions) and e.stated_open == "unknown"
+
+
+def test_age_words_in_free_text_need_a_condition_word_but_the_audience_field_does_not():
+    assert not parse_eligibility("누구나", extra="어린이대공원 근처에서 열린다").age_limit
+    assert not parse_eligibility("누구나", extra="어린이날 특집, 성인 10,000원").age_limit
+    assert parse_eligibility("누구나", extra="어린이 대상 프로그램").age_limit
+    assert parse_eligibility("초등학생").age_limit == "초등학생"  # 이용대상 칸의 낱말은 대상 조건이다

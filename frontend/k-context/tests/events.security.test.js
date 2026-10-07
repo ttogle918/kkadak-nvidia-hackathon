@@ -20,6 +20,8 @@ test('?base= 로 받은 외부 주소는 쓰지 않는다(events·admin 둘 다)
   assert.doesNotMatch(a.api.baseUrl, /evil/);
   const ok = await bootEvents(root(), '?api=http&base=http://127.0.0.1:8000/api');
   assert.equal(ok.api.baseUrl, 'http://127.0.0.1:8000/api');
+  const other = await bootEvents(root(), '?api=http&base=http://127.0.0.1:9999/api');
+  assert.doesNotMatch(other.api.baseUrl, /9999/);
 });
 
 test('두 페이지 모두 CSP 가 있고 외부 연결·스크립트를 허용하지 않는다', () => {
@@ -108,4 +110,22 @@ test('합성 이야기는 데모 표시와 함께 나온다', async () => {
   const stories = byClass(x.root, 'ev-stories')[0];
   assert.match(stories.text, /데모/);
   assert.match(stories.text, /서비스 제안/);
+});
+
+test('?base= 를 바꾼 관리자 화면은 저장된 토큰을 자동으로 보내지 않는다', async () => {
+  const calls = [];
+  globalThis.sessionStorage = { getItem: (k) => (k === 'kc.admin.token' ? JSON.stringify('saved-token') : null), setItem() {}, removeItem() {} };
+  globalThis.fetch = async (url, init) => { calls.push([url, init?.headers?.['X-Admin-Token']]); throw new TypeError('offline'); };
+  await bootAdmin(new El('div', 'html'), '?base=http://127.0.0.1:8000/api');
+  assert.equal(calls.length, 0);
+  await bootAdmin(new El('div', 'html'), '');
+  await tick();
+  assert.ok(calls.length >= 1 && calls.every((c) => c[1] === 'saved-token'));
+  delete globalThis.sessionStorage;
+});
+
+test('index 화면도 ?base= 를 검증한다', () => {
+  const src = readFileSync(new URL('../src/main.js', import.meta.url), 'utf8');
+  assert.match(src, /safeBase\(q\.get\('base'\)\)/);
+  assert.doesNotMatch(src, /[^(]q\.get\('base'\) \|\|/);
 });

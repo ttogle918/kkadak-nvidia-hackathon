@@ -151,7 +151,8 @@ export async function boot(root = document.getElementById('app'), search = locat
   const admin = createAdmin({ api, session: safeStorage('session') });
   if (q.get('lang') === 'en') admin.setLang('en');
   const view = mountAdmin(root, { admin, api });
-  if (admin.store.getState().token) admin.load();
+  // ?base= 로 주소를 바꿨으면 저장된 토큰을 자동으로 보내지 않는다(관리자가 직접 "불러오기"를 누른다)
+  if (admin.store.getState().token && !q.get('base')) admin.load();
   return { admin, view, api };
 }
 

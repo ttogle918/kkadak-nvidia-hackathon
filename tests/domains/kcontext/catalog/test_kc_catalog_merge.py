@@ -1,7 +1,7 @@
 from kc_catalog_helpers import NOW, obs, session
 
 from domains.kcontext.catalog.merge import build_entries, same_event
-from domains.kcontext.catalog.model import Eligibility, Observation, Reservation
+from domains.kcontext.catalog.model import Eligibility, Observation, Price, Reservation
 
 
 def build(*o, **kw):
@@ -301,3 +301,79 @@ def test_entry_ids_stay_unique_when_a_previous_group_splits():
     b = obs("s:2", title="△△ 전시", venue_name="□□ 관", external_ids=("a:2",))
     ents = build(a, b, prior={"a:1": "ev:old", "a:2": "ev:old"})
     assert len({e.id for e in ents}) == 2
+
+
+# ---- 3차 검토(reviewer) 재발 방지: 비운 값이 다른 필드로 다시 나타나지 않는다 ----------------
+def _conflicting_pair(**kw):
+    from dataclasses import replace
+
+    a = obs("s:1", external_ids=("k",), origin="o1", start="2026-10-16", end="2026-10-16",
+            price_kind="free", sessions=(session("2026-10-16"),))
+    a = replace(a, price=Price(kind="free", text="무료 입장"), reservation=Reservation(required="yes", link="https://a.invalid/r", status="open", deadline="2026-10-15"))
+    b = obs("s:2", external_ids=("k",), origin="o2", start="2026-10-17", end="2026-10-17",
+            price_kind="paid", sessions=(session("2026-10-17"),))
+    b = replace(b, price=Price(kind="paid", text="10,000원"), reservation=Reservation(required="no", status="closed"))
+    return build(a, b)
+
+
+def test_unresolved_price_conflict_hides_the_price_text_too():
+    (e,) = _conflicting_pair()
+    assert e.price.kind == "unknown" and e.price.text == ""
+
+
+def test_unresolved_date_conflict_hides_the_sessions_so_no_session_match_appears():
+    from kc_catalog_helpers import NOW as N
+
+    from domains.kcontext.catalog.query import search_events
+
+    (e,) = _conflicting_pair()
+    assert e.schedule.start_date is None and e.schedule.sessions == ()
+    r = search_events([e], {"trip": {"from": "2026-10-15", "to": "2026-10-18"}}, now=N)
+    assert all(x["availability"] != "session_match" for x in r["events"])
+
+
+def test_unresolved_reservation_conflict_clears_link_deadline_and_status():
+    (e,) = _conflicting_pair()
+    r = e.reservation
+    assert (r.required, r.link, r.deadline, r.status) == ("unknown", "", None, "unknown")
+    assert e.reservation_status == "unknown"
+
+
+def test_sessions_that_disagree_between_sources_are_a_conflict():
+    a = obs("s:1", external_ids=("k",), origin="o1", sessions=(session("2026-10-16", "19:00", "20:30"),))
+    b = obs("s:2", external_ids=("k",), origin="o2", sessions=(session("2026-10-16", "20:00", "21:30"),))
+    (e,) = build(a, b)
+    assert any(c["field"] == "sessions" and not c["resolved"] for c in e.conflicts)
+    assert e.schedule.sessions == () and e.verification == "conflict"
+
+
+def test_only_the_start_date_known_does_not_exclude_the_following_trip_days():
+    from kc_catalog_helpers import NOW as N
+
+    from domains.kcontext.catalog.query import search_events
+
+    (e,) = build(obs("s:1", start="2026-10-15", end=None))
+    r = search_events([e], {"trip": {"from": "2026-10-15", "to": "2026-10-18"}}, now=N)
+    (ev,) = r["events"]
+    states = {d["date"]: d["state"] for d in ev["matching_dates"]}
+    assert states["2026-10-16"] == "unknown" and "종료일" in {d["date"]: d["reason"] for d in ev["matching_dates"]}["2026-10-16"]
+
+
+def test_names_that_refer_to_the_same_place_are_not_a_venue_conflict():
+    a = obs("s:1", external_ids=("k",), origin="o1", venue_name="세종문화회관")
+    b = obs("s:2", external_ids=("k",), origin="o2", venue_name="세종문화회관 대극장")
+    (e,) = build(a, b)
+    assert not any(c["field"] == "venue_name" for c in e.conflicts)
+    assert e.venue.in_target == "yes"
+
+
+def test_closures_and_hours_come_only_from_trusted_sources():
+    from dataclasses import replace
+
+    off = obs("s:1", external_ids=("k",), origin="o1")
+    sns = obs("n:1", external_ids=("k",), kind="sns", origin="o2", source_id="sns")
+    sns = replace(sns, schedule=replace(sns.schedule, closed_dates=("2026-10-16",), weekly_closed_days=(4,), hours_text="비공식"),
+                  reservation=Reservation(required="no"))
+    (e,) = build(off, sns)
+    assert e.schedule.closed_dates == () and e.schedule.weekly_closed_days == () and e.schedule.hours_text == ""
+    assert e.reservation.required == "unknown"  # SNS 가 "예약 불필요"라고 해도 사실로 쓰지 않는다

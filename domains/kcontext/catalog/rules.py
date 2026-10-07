@@ -105,15 +105,21 @@ def _address_district(addr: str, city_hint: str) -> str:
 # ---- 참여조건 -------------------------------------------------------------------------------
 
 _RESIDENT = re.compile(r"([가-힣]{1,4}(?:시민|구민|군민|도민))")
-_RESIDENT2 = re.compile(r"([가-힣]{1,6})\s*(?:거주자?|거주민|주민)(?!\s*등록)")
+_RESIDENT2 = re.compile(r"([가-힣]{1,6})\s*(?:거주자?|거주민|주민)")
 _GENERIC_PREFIX = ("일반", "모든", "전체", "모두", "내외국인", "외국인")
+# 거주 조건이 아닌 낱말("주민센터", "주민등록", "거주지 무관", "서울시민청")
+_BAD_RESIDENT_TAIL = re.compile(r"^\s*(?:센터|자치|등록|지(?:와|에|는)?\s*(?:무관|관계)|청|사무|행정|에서|세터)")
 _PERK = re.compile(r"우대|할인|가산|감면|무료|혜택")
-_EXCLUSIVE = re.compile(r"^\s*(?:에게만|만|한정|전용|대상|에\s*한함|에\s*한해)")
+_EXCLUSIVE = re.compile(r"^\s*(?:에게만|만(?!\s*\d)|한정|전용|대상(?!\s*(?:할인|우대|무료|혜택))|에\s*한함|에\s*한해)")
+_AGE_WORD = r"(?:영유아|유아|어린이|초등학생|중학생|고등학생|청소년|성인|어르신|노인)"
 _AGE = re.compile(
     r"(?:만\s*)?(\d{1,2})\s*세\s*(이상|이하|미만|초과)|(\d{1,3})\s*개월\s*(이상|이하|미만|초과)"
-    r"|(영유아|유아|어린이|초등학생|중학생|고등학생|청소년|성인|어르신|노인)"
+    rf"|({_AGE_WORD})\s*(?:대상|이상|이하|만|전용|관람가)"
 )
-_MEMBER = re.compile(r"(회원|가입자|멤버십|동호회|재학생|재직자|학부모|수강생|참가팀)")
+# 회원 조건: 배타·대상 표현이 붙고 가입 안내·혜택·부정("비회원", "없이")이 아닐 때만
+_AGE_BARE = re.compile(_AGE_WORD)  # 이용대상 칸(audience)은 낱말만 있어도 대상 조건이다. 자유 서술(extra)은 조건어가 붙어야 한다.
+_MEMBER = re.compile(r"(?<!비)(회원|가입자|멤버십|동호회|재학생|재직자|학부모|수강생)\s*(?:만|전용|한정|대상|누구나|모두|에게|이면)")
+_MEMBER_BAD = re.compile(r"가입\s*없이|가입\s*불필요|비회원|회원\s*(?:할인|혜택|가입|카드|포인트)")
 _OPEN = re.compile(r"누구나|전\s*연령|전체\s*관람가|제한\s*없음|연령\s*제한\s*없음|모든\s*시민|모두\s*참여")
 _FOREIGN_OK = re.compile(
     r"외국인(?!등록)(?:\s*(?:관광객|방문객))?\s*(?:도\s*)?(?:참여|참가|관람|이용|입장)?\s*(?:가능|환영)"
@@ -128,7 +134,10 @@ def _resident_hits(text: str) -> list[tuple[int, int, str]]:
         for m in rx.finditer(text):
             word = m.group(1)
             prefix = re.sub(r"(?:시민|구민|군민|도민)$", "", word) if rx is _RESIDENT else word
-            if prefix in _GENERIC_PREFIX or (rx is _RESIDENT and not prefix):
+            if prefix in _GENERIC_PREFIX or "외국인" in prefix or (rx is _RESIDENT and not prefix):
+                continue
+            if _BAD_RESIDENT_TAIL.match(text[m.end(): m.end() + 6]) or re.search(
+                    r"(?:무관|관계\s*없이)\s*$", text[max(0, m.start() - 6): m.start()]):
                 continue
             hits.append((m.start(), m.end(), m.group(0)))
     return hits
@@ -153,11 +162,20 @@ def parse_eligibility(audience: str, *, extra: str = "") -> Eligibility:
         resident = "yes"
         restrictions.append({"kind": "resident", "text": word, "reason": f"거주 조건: {word}"})
     age_text = ""
-    for m in _AGE.finditer(text):
+    aud = norm_text(audience)
+    spans = [m for m in _AGE_BARE.finditer(aud)] + [m for m in _AGE.finditer(norm_text(extra))]
+    spans += [m for m in _AGE.finditer(aud) if not _AGE_BARE.fullmatch(m.group(0))]
+    seen_age: set[str] = set()
+    for m in spans:
+        if m.group(0) in seen_age:
+            continue
+        seen_age.add(m.group(0))
         age_text = (age_text + " " + m.group(0)).strip()
         restrictions.append({"kind": "age", "text": m.group(0), "reason": f"연령 조건: {m.group(0)}"})
     for m in _MEMBER.finditer(text):
-        restrictions.append({"kind": "other", "text": m.group(0), "reason": f"대상 조건: {m.group(0)}"})
+        if _MEMBER_BAD.search(text[max(0, m.start() - 4): m.end() + 6]):
+            continue
+        restrictions.append({"kind": "other", "text": m.group(0), "reason": f"대상 조건: {m.group(1)}"})
     foreigner = "unknown"
     if _FOREIGN_NO.search(text):
         foreigner = "excluded"
@@ -201,6 +219,8 @@ def is_operating_day(sched: Schedule, day: date) -> tuple[Tri, str]:
         return "no", "시작 전"
     if sched.end_date and iso > sched.end_date:
         return "no", "종료 후"
+    if sched.start_date and not sched.end_date and not sched.sessions and iso > sched.start_date:
+        return "unknown", "종료일 확인 필요"
     if not sched.start_date and not sched.end_date and not sched.sessions:
         return "unknown", "날짜 미확인"
     if iso in sched.closed_dates:

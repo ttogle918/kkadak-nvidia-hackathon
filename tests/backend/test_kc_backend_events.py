@@ -291,3 +291,32 @@ def test_corrupt_catalog_is_a_server_error_not_a_bad_request(tmp_path):
                  reviewer_id="human:demo", catalog_dir=tmp_path / "cat", admin_token=TOKEN)
     r = TestClient(create_app(s)).post("/api/events/search", json={"trip": TRIP})
     assert r.status_code == 500 and r.json()["error"]["code"] == "internal_error"
+
+
+# ---- 3차 검토(reviewer): 에이전트 역할 자식은 .env 를 읽지 않는다 ----
+def test_child_process_never_reads_dotenv(monkeypatch, tmp_path):
+    (tmp_path / ".env").write_text("SEOUL_OPENAPI_KEY=from-dotenv-1234\nNVIDIA_API_KEY=nv-secret-9999\nTAVILY_SEARCH_KEY=tv-secret\n",
+                                   encoding="utf-8")
+    monkeypatch.setattr(catalog_runner, "REPO_ROOT", tmp_path)
+    for k in ("SEOUL_OPENAPI_KEY", "NVIDIA_API_KEY", "TAVILY_SEARCH_KEY", "DATA_GO_KR_SERVICE_KEY"):
+        monkeypatch.delenv(k, raising=False)
+    seen = []
+
+    def fake(cmd, **kw):
+        seen.append(kw["env"])
+        return subprocess.CompletedProcess(cmd, 0, stdout=json.dumps({"ok": True}), stderr="")
+
+    monkeypatch.setattr(catalog_runner.subprocess, "run", fake)
+    run_catalog(tmp_path / "cat", "search", {})
+    run_catalog(tmp_path / "cat", "admin_refresh", {"source_id": "seoul_openapi"}, "human:demo")
+    search_env, refresh_env = seen
+    assert not {"SEOUL_OPENAPI_KEY", "NVIDIA_API_KEY", "TAVILY_SEARCH_KEY"} & set(search_env)
+    assert refresh_env["SEOUL_OPENAPI_KEY"] == "from-dotenv-1234"  # .env 에서 그 출처의 키 하나만 backend 가 골라 준다
+    assert "NVIDIA_API_KEY" not in refresh_env and "TAVILY_SEARCH_KEY" not in refresh_env
+
+
+def test_catalog_api_module_does_not_load_dotenv():
+    from pathlib import Path
+
+    src = (Path(__file__).resolve().parents[2] / "domains/kcontext/catalog/api.py").read_text(encoding="utf-8")
+    assert "dotenv" not in src and "_env()" not in src

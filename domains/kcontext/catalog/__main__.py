@@ -92,8 +92,10 @@ def main(argv: Sequence[str] | None = None) -> int:
         print(json.dumps(status(store, sources), ensure_ascii=False, indent=1))
         return 0
     if a.cmd == "update":
-        if a.sample and not a.dir:
-            print("--sample(5행 연결 확인)은 실제 카탈로그를 오염시키지 않도록 --dir <임시 폴더> 와 함께만 쓴다",
+        from .store import default_dir
+
+        if a.sample and (not a.dir or a.dir.resolve() == default_dir().resolve()):
+            print("--sample(5행 연결 확인)은 실제 카탈로그를 오염시키지 않도록 --dir <임시 폴더>(기본 카탈로그 경로가 아닌) 와 함께만 쓴다",
                   file=sys.stderr)
             return 2
         fetchers = _fetchers(sources, region, now, env, sample=a.sample)

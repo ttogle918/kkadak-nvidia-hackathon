@@ -12,9 +12,10 @@ export class EventsApiError extends Error {
 }
 
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
+const BACKEND_PORT = '8000'; // 개발용 backend 의 기본 포트. 다른 포트의 로컬 서버로는 보내지 않는다
 
 /**
- * ?base= 로 받은 backend 주소를 검증한다. 같은 출처의 경로("/api")이거나 루프백(localhost·127.0.0.1) 주소만 받는다.
+ * ?base= 로 받은 backend 주소를 검증한다. 같은 출처의 경로("/api")이거나 루프백(localhost·127.0.0.1)의 8000 포트만 받는다.
  * 그 밖의 주소는 버리고 기본값을 쓴다 — 링크 하나로 관리자 토큰이나 일정·숙소 좌표를 다른 서버로 보내지 못하게 한다.
  */
 export function safeBase(value, loc = globalThis.location) {
@@ -23,7 +24,8 @@ export function safeBase(value, loc = globalThis.location) {
   if (/^\/(?!\/)[\w\-./]*$/.test(v)) return v; // 같은 출처 경로
   try {
     const u = new URL(v);
-    if ((u.protocol === 'http:' || u.protocol === 'https:') && LOOPBACK.has(u.hostname) && !u.username && !u.password) {
+    if ((u.protocol === 'http:' || u.protocol === 'https:') && LOOPBACK.has(u.hostname) && u.port === BACKEND_PORT
+        && !u.username && !u.password) {
       return `${u.origin}${u.pathname.replace(/\/$/, '')}`;
     }
     if (loc && u.origin === loc.origin) return `${u.origin}${u.pathname.replace(/\/$/, '')}`;
@@ -33,7 +35,8 @@ export function safeBase(value, loc = globalThis.location) {
 
 /** 정적 서버(8766)에서 열었으면 같은 호스트의 8000 포트 backend 를 기본으로 본다. */
 export function defaultBase(loc = globalThis.location) {
-  if (loc && loc.port === '8766') return `${loc.protocol}//${loc.hostname}:8000/api`;
+  // 정적 서버(8766)를 로컬에서 열었을 때만 :8000 을 쓴다. 다른 호스트(LAN·원격)는 같은 출처의 /api(프록시)다 — CSP 가 그 밖의 연결을 막는다.
+  if (loc && loc.port === '8766' && LOOPBACK.has(loc.hostname)) return `${loc.protocol}//${loc.hostname}:8000/api`;
   return '/api';
 }
 

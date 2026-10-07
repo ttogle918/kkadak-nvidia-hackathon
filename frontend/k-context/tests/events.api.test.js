@@ -85,6 +85,8 @@ test('토큰이 오류 메시지·객체에 남지 않는다', async () => {
 test('기본 주소: 정적 서버(8766)면 같은 호스트의 8000 포트', () => {
   assert.equal(defaultBase({ port: '8766', protocol: 'http:', hostname: '127.0.0.1' }), 'http://127.0.0.1:8000/api');
   assert.equal(defaultBase({ port: '8000', protocol: 'http:', hostname: 'x' }), '/api');
+  assert.equal(defaultBase({ port: '8766', protocol: 'http:', hostname: '192.168.0.7' }), '/api'); // 원격 호스트는 같은 출처 프록시
+  assert.equal(defaultBase({ port: '8766', protocol: 'http:', hostname: 'localhost' }), 'http://localhost:8000/api');
   assert.equal(defaultBase(null), '/api');
 });
 
@@ -132,6 +134,8 @@ test('safeBase: 같은 출처 경로와 루프백 주소만 받고, 외부 주�
   assert.equal(safeBase('/api', loc), '/api');
   assert.equal(safeBase('http://127.0.0.1:8000/api', loc), 'http://127.0.0.1:8000/api');
   assert.equal(safeBase('http://localhost:8000/api/', loc), 'http://localhost:8000/api');
+  assert.equal(safeBase('http://localhost:9999/api', loc), undefined); // 다른 포트의 로컬 서버로는 보내지 않는다
+  assert.equal(safeBase('http://127.0.0.1:8001/api', loc), undefined);
   assert.equal(safeBase('http://app.invalid/api', loc), 'http://app.invalid/api'); // 같은 출처
   for (const bad of ['https://evil.example/api', '//evil.example/api', 'http://evil.example@localhost/api',
     'http://localhost@evil.example/api', 'javascript:alert(1)', 'file:///etc/passwd', 'http://localhost.evil.example/api', '', null, undefined, '/api/../../x\\y']) {

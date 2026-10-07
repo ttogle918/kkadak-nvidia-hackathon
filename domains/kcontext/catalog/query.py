@@ -109,6 +109,8 @@ def _matching_dates(e: EventEntry, trip_days: list[date]) -> list[dict]:
     out = []
     event_days = set(date_range_days(e.schedule.start_date, e.schedule.end_date))
     event_days |= {date.fromisoformat(s.date) for s in e.schedule.sessions}
+    if e.schedule.start_date and not e.schedule.end_date and not e.schedule.sessions:
+        event_days = set()  # 종료일을 모르면 시작일 하루로 제한하지 않는다(시작 전 날짜는 is_operating_day 가 거른다)
     for d in trip_days:
         if event_days and d not in event_days:
             continue

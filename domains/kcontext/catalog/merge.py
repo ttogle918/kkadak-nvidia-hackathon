@@ -184,6 +184,14 @@ def _conflict(
     return rec, top[1]
 
 
+def _venue_name(ordered: Sequence[Observation], chosen: Callable) -> object:
+    """장소 이름 충돌 판정. 이름이 달라도 같은 장소(부분 문자열·가까운 좌표)면 충돌이 아니다."""
+    vs = [o.venue for o in ordered if squash(o.venue.name)]
+    if len(vs) > 1 and all(_same_venue(vs[0], v) for v in vs[1:]):
+        return vs[0].name
+    return chosen("venue_name", lambda o: squash(o.venue.name) and o.venue.name)
+
+
 def _sessions(ordered: Sequence[Observation]) -> tuple[Session, ...]:
     for o in ordered:
         if o.schedule.sessions:
@@ -216,9 +224,10 @@ def _entry(group: Sequence[Observation], *, now: datetime, verified_at: str,
     needs: list[str] = []
 
     unresolved_fields: set[str] = set()
+    trusted = [o for o in ordered if evidence_rank(o) <= TRUSTED_RANK]
 
-    def chosen(field: str, get: Callable[[Observation], object]):
-        rec, val = _conflict(ordered, field, get)
+    def chosen(field: str, get: Callable[[Observation], object], pool: Sequence[Observation] | None = None):
+        rec, val = _conflict(ordered if pool is None else pool, field, get)
         if rec:
             conflicts.append(rec)
             if not rec["resolved"]:  # 해결되지 않은 충돌은 어느 쪽도 사실로 보여 주지 않는다
@@ -228,9 +237,11 @@ def _entry(group: Sequence[Observation], *, now: datetime, verified_at: str,
 
     start = chosen("start_date", lambda o: o.schedule.start_date)
     end = chosen("end_date", lambda o: o.schedule.end_date)
-    venue_name = chosen("venue_name", lambda o: squash(o.venue.name) and o.venue.name)
+    venue_name = _venue_name(ordered, chosen)
     price_kind = chosen("price_kind", lambda o: o.price.kind)
-    res_required = chosen("reservation_required", lambda o: o.reservation.required)
+    # 예약 필요 여부는 사실로 오해하기 쉬워 신뢰 출처(주최·공식 API·보도자료)의 값만 쓴다
+    res_required = chosen("reservation_required", lambda o: o.reservation.required, trusted)
+    chosen("sessions", lambda o: tuple((x.date, x.start_time, x.end_time) for x in o.schedule.sessions))
     # 개최 상태: 취소·연기는 공식(주최·공식 API·보도) 출처만 확정한다. 그 밖의 출처는 충돌로만 남긴다.
     reported = [o for o in ordered if o.lifecycle in ("cancelled", "postponed")]
     life = "unknown"
@@ -251,25 +262,28 @@ def _entry(group: Sequence[Observation], *, now: datetime, verified_at: str,
         venue = Venue()  # 장소가 출처마다 다르면 장소·대상 지역을 확정하지 않는다
     elif venue_name and venue.name != venue_name:
         venue = next((o.venue for o in ordered if o.venue.name == venue_name), venue)
+    # 날짜가 미해결이거나 회차끼리 다르면 회차도 비운다(비운 날짜가 회차로 다시 나타나지 않게)
+    date_unresolved = bool(unresolved_fields & {"start_date", "end_date", "sessions"})
     schedule = Schedule(
-        start_date=start, end_date=end, sessions=_sessions(ordered),
-        weekly_closed_days=tuple(_pick(ordered, lambda o: o.schedule.weekly_closed_days, ())),
-        closed_dates=tuple(sorted({d for o in ordered for d in o.schedule.closed_dates})),
-        holiday_rule=_pick(ordered, lambda o: o.schedule.holiday_rule, ""),
-        entry_cutoff=_pick(ordered, lambda o: o.schedule.entry_cutoff, ""),
-        hours_text=_pick(ordered, lambda o: o.schedule.hours_text, ""),
+        start_date=start, end_date=end, sessions=() if date_unresolved else _sessions(ordered),
+        weekly_closed_days=tuple(_pick(trusted, lambda o: o.schedule.weekly_closed_days, ())),
+        closed_dates=tuple(sorted({d for o in trusted for d in o.schedule.closed_dates})),
+        holiday_rule=_pick(trusted, lambda o: o.schedule.holiday_rule, ""),
+        entry_cutoff=_pick(trusted, lambda o: o.schedule.entry_cutoff, ""),
+        hours_text=_pick(trusted, lambda o: o.schedule.hours_text, ""),
     )
-    price_text = _pick(ordered, lambda o: o.price.text if o.price.kind == price_kind or not price_kind
-                       else None, "")
+    price_text = "" if "price_kind" in unresolved_fields else _pick(
+        ordered, lambda o: o.price.text if o.price.kind == price_kind or not price_kind else None, "")
     price = Price(kind=price_kind or "unknown", text=price_text)
-    trusted = [o for o in ordered if evidence_rank(o) <= TRUSTED_RANK]
     res_src = next((o.reservation for o in trusted if o.reservation.required == res_required
                     and res_required), None)
+    res_open = "reservation_required" not in unresolved_fields  # 예약 필요 여부가 미해결이면 링크·마감·상태도 확정하지 않는다
     reservation = Reservation(
         required=res_required or "unknown",
-        link=_pick(trusted, lambda o: o.reservation.link, ""),
-        deadline=_pick(trusted, lambda o: o.reservation.deadline, None),
-        status=(res_src.status if res_src else _pick(trusted, lambda o: o.reservation.status, "unknown")),
+        link=_pick(trusted, lambda o: o.reservation.link, "") if res_open else "",
+        deadline=_pick(trusted, lambda o: o.reservation.deadline, None) if res_open else None,
+        status=((res_src.status if res_src else _pick(trusted, lambda o: o.reservation.status, "unknown"))
+                if res_open else "unknown"),
         note=_pick(trusted, lambda o: o.reservation.note, ""),
     )
     elig_src = next((o.eligibility for o in trusted if o.eligibility.audience
@@ -354,8 +368,8 @@ def build_entries(
     seen_ids: set[str] = set()
     for i, e in enumerate(out):  # 이전에 한 묶음이던 관찰이 나뉘면 같은 이전 id 를 이어받을 수 있다
         if e.id in seen_ids:
-            fresh = "ev:" + hashlib.sha1("|".join(e.external_ids[:1]).encode()).hexdigest()[:12]
-            out[i] = dataclasses.replace(e, id=fresh if fresh not in seen_ids else f"{fresh}x{i}")
+            fresh = "ev:" + hashlib.sha1("|".join(e.external_ids).encode()).hexdigest()[:12]
+            out[i] = dataclasses.replace(e, id=fresh)
         seen_ids.add(out[i].id)
     out.sort(key=lambda e: (e.schedule.start_date or "9999-99-99", e.id))
     return out

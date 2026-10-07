@@ -16,10 +16,7 @@ from collections.abc import Mapping
 from datetime import datetime
 from pathlib import Path
 
-from dotenv import dotenv_values
-
 from domains.kcontext.contract.errors import ContractError
-from domains.kcontext.paths import repo_root
 from domains.kcontext.regions import load_regions
 
 from . import reports as reports_mod
@@ -181,15 +178,6 @@ def handle(
     raise ApiError("bad_request", f"알 수 없는 op: {op}")
 
 
-def _env() -> dict[str, str]:
-    """셸 env 우선, 없는 키만 레포 .env 에서 보충한다(os.environ 은 바꾸지 않는다). 키는 이 프로세스 안에서만 쓴다."""
-    merged = dict(os.environ)
-    for k, v in dotenv_values(repo_root() / ".env").items():
-        if v and not merged.get(k):
-            merged[k] = v
-    return merged
-
-
 def main() -> int:
     def out_error(code: str, message: str) -> int:
         print(json.dumps({"error": {"code": code, "message": message}}, ensure_ascii=False))
@@ -201,7 +189,7 @@ def main() -> int:
             raise ApiError("bad_request", "{op, args, actor} 형식이어야 한다")
         store = CatalogStore(Path(os.environ["KC_CATALOG_DIR"]) if os.environ.get("KC_CATALOG_DIR") else None)
         out = handle(req["op"], req.get("args") or {}, store=store, now=datetime.now(KST),
-                     actor=req.get("actor"), env=_env())
+                     actor=req.get("actor"), env=dict(os.environ))  # .env 는 읽지 않는다 — 필요한 키 하나는 호출한 쪽이 env 로 준다
     except ApiError as e:
         return out_error(e.code, str(e))
     except ContractError:  # 저장된 파일이 손상됐다 — 요청 잘못이 아니라 서버 쪽 문제다
