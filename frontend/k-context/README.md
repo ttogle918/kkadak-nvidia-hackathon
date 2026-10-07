@@ -28,7 +28,7 @@ URL 파라미터: `?lang=en` · `?theme=dark|light|auto` · `?mode=old|now|both`
 3. `python3 -m http.server 8766` → `http://localhost:8766/`. 키가 없으면 `config.local.js` 404 가 한 번 보이는데 정상이다(SVG 폴백).
 
 **지도 SDK 에는 REST API 키를 쓰지 않는다**(JavaScript 키만). 외부 스크립트는 `https://dapi.kakao.com/v2/maps/sdk.js` 하나뿐이다. 코드: `src/lib/kakao-sdk.js`(로더·8초 타임아웃) · `src/components/map/renderer.js`(선택) · `kakao-view.js`(마커·폴리라인).
-좌표는 `[lat, lng]`; lat/lng 가 null 인 항목은 건너뛴다(현재 mock 은 전부 null → 덕수궁 부근 기본 중심 + "좌표 없음" 표시). 결정 초안: `docs/D13-kakao-map-sdk.draft.md`.
+좌표는 `[lat, lng]`; lat/lng 가 null 인 항목은 건너뛴다(현재 mock 은 전부 null → 덕수궁 부근 기본 중심 + "좌표 없음" 표시). 결정 초안: `docs/kakao-map-sdk.decision-draft.md`.
 
 ## 구조
 ```

@@ -56,7 +56,7 @@ SYSTEM_PROMPT = (
 # 정상 답 끝에 서버가 붙이는 고정 문구(i18n 상수). LLM 이 만든 문구가 아니다(보안 8) — 모델 출력과
 # 섞이지 않게 항상 서버에서 이어 붙이고, 차단 응답에는 붙이지 않는다.
 # reply.text 는 계약상 문자열(정상) 또는 {ko,en}(차단)이라 필드를 늘리지 않고 ko 문구를 text 끝에 잇는다.
-# 더 나은 방식(reply.unverified 필드)은 docs/D12-chat-llm.draft.md 에 제안만 했다.
+# 더 나은 방식(reply.unverified 필드)은 docs/chat-llm.decision-draft.md 에 제안만 했다.
 UNVERIFIED_NOTICE = {
     "ko": "※ 출처 없는 일반 안내입니다. 근거가 필요하면 출처 카드로 확인하세요.",
     "en": "Note: general guidance without sources. Check the source cards for evidence.",
