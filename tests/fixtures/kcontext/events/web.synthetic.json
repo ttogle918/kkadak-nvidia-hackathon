@@ -49,6 +49,23 @@
           "quote": "2026-10-16 ○○ 골목에서 연다."
         }
       ]
+    },
+    {
+      "url": "https://www.example-gu.invalid/board/4",
+      "title": "○○ 걷기대회",
+      "score": 0.4,
+      "content": "○○구 보도자료\n○○ 걷기대회 16일 저녁에 연다. 2026-10-07\n다른 소식 ○○ 소식 2026-10-06",
+      "extracted": [
+        {
+          "title": "○○ 걷기대회",
+          "start_date": "2026-10-16",
+          "end_date": null,
+          "place_name": "",
+          "category": "festival",
+          "quote": "○○ 걷기대회 16일 저녁에 연다.",
+          "posted_date": "2026-10-07"
+        }
+      ]
     }
   ]
 }

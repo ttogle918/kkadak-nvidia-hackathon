@@ -270,3 +270,113 @@ def test_year_label_does_not_block_matching_year():
 def test_unrelated_four_digit_numbers_are_not_years():
     q = "○○ 마라톤 참가비 2000-3000원, 10월 15일 개최"
     assert one(item_for(q), q, year=2026).records[0].start_date == "2026-10-15"
+
+
+# ---- 게시일 기준 연도·월 보충(월 없는 일자) ----
+from domains.kcontext.contract.records import INFERRED_DATE_NOTE
+
+
+def posted_case(quote: str, posted_line: str, *, start: str | None, end: str | None = None,
+                posted: str | None = "2026-10-07", year: int = 2026, collected="2026-10-07",
+                before: str = ""):
+    content = f"{before}○○구 보도자료\n{quote}\n{posted_line}"
+    item = item_for(quote, start_date=start, end_date=end)
+    if posted is not None:
+        item["posted_date"] = posted
+    return extract_events(cand(content), extractor=lambda _c: [item], screen=no_screen,
+                          region=REGION, source_name="○○구청", collected_at=collected, year=year)
+
+
+def test_day_only_is_filled_from_the_posting_date():
+    res = posted_case("○○ 마라톤 16일 저녁에 연다.", "2026-10-07", start="2026-10-16")
+    r = res.records[0]
+    assert r.start_date == "2026-10-16"
+    assert r.source.published == "2026-10-07"
+    assert r.source.locator == f"2026-10-07 게시 · 2026-10-07 수집 · {INFERRED_DATE_NOTE}"
+
+
+def test_day_earlier_than_posting_day_rolls_to_next_month_and_year():
+    r = posted_case("○○ 마라톤 5일 열린다.", "2026-10-30", start="2026-11-05",
+                    posted="2026-10-30", collected="2026-10-30").records[0]
+    assert r.start_date == "2026-11-05"
+    r = posted_case("○○ 마라톤 3일 열린다.", "2026-12-28", start="2027-01-03",
+                    posted="2026-12-28", collected="2026-12-28").records[0]
+    assert r.start_date == "2027-01-03"
+    # 같은 달로 읽는 값은 맞지 않으면 버린다
+    assert posted_case("○○ 마라톤 5일 열린다.", "2026-10-30", start="2026-10-05",
+                       posted="2026-10-30", collected="2026-10-30").records[0].start_date is None
+
+
+def test_day_range_without_month():
+    r = posted_case("○○ 마라톤 16~18일 열린다.", "2026-10-07", start="2026-10-16",
+                    end="2026-10-18").records[0]
+    assert (r.start_date, r.end_date) == ("2026-10-16", "2026-10-18")
+    assert INFERRED_DATE_NOTE in r.source.locator
+
+
+def test_month_day_without_year_takes_the_year_from_posting_date():
+    r = posted_case("○○ 마라톤 1월 5일 열린다.", "2026-12-30", start="2027-01-05",
+                    posted="2026-12-30", collected="2026-12-30").records[0]
+    assert r.start_date == "2027-01-05" and INFERRED_DATE_NOTE in r.source.locator
+    wrong = posted_case("○○ 마라톤 1월 5일 열린다.", "2026-12-30", start="2026-01-05",
+                        posted="2026-12-30", collected="2026-12-30").records[0]
+    assert wrong.start_date is None
+
+
+def test_month_day_range_end_is_confirmed():
+    q = "○○ 마라톤 10월 15일~18일 열린다."
+    r = posted_case(q, "2026-10-07", start="2026-10-15", end="2026-10-18").records[0]
+    assert (r.start_date, r.end_date) == ("2026-10-15", "2026-10-18")
+
+
+def test_explicit_full_date_needs_no_inference_and_is_not_marked():
+    q = "○○ 마라톤 2026.10.16 에 연다."
+    r = posted_case(q, "2026-10-07", start="2026-10-16").records[0]
+    assert r.start_date == "2026-10-16" and INFERRED_DATE_NOTE not in r.source.locator
+    assert r.source.published == "2026-10-07"  # 게시일은 확인됐으니 기록한다
+
+
+def test_without_a_posting_date_day_only_stays_unconfirmed():
+    r = posted_case("○○ 마라톤 16일 저녁에 연다.", "2026-10-07", start="2026-10-16",
+                    posted=None).records[0]
+    assert r.start_date is None and r.source.published is None
+    assert INFERRED_DATE_NOTE not in r.source.locator
+
+
+def test_posting_date_must_be_the_nearest_date_to_the_quote():
+    # 가까운 날짜는 10-06 인데 LLM 이 10-07 이라고 하면 쓰지 않는다
+    content_before = "다른 글 2026-10-07 "
+    res = posted_case("○○ 마라톤 16일 저녁에 연다.", "2026-10-06", start="2026-10-16",
+                      posted="2026-10-07", before=content_before)
+    assert res.records[0].start_date is None and any("posted_date" in p for p in res.problems)
+
+
+def test_posting_date_far_from_quote_is_ignored():
+    filler = "가" * 400
+    res = posted_case("○○ 마라톤 16일 저녁에 연다.", f"{filler} 2026-10-07", start="2026-10-16")
+    assert res.records[0].start_date is None
+
+
+def test_future_or_absent_posting_date_is_ignored():
+    future = posted_case("○○ 마라톤 16일 저녁에 연다.", "2026-10-20", start="2026-10-21",
+                         posted="2026-10-20")
+    assert future.records[0].start_date is None
+    absent = posted_case("○○ 마라톤 16일 저녁에 연다.", "내용 없음", start="2026-10-16",
+                         posted="2026-10-07")
+    assert absent.records[0].start_date is None and absent.records[0].source.published is None
+
+
+def test_dates_inside_the_quote_are_never_taken_as_the_posting_date():
+    q = "○○ 마라톤 안내 2026.10.16 일 저녁 16일"
+    res = posted_case(q, "내용 없음", start="2026-10-16", posted="2026-10-16")
+    assert res.records[0].source.published is None
+
+
+def test_explicit_other_year_blocks_inference():
+    q = "2025년 ○○ 마라톤 16일 저녁에 연다."
+    r = posted_case(q, "2026-10-07", start="2026-10-16").records[0]
+    assert r.start_date is None
+
+
+def test_prompt_asks_for_posted_date():
+    assert "posted_date" in build_messages("본문")[0]["content"]

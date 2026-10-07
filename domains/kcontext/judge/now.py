@@ -19,7 +19,13 @@ from dataclasses import dataclass
 from datetime import date, timedelta
 from difflib import SequenceMatcher
 
-from domains.kcontext.contract.records import Blocked, EventRecord, Rejection, SourceRef
+from domains.kcontext.contract.records import (
+    INFERRED_DATE_NOTE,
+    Blocked,
+    EventRecord,
+    Rejection,
+    SourceRef,
+)
 from domains.kcontext.contract.source import TIERS
 from domains.kcontext.contract.text import is_date, pick
 
@@ -302,6 +308,8 @@ def judge_events(records: Sequence[EventRecord], situation: Mapping, *, now: dat
         if weather.get("rain") and r.outdoor is True:
             reject(r, "상황 부적합", "비 · 야외 행사")
             continue
+        if INFERRED_DATE_NOTE in r.source.locator:
+            note.append("날짜는 게시일 기준 추정 — 원문 확인 필요")
         if _coord(r) is None:
             note.append("위치 미상")
         kept.append(r)

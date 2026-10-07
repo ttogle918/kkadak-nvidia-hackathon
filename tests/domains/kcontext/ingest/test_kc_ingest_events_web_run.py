@@ -25,11 +25,11 @@ def test_fixture_run_writes_validated_records(tmp_path, capsys):
     )
     assert rc == 0
     rows = [json.loads(x) for x in out.read_text(encoding="utf-8").splitlines()]
-    assert len(rows) == 1  # 정상 1 · quote 불일치 버림 · 지시문 후보 버림
+    assert len(rows) == 2  # 정상 1 · 게시일 보충 1 · quote 불일치 버림 · 지시문 후보 버림
     rec = event_from_dict(rows[0])
     assert rec.fetched_from == "web" and rec.region == "jung"
     report = json.loads(capsys.readouterr().out.splitlines()[-1])
-    assert report["candidates"] == 3 and report["records"] == 1 and report["dropped"] == 2
+    assert report["candidates"] == 4 and report["records"] == 2 and report["dropped"] == 2
     assert report["calls"] == 0
 
 

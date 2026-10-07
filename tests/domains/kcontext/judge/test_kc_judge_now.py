@@ -388,3 +388,12 @@ def test_start_time_from_web_only_does_not_block_confirmation_but_is_noted():
     d = judge([official, web(start_time="21:00")]).decisions[0]
     assert d.primary.start_time == "21:00" and d.badge == "확인됨"
     assert any("시작 시간" in c and "비공식" in c for c in d.caveats)
+
+
+def test_inferred_date_gets_a_caveat():
+    from domains.kcontext.contract.records import INFERRED_DATE_NOTE
+
+    r = web(source={"locator": f"2026-10-07 게시 · 2026-10-07 수집 · {INFERRED_DATE_NOTE}",
+                    "published": "2026-10-07"})
+    d = judge([r]).decisions[0]
+    assert any("게시일 기준 추정" in c for c in d.caveats) and d.badge == "확인 필요"

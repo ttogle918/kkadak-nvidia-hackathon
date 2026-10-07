@@ -119,4 +119,4 @@ def test_cli_web_provider_is_forwarded(tmp_path: Path, capsys):
                "--fixture", str(web_fix), "--out", str(out), "--collected-at", "2026-10-07"])
     assert rc == 0  # 실제 inject.screen 이 연결돼 있다
     report = json.loads(capsys.readouterr().out.splitlines()[-1])
-    assert report["candidates"] == 3 and report["records"] == len(read_jsonl(out)) == 1
+    assert report["candidates"] == 4 and report["records"] == len(read_jsonl(out)) == 2
