@@ -1,0 +1,28 @@
+{
+  "kind": "route",
+  "obj": {
+    "id": "bad_segs",
+    "theme": {
+      "ko": "○○ 길 (합성 예시)",
+      "en": "○○ Road (synthetic example)"
+    },
+    "walk_min": 18,
+    "delta_min": 4,
+    "story_count": 1,
+    "badge_mix": {
+      "기록": 1
+    },
+    "badges": [
+      "추천"
+    ],
+    "estimated": true,
+    "recommend_reason": {
+      "ko": "저녁 약속까지 시간이 남아서 권해요 (합성 예시)",
+      "en": "You have time before dinner (synthetic example)"
+    },
+    "segments": []
+  },
+  "expect": [
+    "route[bad_segs].segments: 비어 있음"
+  ]
+}

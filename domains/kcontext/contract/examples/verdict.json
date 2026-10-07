@@ -1,0 +1,21 @@
+{
+  "claim": "○○사 대웅전은 ○○○○년에 중건되었다 (합성 예시)",
+  "sources": [
+    {
+      "id": "doc_ex_01",
+      "tier": "S",
+      "date": "2023-11",
+      "stance": "support"
+    },
+    {
+      "id": "doc_ex_02",
+      "tier": "D",
+      "date": null,
+      "stance": "contradict",
+      "says": "○○시대 건물 (합성 예시)"
+    }
+  ],
+  "verdict": "disputed",
+  "reason": "지정 정보(S)와 일치, D 급 출처는 반대 (합성 예시)",
+  "confidence": "medium"
+}

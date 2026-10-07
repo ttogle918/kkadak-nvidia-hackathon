@@ -1,0 +1,69 @@
+{
+  "kind": "route",
+  "obj": {
+    "id": "bad_count",
+    "theme": {
+      "ko": "○○ 길 (합성 예시)",
+      "en": "○○ Road (synthetic example)"
+    },
+    "walk_min": 18,
+    "delta_min": 4,
+    "story_count": 2,
+    "badge_mix": {
+      "기록": 1
+    },
+    "badges": [
+      "추천"
+    ],
+    "estimated": true,
+    "recommend_reason": {
+      "ko": "저녁 약속까지 시간이 남아서 권해요 (합성 예시)",
+      "en": "You have time before dinner (synthetic example)"
+    },
+    "segments": [
+      {
+        "name": {
+          "ko": "○○ 길 (합성 예시)",
+          "en": "○○ Road (synthetic example)"
+        },
+        "card_id": "card_example_story",
+        "length_m": 240,
+        "walk_min": 4,
+        "weak": false,
+        "coords": [
+          [
+            37.0,
+            127.0
+          ],
+          [
+            37.001,
+            127.001
+          ]
+        ]
+      },
+      {
+        "name": {
+          "ko": "연결 도로",
+          "en": "Connecting road"
+        },
+        "card_id": null,
+        "length_m": 100,
+        "walk_min": 2,
+        "weak": false,
+        "coords": [
+          [
+            37.001,
+            127.001
+          ],
+          [
+            37.002,
+            127.002
+          ]
+        ]
+      }
+    ]
+  },
+  "expect": [
+    "route[bad_count].story_count(2) != 카드 있는 구간 수(1)"
+  ]
+}

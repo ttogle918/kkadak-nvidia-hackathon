@@ -1,0 +1,16 @@
+{
+  "kind": "source",
+  "obj": {
+    "id": "doc_ex_01",
+    "tier": "S",
+    "name": "○○실록 (합성 예시)",
+    "url": "",
+    "bib": "○○실록 권○ · 합성 예시 서지",
+    "published": "○○",
+    "collected_at": "2026-10-05",
+    "quote": "「○○○○ 행차 ○○…」 (합성 예시 구절)"
+  },
+  "expect": [
+    "source.locator"
+  ]
+}

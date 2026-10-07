@@ -1,0 +1,122 @@
+{
+  "kind": "card",
+  "obj": {
+    "id": "bad_segment",
+    "kind": "story",
+    "synthetic": true,
+    "title": {
+      "ko": "○○ 길 (합성 예시)",
+      "en": "○○ Road (synthetic example)"
+    },
+    "place": {
+      "name": {
+        "ko": "○○ 구간",
+        "en": "○○ section"
+      },
+      "lat": 37.0,
+      "lng": 127.0,
+      "synthetic": true
+    },
+    "geometry": {
+      "type": "segment",
+      "coords": [
+        [
+          37.0,
+          127.0
+        ]
+      ],
+      "basis": {
+        "ko": "합성 예시 — 실제 위치 아님",
+        "en": "synthetic example, not a real location"
+      },
+      "space": "geo",
+      "synthetic": true
+    },
+    "era": {
+      "ko": "○○ 시대",
+      "en": "○○ era"
+    },
+    "facts": [
+      {
+        "text": {
+          "ko": "이 구간은 ○○ 기록에 나온다.",
+          "en": "This section appears in ○○ records."
+        },
+        "ref": 1
+      },
+      {
+        "text": {
+          "ko": "폭은 ○○ 정도였다고 한다.",
+          "en": "Its width is said to be about ○○."
+        },
+        "ref": 2
+      }
+    ],
+    "body": {
+      "ko": "이 구간은 ○○ 기록에 나온다. 폭은 ○○ 정도였다고 한다.",
+      "en": "This section appears in ○○ records. Its width is said to be about ○○."
+    },
+    "alternatives": [
+      {
+        "label": {
+          "ko": "이설 ○○",
+          "en": "Alternative ○○"
+        },
+        "text": {
+          "ko": "○○ 설도 있다.",
+          "en": "Another account says ○○."
+        }
+      }
+    ],
+    "badge": "기록",
+    "sources": [
+      {
+        "id": "doc_ex_01",
+        "tier": "S",
+        "name": "○○실록 (합성 예시)",
+        "locator": "○○ ○년 ○월 ○일",
+        "url": "",
+        "bib": "○○실록 권○ · 합성 예시 서지",
+        "published": "○○",
+        "collected_at": "2026-10-05",
+        "quote": "「○○○○ 행차 ○○…」 (합성 예시 구절)"
+      },
+      {
+        "id": "doc_ex_02",
+        "tier": "A",
+        "name": "○○지명사전 (합성 예시)",
+        "locator": "p.○○",
+        "url": "https://example.org/○○",
+        "published": null,
+        "collected_at": "2026-10-05",
+        "quote": "「○○ 일대에 ○○ 물길이 있었다」 (합성 예시 구절)"
+      }
+    ],
+    "slot": null,
+    "time_cost_min": null,
+    "stay_min": null,
+    "valid": null,
+    "why_fits": [
+      {
+        "ko": "관심사와 일치 (예시)",
+        "en": "Matches interests (example)"
+      }
+    ],
+    "caveats": [],
+    "local_context": null,
+    "narration": {
+      "ko": "당신은 지금 ○○년의 이 길에 서 있습니다… (합성 예시)",
+      "en": "You stand on this road in the year ○○… (synthetic example)"
+    },
+    "rejected": [
+      {
+        "claim": "○○ 설 (합성 예시)",
+        "reason": "신뢰 불가"
+      }
+    ],
+    "user_state": "proposed"
+  },
+  "expect": [
+    "card[bad_segment].geometry: segment 는 좌표 2개 이상"
+  ]
+}

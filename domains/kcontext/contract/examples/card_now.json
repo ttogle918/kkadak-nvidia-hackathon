@@ -1,0 +1,125 @@
+{
+  "id": "card_example_now",
+  "kind": "now",
+  "synthetic": true,
+  "title": {
+    "ko": "○○ 야장 (합성 예시)",
+    "en": "○○ night market (synthetic example)"
+  },
+  "place": {
+    "name": {
+      "ko": "○○ 골목",
+      "en": "○○ alley"
+    },
+    "lat": 37.0,
+    "lng": 127.0,
+    "synthetic": true
+  },
+  "geometry": {
+    "type": "approx",
+    "coords": [
+      [
+        37.0,
+        127.0
+      ]
+    ],
+    "radius_m": 150,
+    "basis": {
+      "ko": "포스터 문구 (합성 예시)",
+      "en": "poster text (synthetic example)"
+    },
+    "space": "geo",
+    "synthetic": true
+  },
+  "body": {
+    "ko": "○○ 골목 일대에서 ○일간 열린다 (합성 예시).",
+    "en": "Held around the ○○ alley for ○ days (synthetic example)."
+  },
+  "badge": "확인 필요",
+  "sources": [
+    {
+      "id": "doc_ex_03",
+      "tier": "B",
+      "name": "○○ 공지 (합성 예시)",
+      "locator": "2026-10-02 게시",
+      "url": "https://example.org/notice/○○",
+      "published": "2026-10-02",
+      "collected_at": "2026-10-05",
+      "quote": "○○ 행사 운영 안내, 19:30 시작 (합성 예시)"
+    }
+  ],
+  "slot": {
+    "day": 1,
+    "at": "19:30",
+    "between": [
+      "○○",
+      "○○ 숙소"
+    ]
+  },
+  "time_cost_min": 12,
+  "stay_min": 70,
+  "valid": {
+    "from": "2026-10-15",
+    "to": "2026-10-18",
+    "as_of": "2026-10-05"
+  },
+  "why_fits": [
+    {
+      "ko": "여행 날짜에 열림 (예시)",
+      "en": "Open during your trip (example)"
+    }
+  ],
+  "caveats": [
+    {
+      "ko": "현금만 가능 (예시)",
+      "en": "Cash only (example)"
+    }
+  ],
+  "local_context": {
+    "text": "○○ (합성 예시)",
+    "story_card_id": "card_example_story"
+  },
+  "narration": null,
+  "checks": [
+    {
+      "level": "ok",
+      "text": {
+        "ko": "날짜 일치 (예시)",
+        "en": "Date matches (example)"
+      }
+    },
+    {
+      "level": "warn",
+      "text": {
+        "ko": "시간 미확인 (예시)",
+        "en": "Time unconfirmed (example)"
+      }
+    }
+  ],
+  "poster": {
+    "read": {
+      "ko": "10/15–18 · 19:30 · ○○ 골목 (합성 예시)",
+      "en": "Oct 15–18 · 19:30 · ○○ alley (synthetic example)"
+    }
+  },
+  "only": {
+    "ko": "여행 기간에만 열림 (예시)",
+    "en": "Only during your trip (example)"
+  },
+  "warning": {
+    "title": {
+      "ko": "시간 확인 필요 (예시)",
+      "en": "Check the time (example)"
+    },
+    "body": {
+      "ko": "공식 공지로 확인하세요 (예시).",
+      "en": "Confirm with the official notice (example)."
+    }
+  },
+  "kind_label": {
+    "ko": "야장",
+    "en": "Night market"
+  },
+  "rejected": [],
+  "user_state": "proposed"
+}

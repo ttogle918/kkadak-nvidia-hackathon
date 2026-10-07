@@ -1,0 +1,75 @@
+{
+  "trip": {
+    "from": "2026-10-15",
+    "to": "2026-10-18"
+  },
+  "anchors": [
+    {
+      "type": "hotel",
+      "name": "○○ 호텔 (합성 예시)",
+      "lat": 37.0,
+      "lng": 127.0,
+      "from": "2026-10-15T15:00",
+      "to": "2026-10-18T11:00"
+    },
+    {
+      "type": "visit",
+      "name": "○○ 궁 (합성 예시)",
+      "day": 1,
+      "lat": 37.0,
+      "lng": 127.0,
+      "from": "2026-10-15T14:00",
+      "to": "2026-10-15T16:30"
+    },
+    {
+      "type": "train",
+      "name": "○○역 (합성 예시)",
+      "lat": null,
+      "lng": null,
+      "at": "2026-10-18T14:30"
+    }
+  ],
+  "free_slots": [
+    {
+      "day": 1,
+      "from": "2026-10-15T19:00",
+      "to": "2026-10-15T23:00",
+      "near": "○○동",
+      "inferred": true
+    }
+  ],
+  "now": {
+    "time": "2026-10-15T18:20",
+    "lat": 37.0,
+    "lng": 127.0
+  },
+  "party": {
+    "size": 2,
+    "kids": false,
+    "mobility_limited": false,
+    "luggage": false
+  },
+  "language": "ko",
+  "interests": [
+    "한국 음식",
+    "로컬 문화"
+  ],
+  "minimize_changes": true,
+  "weather": {
+    "rain": false,
+    "temp_c": 17
+  },
+  "walk_request": {
+    "from": {
+      "name": "○○ A",
+      "lat": 37.0,
+      "lng": 127.0
+    },
+    "to": {
+      "name": "○○ B",
+      "lat": 37.001,
+      "lng": 127.001
+    },
+    "budget_min": 40
+  }
+}
