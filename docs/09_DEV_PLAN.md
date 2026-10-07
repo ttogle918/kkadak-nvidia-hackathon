@@ -49,6 +49,7 @@ docs/                  이 문서들
 - [x] OpenShell 설치, 버전 확인, 빈 샌드박스 하나 띄워 보기 — openshell 0.0.116, 샌드박스 `kcontext`(2026-10-07)
 - [x] 샌드박스 안에서 Nemotron 한 번 불러 보기 — `https://inference.local/v1/chat/completions` 로 확인(D1 과 일치, 샌드박스 환경변수에 키 0건). reasoning 모델이라 `max_tokens` 가 작으면 `content` 가 빈다
 - [ ] 공통 계약(`AGENT_CONTEXT.md` 3.3) 두 사람이 읽고 확정
+  - 화면용 API 계약 초안: `docs/screen-api.proposal.md`(백엔드에 `itinerary`·`routes`·`cards`·`sources`·`rationale` 없음 확인). 챗봇 맥락·라우터: `docs/chat-context-router.proposal.md`
 - [ ] `policy.yaml` 관리자 한 명 지정
 
 **끝:** 샌드박스 안의 코드가 프로바이더를 통해 Nemotron의 답을 받는다. ✅ 달성(`scripts/kculture_practice.py` 가 샌드박스에서 초안을 만들었다)
@@ -96,11 +97,12 @@ docs/                  이 문서들
 
 ### 4단계. NVIDIA 기술을 깊게
 
-- [ ] L40S에 로컬 NIM 올리기: 임베딩, 리랭커, 비전, 가드, 경량 ⚠ 미해결 충돌: D1·D6 와 어긋남 — 사람 결정 대기
-- [ ] 검색을 로컬 임베딩·리랭커로 바꾸기 — 임베딩 시험(예비, `docs/spikes/sillok_embedding.md`: 제목+본문 권장)과 벡터 저장·검색(`chunk_embeddings`)까지. 임베딩 호출 클라이언트·색인 채우기는 미구현. 이 PC 는 GPU 없음 ⚠ 미해결 충돌: D8 과 어긋남 — 사람 결정 대기
+- [ ] L40S에 로컬 NIM 올리기: 임베딩·리랭커는 제외(위 결정), 비전, 가드, 경량 ⚠ 미해결 충돌: D1·D6 와 어긋남 — 사람 결정 대기
+- [~] 검색을 로컬 임베딩·리랭커로 바꾸기 — **하지 않기로 했다(2026-10-07, 사용자 결정).** 자료를 가져와 입력으로 넣고 판단하는 방식(in → out)으로 가고, 검색은 D8 의 FTS5 trigram 을 그대로 쓴다. 이미 만든 `chunk_embeddings`·임베딩 시험(`docs/spikes/sillok_embedding.md`)은 쓰지 않는 채로 둔다(삭제하지 않음)
 - [x] 보안 로그 화면(`/api/audit`, 프론트 `securitylog`), 공격 프롬프트 차단(챗봇이 주입 질문에 거부 응답·audit `deny` 확인)
 - [ ] 새 출처 승인 시연 — 프론트 `decideAudit` 이 `ApiNotImplementedError`(백엔드 `/api/audit/{id}/decision` 는 있다)
 - [x] 키가 보이지 않는 것 — 샌드박스 환경변수에 키·토큰·시크릿 0건, 외부 접속 DENIED, `/tmp` 밖 쓰기 불가(`policy.kculture.yaml` 실측). 지식 DB 쓰기 금지는 미확인
+  - 주의: `input` 읽기 전용은 정책이 아니라 업로드 후 `chmod` 로만 보장된다(같은 uid 라 `chmod u+w` 로 풀린다). 정책으로 강제하려면 `input` 을 이미지에 포함해 빌드해야 한다 — 사람 결정 대기. 발표·README 에 "정책으로 읽기 전용"이라고 쓰지 않는다
 - [ ] 단계별 소요 시간과 모델 기록 → 구조도에 반영
 
 **끝:** `08_OPENSHELL_POLICY.md` 7장의 시연 네 가지가 모두 된다.
