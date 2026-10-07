@@ -1,6 +1,6 @@
-# 제안 — 화면용 API 계약 (구현 전, 팀원과 맞추기용)
+# 화면용 API 계약 (구현 전, 팀원과 맞추기용)
 
-상태: **제안**. 코드는 만들지 않았다. 번호·병합은 사람이 정한다(DECISIONS 에는 넣지 않음). 관련: D3·D10, `docs/09_DEV_PLAN.md` 1단계("가짜 데이터로 끝에서 끝까지"), `docs/chat-context-router.proposal.md`.
+상태: **결정 3건 반영(2026-10-07, 사용자)**, 나머지는 제안. 코드는 만들지 않았다. 번호·병합은 사람이 정한다(DECISIONS 에는 넣지 않음). 관련: D3·D10, `docs/09_DEV_PLAN.md` 1단계("가짜 데이터로 끝에서 끝까지"), `docs/chat-context-router.proposal.md`.
 
 ## 1. 현황 (2026-10-07 실행 확인)
 프론트(`frontend/k-context/src/api/`)는 10개 메서드를 쓴다. 백엔드에 있는 것은 아래 표의 ✓ 뿐이고, 나머지는 404 다. 프론트 `http.js` 는 ✓ 인 것 중에서도 `getMessages`·`sendMessage` 만 연결했다.
@@ -31,8 +31,12 @@
 3. **fixture 를 진짜로 하나씩 교체**: 이야기 카드(본인)와 행사 카드(팀원)가 각자 파이프라인 출력 묶음을 쓰게 하고, backend 는 같은 파일 경로만 읽는다.
 4. `getAuditLog`·`decideAudit` 는 백엔드가 이미 있으므로 프론트 `http.js` 에서 연결만 한다(`nope()` 제거 + 테스트).
 
-## 4. 합의가 필요한 것
-- 일정(`itinerary`)을 서버가 보관하는지, 화면이 들고 있다가 요청에 실어 보내는지. 행사 API 는 이미 요청에 일정을 실어 보낸다(`/api/events/search` 의 `trip`·`itinerary`). 같은 방식이면 `GET /api/itinerary` 는 샘플 전용이다 `[제안: 화면이 들고 있는다]`.
-- `routes` 에서 이야기 구간(본인)과 도보 시간·우회 계산(팀원 `geo/`)의 경계: 경로 id·구간·`walk_min`/`delta_min` 을 누가 채우는지.
-- 출처 `Source.tier` 가 `C`(검색 수집·미확인)인 행사 카드의 화면 표기(D12 열린 질문).
+## 4. 결정된 것 (2026-10-07, 사용자)
+1. **일정은 화면이 들고 있다가 요청에 실어 보낸다.** 행사 API(`/api/events/search` 의 `trip`·`itinerary`)와 같은 방식이다. 서버는 일정을 보관하지 않는다. `GET /api/itinerary` 는 샘플 전용이고, 일정 이해(자유형 글 → `anchors`·`free_slots`)가 생기면 `POST` 로 바꾼다.
+2. **`routes` 는 담당별로 파일을 나눈다.** 충돌을 막기 위해 이야기 구간(본인)과 행사·도보 계산(팀원)이 서로 다른 파일을 쓰고, backend 의 `/api/routes` 가 읽을 때 합친다. 파일 이름·합치는 규칙은 구현 전에 정한다 `[제안: routes.story.json · routes.walk.json, 경로 id 로 합침]`.
+3. **출처는 아주 작은 태그로 표시한다.** 카드마다 출처 태그(작은 pill)가 붙고, 검색 수집·미확인(`tier C`) 행사도 같은 태그에 등급을 보여 준다. 판단 근거 패널·카드의 기존 출처 태그 형식(`rationale` 모듈, `sources` 번호)을 그대로 쓴다.
+
+## 5. 아직 합의가 필요한 것
+- `routes` 의 두 파일을 합칠 때 경로 id·구간 순서·`walk_min`/`delta_min` 을 어느 쪽이 소유하는지.
+- 출처 태그에 표시할 문구 규칙(예: 등급 글자 + 이름 한 줄, `tier C` 는 "검색 수집 · 미확인"; D12 열린 질문).
 - fixture 위치(`domains/kcontext/data/fixtures/`? backend 가 읽으니 `backend` 쪽 경로 설정이 필요).
