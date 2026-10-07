@@ -12,17 +12,15 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 from collections.abc import Callable, Mapping, Sequence
 from pathlib import Path
 
 import httpx
-from dotenv import dotenv_values
 
+from domains.kcontext.catalog.envkeys import resolve_catalog_env
 from domains.kcontext.contract.text import is_date
 from domains.kcontext.index.store import LocalIndex
-from domains.kcontext.paths import repo_root
 from domains.kcontext.regions import load_regions
 
 from .extract import Extractor, ScreenFn, extract_events
@@ -47,15 +45,10 @@ def _fail(msg: str) -> int:
 
 
 def _env_with_dotenv(env: Mapping[str, str] | None) -> Mapping[str, str]:
-    """셸 env 우선, 없으면 레포 .env 의 TAVILY 키만 보충한다(os.environ 은 바꾸지 않는다)."""
+    """env 가 주어지면 그대로, 아니면 Tavily 키 하나만(셸 우선, 없으면 `.env` 의 허용 목록 이름)."""
     if env is not None:
         return env
-    merged = dict(os.environ)
-    if not merged.get(KEY_ENV):
-        val = dotenv_values(repo_root() / ".env").get(KEY_ENV)
-        if val:
-            merged[KEY_ENV] = val
-    return merged
+    return resolve_catalog_env((KEY_ENV,))
 
 
 def _default_screen() -> ScreenFn | None:

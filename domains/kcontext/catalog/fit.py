@@ -67,6 +67,8 @@ def fit_event(
 ) -> list[dict]:
     """``search_events`` 가 돌려준 행사 하나 → 회차별 제안. 회차가 확인된 날짜만 다룬다."""
     items, _ = validate_itinerary(itinerary)
+    # 이미 일정에 넣은 이 행사 자신은 겹침·앞뒤 일정 계산에서 뺀다(자기 자신과 겹치는 것으로 보지 않게)
+    items = [i for i in items if not (i.get("source") == "catalog" and i.get("entry_id") == event["id"])]
     venue = _coord(event["venue"])
     org = _coord(origin) if origin else None
     out: list[dict] = []

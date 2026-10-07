@@ -1,0 +1,1101 @@
+{
+ "cards": [
+  {
+   "badge": "확인됨",
+   "body": {
+    "en": "2026-10-16 · ○○ 홀",
+    "ko": "2026-10-16 · ○○ 홀"
+   },
+   "caveats": [
+    {
+     "en": "Price needs checking",
+     "ko": "요금 확인 필요"
+    },
+    {
+     "en": "Event language needs checking",
+     "ko": "진행 언어 확인 필요"
+    }
+   ],
+   "checks": [
+    {
+     "level": "ok",
+     "text": {
+      "en": "Confirmed by an official source",
+      "ko": "공식 출처로 확인됨"
+     }
+    },
+    {
+     "level": "ok",
+     "text": {
+      "en": "Session confirmed",
+      "ko": "회차 확인됨"
+     }
+    },
+    {
+     "level": "ok",
+     "text": {
+      "en": "Last verified 2026-10-07T12:00",
+      "ko": "마지막 확인 2026-10-07T12:00"
+     }
+    },
+    {
+     "level": "ok",
+     "text": {
+      "en": "Source says open to all",
+      "ko": "출처가 '누구나'라고 적음"
+     }
+    },
+    {
+     "level": "ok",
+     "text": {
+      "en": "No reservation (per source)",
+      "ko": "예약 불필요(출처 표기)"
+     }
+    }
+   ],
+   "demo": false,
+   "entry_id": "ev:a9a8751faffa",
+   "geometry": {
+    "basis": {
+     "en": "Coordinates from ○○ seoul_openapi",
+     "ko": "○○ seoul_openapi 좌표"
+    },
+    "coords": [
+     [
+      37.57,
+      126.995
+     ]
+    ],
+    "radius_m": null,
+    "space": "geo",
+    "type": "point"
+   },
+   "id": "card_now_a9a8751faffa",
+   "kind": "now",
+   "kind_label": {
+    "en": "Event",
+    "ko": "행사"
+   },
+   "place": {
+    "en": "○○ 홀",
+    "ko": "○○ 홀"
+   },
+   "rejected": [],
+   "slot": {
+    "at": "19:00",
+    "between": [
+     {
+      "en": "점심",
+      "ko": "점심"
+     },
+     {
+      "en": "호텔",
+      "ko": "호텔"
+     }
+    ],
+    "day": 2
+   },
+   "sources": [
+    {
+     "collected_at": "2026-10-07",
+     "id": "src_29ce977c",
+     "locator": "2026-10-07 수집",
+     "name": "○○ seoul_openapi",
+     "published": null,
+     "quote": "인용",
+     "tier": "B",
+     "unverified": false,
+     "url": "https://example.invalid/x"
+    }
+   ],
+   "time_cost_min": 7,
+   "time_cost_unknown": false,
+   "title": {
+    "en": "○○ 저녁 공연",
+    "ko": "○○ 저녁 공연"
+   },
+   "user_state": "proposed",
+   "valid": {
+    "as_of": "2026-10-07",
+    "from": "2026-10-16",
+    "to": "2026-10-16"
+   },
+   "why_fits": [
+    {
+     "en": "Open on your travel date (2026-10-16)",
+     "ko": "여행 날짜(2026-10-16)에 열림"
+    },
+    {
+     "en": "Matches: 공연",
+     "ko": "관심사와 일치: 공연"
+    },
+    {
+     "en": "The source says anyone can join",
+     "ko": "출처가 누구나 참여할 수 있다고 적음"
+    }
+   ]
+  },
+  {
+   "badge": "확인 필요",
+   "body": {
+    "en": "2026-10-14 ~ 2026-10-20 · □□ 관",
+    "ko": "2026-10-14 ~ 2026-10-20 · □□ 관"
+   },
+   "caveats": [
+    {
+     "en": "Sessions needs checking",
+     "ko": "회차 확인 필요"
+    },
+    {
+     "en": "Hours needs checking",
+     "ko": "운영 시간 확인 필요"
+    },
+    {
+     "en": "Price needs checking",
+     "ko": "요금 확인 필요"
+    },
+    {
+     "en": "Reservation needs checking",
+     "ko": "예약 확인 필요"
+    },
+    {
+     "en": "Eligibility needs checking",
+     "ko": "참여조건 확인 필요"
+    },
+    {
+     "en": "Event language needs checking",
+     "ko": "진행 언어 확인 필요"
+    }
+   ],
+   "checks": [
+    {
+     "level": "ok",
+     "text": {
+      "en": "Confirmed by an official source",
+      "ko": "공식 출처로 확인됨"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Within the run — sessions need checking",
+      "ko": "기간 안 — 회차·시간 확인 필요"
+     }
+    },
+    {
+     "level": "ok",
+     "text": {
+      "en": "Last verified 2026-10-07T12:00",
+      "ko": "마지막 확인 2026-10-07T12:00"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Eligibility needs checking",
+      "ko": "참여조건 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Foreigner eligibility needs checking",
+      "ko": "외국인 참여 조건 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Reservation status needs checking",
+      "ko": "예약 여부 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Travel time needs checking",
+      "ko": "이동시간 확인 필요"
+     }
+    }
+   ],
+   "demo": false,
+   "entry_id": "ev:e94393100d50",
+   "geometry": {
+    "basis": {
+     "en": "Coordinates from ○○ seoul_openapi",
+     "ko": "○○ seoul_openapi 좌표"
+    },
+    "coords": [
+     [
+      37.58,
+      127.01
+     ]
+    ],
+    "radius_m": null,
+    "space": "geo",
+    "type": "point"
+   },
+   "id": "card_now_e94393100d50",
+   "kind": "now",
+   "kind_label": {
+    "en": "Event",
+    "ko": "행사"
+   },
+   "place": {
+    "en": "□□ 관",
+    "ko": "□□ 관"
+   },
+   "rejected": [],
+   "slot": {
+    "day": 1
+   },
+   "sources": [
+    {
+     "collected_at": "2026-10-07",
+     "id": "src_29ce977c",
+     "locator": "2026-10-07 수집",
+     "name": "○○ seoul_openapi",
+     "published": null,
+     "quote": "인용",
+     "tier": "B",
+     "unverified": false,
+     "url": "https://example.invalid/x"
+    }
+   ],
+   "time_cost_min": 0,
+   "time_cost_unknown": true,
+   "title": {
+    "en": "△△ 상설 전시",
+    "ko": "△△ 상설 전시"
+   },
+   "user_state": "proposed",
+   "valid": {
+    "as_of": "2026-10-07",
+    "from": "2026-10-14",
+    "to": "2026-10-20"
+   },
+   "why_fits": [
+    {
+     "en": "Within your trip (2026-10-15) — sessions need checking",
+     "ko": "여행 기간 안(2026-10-15) — 회차 확인 필요"
+    }
+   ]
+  },
+  {
+   "badge": "확인 필요",
+   "body": {
+    "en": "2026-10-17 · ◇◇ 공원",
+    "ko": "2026-10-17 · ◇◇ 공원"
+   },
+   "caveats": [
+    {
+     "en": "Collected by search · unverified",
+     "ko": "검색 수집 · 미확인"
+    },
+    {
+     "en": "Sessions needs checking",
+     "ko": "회차 확인 필요"
+    },
+    {
+     "en": "Hours needs checking",
+     "ko": "운영 시간 확인 필요"
+    },
+    {
+     "en": "Price needs checking",
+     "ko": "요금 확인 필요"
+    },
+    {
+     "en": "Reservation needs checking",
+     "ko": "예약 확인 필요"
+    },
+    {
+     "en": "Eligibility needs checking",
+     "ko": "참여조건 확인 필요"
+    },
+    {
+     "en": "Event language needs checking",
+     "ko": "진행 언어 확인 필요"
+    }
+   ],
+   "checks": [
+    {
+     "level": "warn",
+     "text": {
+      "en": "Needs checking",
+      "ko": "확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Within the run — sessions need checking",
+      "ko": "기간 안 — 회차·시간 확인 필요"
+     }
+    },
+    {
+     "level": "ok",
+     "text": {
+      "en": "Last verified 2026-10-07T12:00",
+      "ko": "마지막 확인 2026-10-07T12:00"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Eligibility needs checking",
+      "ko": "참여조건 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Foreigner eligibility needs checking",
+      "ko": "외국인 참여 조건 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Reservation status needs checking",
+      "ko": "예약 여부 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Travel time needs checking",
+      "ko": "이동시간 확인 필요"
+     }
+    }
+   ],
+   "demo": false,
+   "entry_id": "ev:4eaf835ce321",
+   "geometry": {
+    "basis": {
+     "en": "Coordinates from ○○ web_search",
+     "ko": "○○ web_search 좌표"
+    },
+    "coords": [
+     [
+      37.59,
+      127.02
+     ]
+    ],
+    "radius_m": null,
+    "space": "geo",
+    "type": "point"
+   },
+   "id": "card_now_4eaf835ce321",
+   "kind": "now",
+   "kind_label": {
+    "en": "Event",
+    "ko": "행사"
+   },
+   "place": {
+    "en": "◇◇ 공원",
+    "ko": "◇◇ 공원"
+   },
+   "rejected": [],
+   "slot": {
+    "day": 3
+   },
+   "sources": [
+    {
+     "collected_at": "2026-10-07",
+     "id": "src_29ce977c",
+     "locator": "2026-10-07 수집",
+     "name": "○○ web_search",
+     "published": null,
+     "quote": "인용",
+     "tier": "C",
+     "unverified": true,
+     "url": "https://example.invalid/x"
+    }
+   ],
+   "time_cost_min": 0,
+   "time_cost_unknown": true,
+   "title": {
+    "en": "◇◇ 검색 수집 행사",
+    "ko": "◇◇ 검색 수집 행사"
+   },
+   "user_state": "proposed",
+   "valid": {
+    "as_of": "2026-10-07",
+    "from": "2026-10-17",
+    "to": "2026-10-17"
+   },
+   "why_fits": [
+    {
+     "en": "Within your trip (2026-10-17) — sessions need checking",
+     "ko": "여행 기간 안(2026-10-17) — 회차 확인 필요"
+    }
+   ]
+  },
+  {
+   "badge": "보류",
+   "body": {
+    "en": "Date needs checking · ☆☆ 홀",
+    "ko": "날짜 확인 필요 · ☆☆ 홀"
+   },
+   "caveats": [
+    {
+     "en": "Dates needs checking",
+     "ko": "날짜 확인 필요"
+    },
+    {
+     "en": "Sessions needs checking",
+     "ko": "회차 확인 필요"
+    },
+    {
+     "en": "Hours needs checking",
+     "ko": "운영 시간 확인 필요"
+    },
+    {
+     "en": "Price needs checking",
+     "ko": "요금 확인 필요"
+    },
+    {
+     "en": "Reservation needs checking",
+     "ko": "예약 확인 필요"
+    },
+    {
+     "en": "Eligibility needs checking",
+     "ko": "참여조건 확인 필요"
+    },
+    {
+     "en": "Event language needs checking",
+     "ko": "진행 언어 확인 필요"
+    }
+   ],
+   "checks": [
+    {
+     "level": "bad",
+     "text": {
+      "en": "Sources disagree — needs checking",
+      "ko": "출처 간 충돌 — 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Within the run — sessions need checking",
+      "ko": "기간 안 — 회차·시간 확인 필요"
+     }
+    },
+    {
+     "level": "ok",
+     "text": {
+      "en": "Last verified 2026-10-07T12:00",
+      "ko": "마지막 확인 2026-10-07T12:00"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Eligibility needs checking",
+      "ko": "참여조건 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Foreigner eligibility needs checking",
+      "ko": "외국인 참여 조건 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Reservation status needs checking",
+      "ko": "예약 여부 확인 필요"
+     }
+    },
+    {
+     "level": "warn",
+     "text": {
+      "en": "Travel time needs checking",
+      "ko": "이동시간 확인 필요"
+     }
+    }
+   ],
+   "demo": false,
+   "entry_id": "ev:13fbd79c3d39",
+   "geometry": {
+    "basis": {
+     "en": "Coordinates from ○○ seoul_openapi",
+     "ko": "○○ seoul_openapi 좌표"
+    },
+    "coords": [
+     [
+      37.6,
+      127.03
+     ]
+    ],
+    "radius_m": null,
+    "space": "geo",
+    "type": "point"
+   },
+   "id": "card_now_13fbd79c3d39",
+   "kind": "now",
+   "kind_label": {
+    "en": "Event",
+    "ko": "행사"
+   },
+   "place": {
+    "en": "☆☆ 홀",
+    "ko": "☆☆ 홀"
+   },
+   "rejected": [
+    {
+     "claim": {
+      "en": "Start date: 2026-10-16 / 2026-10-17",
+      "ko": "시작일: 2026-10-16 / 2026-10-17"
+     },
+     "reason": {
+      "en": "Sources disagree — value not fixed",
+      "ko": "출처 충돌 — 값을 확정하지 않음"
+     }
+    },
+    {
+     "claim": {
+      "en": "End date: 2026-10-16 / 2026-10-17",
+      "ko": "종료일: 2026-10-16 / 2026-10-17"
+     },
+     "reason": {
+      "en": "Sources disagree — value not fixed",
+      "ko": "출처 충돌 — 값을 확정하지 않음"
+     }
+    }
+   ],
+   "slot": {
+    "day": 1
+   },
+   "sources": [
+    {
+     "collected_at": "2026-10-07",
+     "id": "src_29ce977c",
+     "locator": "2026-10-07 수집",
+     "name": "○○ seoul_openapi",
+     "published": null,
+     "quote": "인용",
+     "tier": "B",
+     "unverified": false,
+     "url": "https://example.invalid/x"
+    }
+   ],
+   "time_cost_min": 0,
+   "time_cost_unknown": true,
+   "title": {
+    "en": "☆☆ 충돌 행사",
+    "ko": "☆☆ 충돌 행사"
+   },
+   "user_state": "proposed",
+   "valid": {
+    "as_of": "2026-10-07",
+    "from": null,
+    "to": null
+   },
+   "why_fits": [
+    {
+     "en": "Within your trip (2026-10-15) — sessions need checking",
+     "ko": "여행 기간 안(2026-10-15) — 회차 확인 필요"
+    }
+   ]
+  }
+ ],
+ "funnel": {
+  "adopted": 4,
+  "candidates": 4,
+  "reasons": {}
+ },
+ "rationale": {
+  "card_now_13fbd79c3d39": {
+   "card_id": "card_now_13fbd79c3d39",
+   "chips": [
+    {
+     "key": "funnel",
+     "label": {
+      "en": "● 4 of 4 candidates adopted",
+      "ko": "● 후보 4건 중 채택 4"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "date",
+     "label": {
+      "en": "● Within the run — sessions unconfirmed",
+      "ko": "● 기간 안 — 회차 확인 필요"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "src",
+     "label": {
+      "en": "● 1 sources · 1 independent",
+      "ko": "● 출처 1건 · 독립 1건"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "detour",
+     "label": {
+      "en": "● Travel time needs checking",
+      "ko": "● 이동시간 확인 필요"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "conflict",
+     "label": {
+      "en": "● Sources conflict",
+      "ko": "● 출처 충돌"
+     },
+     "tone": "now"
+    }
+   ],
+   "items": {
+    "conflict": {
+     "rows": [
+      {
+       "k": {
+        "en": "Start date: 2026-10-16 / 2026-10-17",
+        "ko": "시작일: 2026-10-16 / 2026-10-17"
+       },
+       "v": {
+        "en": "Sources disagree — value not fixed",
+        "ko": "출처 충돌 — 값을 확정하지 않음"
+       }
+      },
+      {
+       "k": {
+        "en": "End date: 2026-10-16 / 2026-10-17",
+        "ko": "종료일: 2026-10-16 / 2026-10-17"
+       },
+       "v": {
+        "en": "Sources disagree — value not fixed",
+        "ko": "출처 충돌 — 값을 확정하지 않음"
+       }
+      }
+     ],
+     "text": {
+      "en": "Different sources disagree. Unresolved values are not fixed.",
+      "ko": "서로 다른 출처가 다르게 적은 값입니다. 해결되지 않은 값은 확정하지 않았습니다."
+     },
+     "title": {
+      "en": "Sources conflict",
+      "ko": "출처 충돌"
+     }
+    },
+    "date": {
+     "rows": [
+      {
+       "k": {
+        "en": "Last verified",
+        "ko": "마지막 확인"
+       },
+       "v": "2026-10-07T12:00"
+      }
+     ],
+     "text": {
+      "en": "Dates, sessions and closures were computed by code, not by AI.",
+      "ko": "날짜·회차·휴무는 코드가 계산했습니다(AI 가 계산하지 않음)."
+     },
+     "title": {
+      "en": "● Within the run — sessions unconfirmed",
+      "ko": "● 기간 안 — 회차 확인 필요"
+     }
+    },
+    "detour": {
+     "rows": [],
+     "text": {
+      "en": "Extra travel = prev→event + event→next − prev→next, from a route service only (never straight-line).",
+      "ko": "추가 이동시간 = 앞→행사 + 행사→뒤 − 앞→뒤. 경로 서비스 결과만 쓰고 직선거리로 대신하지 않습니다."
+     },
+     "title": {
+      "en": "● Travel time needs checking",
+      "ko": "● 이동시간 확인 필요"
+     }
+    },
+    "funnel": {
+     "rows": [
+      {
+       "k": {
+        "en": "Adopted",
+        "ko": "채택"
+       },
+       "v": "4"
+      }
+     ],
+     "text": {
+      "en": "Reasons for dropping the rest are below.",
+      "ko": "걸러 낸 이유는 아래와 같습니다."
+     },
+     "title": {
+      "en": "4 of 4 candidates adopted",
+      "ko": "후보 4건 중 채택 4"
+     }
+    },
+    "src": {
+     "rows": [
+      {
+       "k": {
+        "en": "[B] ○○ seoul_openapi",
+        "ko": "[B] ○○ seoul_openapi"
+       },
+       "v": "2026-10-07 수집"
+      }
+     ],
+     "text": {
+      "en": "Re-published copies of one origin do not count as independent.",
+      "ko": "같은 원천에서 재배포된 자료는 독립 출처로 세지 않습니다."
+     },
+     "title": {
+      "en": "● 1 sources · 1 independent",
+      "ko": "● 출처 1건 · 독립 1건"
+     }
+    }
+   }
+  },
+  "card_now_4eaf835ce321": {
+   "card_id": "card_now_4eaf835ce321",
+   "chips": [
+    {
+     "key": "funnel",
+     "label": {
+      "en": "● 4 of 4 candidates adopted",
+      "ko": "● 후보 4건 중 채택 4"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "date",
+     "label": {
+      "en": "● Within the run — sessions unconfirmed",
+      "ko": "● 기간 안 — 회차 확인 필요"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "src",
+     "label": {
+      "en": "● 1 sources · 1 independent",
+      "ko": "● 출처 1건 · 독립 1건"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "detour",
+     "label": {
+      "en": "● Travel time needs checking",
+      "ko": "● 이동시간 확인 필요"
+     },
+     "tone": "now"
+    }
+   ],
+   "items": {
+    "date": {
+     "rows": [
+      {
+       "k": {
+        "en": "Last verified",
+        "ko": "마지막 확인"
+       },
+       "v": "2026-10-07T12:00"
+      }
+     ],
+     "text": {
+      "en": "Dates, sessions and closures were computed by code, not by AI.",
+      "ko": "날짜·회차·휴무는 코드가 계산했습니다(AI 가 계산하지 않음)."
+     },
+     "title": {
+      "en": "● Within the run — sessions unconfirmed",
+      "ko": "● 기간 안 — 회차 확인 필요"
+     }
+    },
+    "detour": {
+     "rows": [],
+     "text": {
+      "en": "Extra travel = prev→event + event→next − prev→next, from a route service only (never straight-line).",
+      "ko": "추가 이동시간 = 앞→행사 + 행사→뒤 − 앞→뒤. 경로 서비스 결과만 쓰고 직선거리로 대신하지 않습니다."
+     },
+     "title": {
+      "en": "● Travel time needs checking",
+      "ko": "● 이동시간 확인 필요"
+     }
+    },
+    "funnel": {
+     "rows": [
+      {
+       "k": {
+        "en": "Adopted",
+        "ko": "채택"
+       },
+       "v": "4"
+      }
+     ],
+     "text": {
+      "en": "Reasons for dropping the rest are below.",
+      "ko": "걸러 낸 이유는 아래와 같습니다."
+     },
+     "title": {
+      "en": "4 of 4 candidates adopted",
+      "ko": "후보 4건 중 채택 4"
+     }
+    },
+    "src": {
+     "rows": [
+      {
+       "k": {
+        "en": "[C] ○○ web_search",
+        "ko": "[C] ○○ web_search"
+       },
+       "v": "2026-10-07 수집"
+      }
+     ],
+     "text": {
+      "en": "Re-published copies of one origin do not count as independent.",
+      "ko": "같은 원천에서 재배포된 자료는 독립 출처로 세지 않습니다."
+     },
+     "title": {
+      "en": "● 1 sources · 1 independent",
+      "ko": "● 출처 1건 · 독립 1건"
+     }
+    }
+   }
+  },
+  "card_now_a9a8751faffa": {
+   "card_id": "card_now_a9a8751faffa",
+   "chips": [
+    {
+     "key": "funnel",
+     "label": {
+      "en": "● 4 of 4 candidates adopted",
+      "ko": "● 후보 4건 중 채택 4"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "date",
+     "label": {
+      "en": "● Session confirmed",
+      "ko": "● 회차 확인됨"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "fit",
+     "label": {
+      "en": "● Matches interests",
+      "ko": "● 관심사 일치"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "src",
+     "label": {
+      "en": "● 1 sources · 1 independent",
+      "ko": "● 출처 1건 · 독립 1건"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "detour",
+     "label": {
+      "en": "● +7 min detour",
+      "ko": "● 동선 +7분"
+     },
+     "tone": "now"
+    }
+   ],
+   "items": {
+    "date": {
+     "rows": [
+      {
+       "k": {
+        "en": "Last verified",
+        "ko": "마지막 확인"
+       },
+       "v": "2026-10-07T12:00"
+      }
+     ],
+     "text": {
+      "en": "Dates, sessions and closures were computed by code, not by AI.",
+      "ko": "날짜·회차·휴무는 코드가 계산했습니다(AI 가 계산하지 않음)."
+     },
+     "title": {
+      "en": "● Session confirmed",
+      "ko": "● 회차 확인됨"
+     }
+    },
+    "detour": {
+     "rows": [],
+     "text": {
+      "en": "Extra travel = prev→event + event→next − prev→next, from a route service only (never straight-line).",
+      "ko": "추가 이동시간 = 앞→행사 + 행사→뒤 − 앞→뒤. 경로 서비스 결과만 쓰고 직선거리로 대신하지 않습니다."
+     },
+     "title": {
+      "en": "● +7 min detour",
+      "ko": "● 동선 +7분"
+     }
+    },
+    "fit": {
+     "rows": [],
+     "text": {
+      "en": "공연",
+      "ko": "공연"
+     },
+     "title": {
+      "en": "Matches interests",
+      "ko": "관심사 일치"
+     }
+    },
+    "funnel": {
+     "rows": [
+      {
+       "k": {
+        "en": "Adopted",
+        "ko": "채택"
+       },
+       "v": "4"
+      }
+     ],
+     "text": {
+      "en": "Reasons for dropping the rest are below.",
+      "ko": "걸러 낸 이유는 아래와 같습니다."
+     },
+     "title": {
+      "en": "4 of 4 candidates adopted",
+      "ko": "후보 4건 중 채택 4"
+     }
+    },
+    "src": {
+     "rows": [
+      {
+       "k": {
+        "en": "[B] ○○ seoul_openapi",
+        "ko": "[B] ○○ seoul_openapi"
+       },
+       "v": "2026-10-07 수집"
+      }
+     ],
+     "text": {
+      "en": "Re-published copies of one origin do not count as independent.",
+      "ko": "같은 원천에서 재배포된 자료는 독립 출처로 세지 않습니다."
+     },
+     "title": {
+      "en": "● 1 sources · 1 independent",
+      "ko": "● 출처 1건 · 독립 1건"
+     }
+    }
+   }
+  },
+  "card_now_e94393100d50": {
+   "card_id": "card_now_e94393100d50",
+   "chips": [
+    {
+     "key": "funnel",
+     "label": {
+      "en": "● 4 of 4 candidates adopted",
+      "ko": "● 후보 4건 중 채택 4"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "date",
+     "label": {
+      "en": "● Within the run — sessions unconfirmed",
+      "ko": "● 기간 안 — 회차 확인 필요"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "src",
+     "label": {
+      "en": "● 1 sources · 1 independent",
+      "ko": "● 출처 1건 · 독립 1건"
+     },
+     "tone": "now"
+    },
+    {
+     "key": "detour",
+     "label": {
+      "en": "● Travel time needs checking",
+      "ko": "● 이동시간 확인 필요"
+     },
+     "tone": "now"
+    }
+   ],
+   "items": {
+    "date": {
+     "rows": [
+      {
+       "k": {
+        "en": "Last verified",
+        "ko": "마지막 확인"
+       },
+       "v": "2026-10-07T12:00"
+      }
+     ],
+     "text": {
+      "en": "Dates, sessions and closures were computed by code, not by AI.",
+      "ko": "날짜·회차·휴무는 코드가 계산했습니다(AI 가 계산하지 않음)."
+     },
+     "title": {
+      "en": "● Within the run — sessions unconfirmed",
+      "ko": "● 기간 안 — 회차 확인 필요"
+     }
+    },
+    "detour": {
+     "rows": [],
+     "text": {
+      "en": "Extra travel = prev→event + event→next − prev→next, from a route service only (never straight-line).",
+      "ko": "추가 이동시간 = 앞→행사 + 행사→뒤 − 앞→뒤. 경로 서비스 결과만 쓰고 직선거리로 대신하지 않습니다."
+     },
+     "title": {
+      "en": "● Travel time needs checking",
+      "ko": "● 이동시간 확인 필요"
+     }
+    },
+    "funnel": {
+     "rows": [
+      {
+       "k": {
+        "en": "Adopted",
+        "ko": "채택"
+       },
+       "v": "4"
+      }
+     ],
+     "text": {
+      "en": "Reasons for dropping the rest are below.",
+      "ko": "걸러 낸 이유는 아래와 같습니다."
+     },
+     "title": {
+      "en": "4 of 4 candidates adopted",
+      "ko": "후보 4건 중 채택 4"
+     }
+    },
+    "src": {
+     "rows": [
+      {
+       "k": {
+        "en": "[B] ○○ seoul_openapi",
+        "ko": "[B] ○○ seoul_openapi"
+       },
+       "v": "2026-10-07 수집"
+      }
+     ],
+     "text": {
+      "en": "Re-published copies of one origin do not count as independent.",
+      "ko": "같은 원천에서 재배포된 자료는 독립 출처로 세지 않습니다."
+     },
+     "title": {
+      "en": "● 1 sources · 1 independent",
+      "ko": "● 출처 1건 · 독립 1건"
+     }
+    }
+   }
+  }
+ },
+ "skipped": []
+}

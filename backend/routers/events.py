@@ -131,6 +131,12 @@ def search(body: SearchBody, request: Request):
     return _call(request, "search", _dump(body))
 
 
+@router.post("/events/cards")
+def cards(body: SearchBody, request: Request):
+    """검색 결과를 화면용 `now` 카드와 판단 근거로(형식은 AGENT_CONTEXT 3.3). 일정은 요청에 실어 보낸다(서버 보관 없음)."""
+    return _call(request, "cards", _dump(body))
+
+
 @router.get("/events/coverage")
 def coverage(request: Request):
     return _call(request, "public_sources", {})
