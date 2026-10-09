@@ -825,3 +825,19 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 
 ## 완료 기록
 (스테이지마다 `/stage` 가 기록한다)
+
+### Stage 1 — 기준선 측정 (2026-10-09, 커밋 `9ea6e5e`)
+- 착수 전 기준선(§0.1 실측): pytest 1,644 · node 312 · ruff 통과 · 색인 7,713 청크(fts) · `.env` 키 항목 있음. 계획 커밋 `fb46d92`(브랜치 `sprint-3`).
+- 태스크별 파일
+  - T301 `eval/drafts/schedule.json`(20) · `gate.json`(24)
+  - T302 `eval/kc_eval/snapshot_mentions.py` · `eval/drafts/mentions.json`(13, 언급 있는 앵커 4 · no_match 9)
+  - T303 `eval/kc_eval/gen_judge.py` · `eval/drafts/judge.json`(23)
+  - T304 `eval/kc.py` · `eval/kc_eval/{__init__,match,schema,offline}.py` · `eval/README.md` · `tests/eval/{conftest,test_kc3_eval_offline}.py`
+  - T305 `eval/kc_eval/stability.py` · `tests/eval/test_kc3_eval_stability.py`
+  - T306 `docs/spikes/llm_params.md`(호출 25)
+  - T307 `eval/BASELINE.md` · `eval/results/baseline-{offline,pipeline,api}-*.json`(실호출 약 85, 429 없음)
+  - reviewer 수정: `eval/kc_eval/meta.py` 신규, stability 자식 env 허용 목록화(D7), run_mentions 임시 사본
+- 회귀: pytest 1,668 passed · node 312 · ruff 통과 · `kc.py validate` 0 · `kc.py run --check --known-failures eval/BASELINE.md` 0 (gate 22/24 known-failure 2 · mentions 13/13 · judge 18/18 · guard 7/7)
+- reviewer: 1차 FAIL(블로커 1 — 측정기가 셸 env 전체를 자식에 전달, D7 ③) → 수정 후 PASS
+- 기준선 요약: 파이프라인 폴백 2/54 · 변동 케이스 8/18 · 일치 35/54 · p95 27.1s / API 폴백 1/30 · 변동 4/10 · 일치 17/30 · p95 46.6s → T_llm 40s
+- **Stage 2 착수 조건 미충족: D15 사람 승인 대기**
