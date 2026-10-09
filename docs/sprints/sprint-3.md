@@ -895,3 +895,23 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 - 회귀: pytest 1,871 · node 329 · ruff · eval check 0
 - reviewer: FAIL(B1 skipped.to 빈 문자열로 routes 전체 소실, B2 주입 제외 수 중복) + 권장 11 → PASS(R1·R2 반영)
 - 실서버 관찰(범위 밖, 다음 처리 후보): "광화문 1시" → 01:00 해석(모델 선택, AMPM_ASSUMED), "익선동도 들를 거야" → 이름에 조사 포함(COORD_UNKNOWN).
+
+### Stage 4 — MOCK 제거 ② · 행사 지역 (+ Stage 3 보완 D21, D22) (2026-10-10, 커밋 `b32d617`, 결정 D21 `236e709`·D22 `6c20f12`)
+- 태스크
+  - D21 `domains/kcontext/schedule/{understand,cache}.py`·`pipeline/run.py`(조사 떼기) · `tests/.../test_kc3_daytime_candidate.py` · 평가셋 `sch_ko_ampm_02`·`sch_ko_particle_01`
+  - T318 `frontend/k-context/src/{api,state,components,lib,i18n,styles}` + `lib/real-state.js`·`lib/trip.js` · `tests/realmode.test.js`·`tests/trip.test.js` (Stage 3 이월 (a)~(g) 전부 포함)
+  - T319 `domains/kcontext/catalog/{target(신규),api,__main__,web_events}.py` · `.env.example` · `tests/.../test_kc3_catalog_target.py`
+  - D22 연도 추정(`validate.resolve_date(today=)`, YEAR_ASSUMED, 캐시 키 today·v4) · 행사 검색 범위 우선순위(`backend/chat{,_story}.py`) · 여행 기간 입력(선택)
+- 회귀: pytest 1,902 · node 360 · ruff · eval validate 0 · check 0
+- reviewer: FAIL(B1 범위 시각 섞임, B2 카드 id 추정) + 권장 10 → PASS(권장 5 남음)
+- 실제 화면(헤드리스 Chromium, `LD_LIBRARY_PATH` 로 libnspr4·libnss3·libasound 사용자 공간 적재): 시작 MOCK 0·"실제 서버 · 일정 대기"·여행 기간 칸 / 데모 문장 일정 3개·이동 구간·"일정 날짜 범위로 찾았어요"·"연도가 없어 다가오는 날짜로" / 두 번째 문장 광화문 13:00·경복궁→광화문 183m / 재사용 "(10월 10일 1:30)" / 근거 버튼 3·실제 근거 / 내부 코드 노출 0 / `?api=mock` 그대로.
+- 관찰: "10/16에 경복궁 10시, 광화문 1시, 익선동도 들를 거야" 는 실행마다 앵커 1~3개(QUOTE_NOT_FOUND 흔들림, 재시도로 일부 복구) — 문장 유형 한계, 데모 문장으로는 쓰지 않는다.
+
+### Stage 4 에서 이월 (2026-10-10)
+- 캐시 키와 해석 기준 불일치: 형식이 틀린 trip(TRIP_INVALID)이면 해석은 today 로 연도 추정, 키에는 today 없음 / 자정 경계에서 키·해석의 today 가 어긋날 수 있음 → `__main__` 에서 today 한 번 구해 둘 다 넘기기.
+- D22 ② 날짜별 독립 추정으로 한 여행이 두 해로 갈릴 수 있음("10/5, 10/15" 를 10/10 에 받으면 2027·2026). 행사 검색의 앵커 범위 31일 상한을 D22 보충에 명시할지 사람 확인.
+- 평가셋 noyear 2건: `from` 도 `"*"` 로 풀림 → `"10:00"` 유지가 검증력 높음.
+- 프론트 여행 기간 상한(서버 31·60일) 미리 안내.
+- D21 낮 시간 범위 08:00~20:59 → "9시"를 모델이 21:00 으로 내도 09:00 으로 바뀜. 07:00~22:59 로 넓힐지 사람 판단 대기.
+- 지역 bbox 를 채우면(H7) 합친 지역 판정에서 좌표만 있는 장소는 unknown — 지역별 bbox 도우미 검토.
+- T320·T321: 수집기는 `EventRecord.region` 에 지역 하나 → 4개 구는 구마다 실행. `docs/guides/EVENTS_CATALOG.md` 쉼표 목록 안내는 T325.
