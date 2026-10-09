@@ -295,10 +295,9 @@ def test_no_trip_derives_from_bundle_or_unavailable(make):
     assert calls["search"][0]["trip"] == {"from": "2026-10-15", "to": "2026-10-15"} and b["events"] is not None
 
 
-@pytest.mark.parametrize("story", [StoryRunnerError("timeout"), StoryRunnerError("exit"), bundle(n=0),
-                                   {"schema": "kc-chat-bundle/v1", "itinerary": 1}])
-def test_story_failure_falls_back_to_chat(make, story):
-    c, t, *_ = make(story=story)
+def test_no_anchors_without_llm_problem_falls_back_to_chat(make):
+    # 정상 no_anchors(일정 아님) 는 예산이 있으면 일반 챗봇(§6.5 #3). 실패 종류는 test_kc3_chat_failure.py
+    c, t, *_ = make(story=bundle(n=0))
     r = c.post("/api/messages", json={"text": SCHED})
     assert r.status_code == 200 and "bundle" not in r.json() and len(t.calls) == 1
 

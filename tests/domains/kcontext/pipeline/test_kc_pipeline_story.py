@@ -190,7 +190,7 @@ def test_cli_llm_unavailable(tmp_path, monkeypatch, capsys):
     txt.write_text(TEXT, encoding="utf-8")
     monkeypatch.setattr(cli, "_make_complete", boom)
     rc = cli.main(["--text-file", str(txt), "--trip-from", TRIP[0], "--trip-to", TRIP[1],
-                   "--db", str(db), "--out", str(tmp_path / "o")])  # fmt: skip
+                   "--db", str(db), "--out", str(tmp_path / "o"), "--require-llm"])  # fmt: skip
     assert rc == 2 and not (tmp_path / "o").exists()
 
 

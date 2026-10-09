@@ -21,9 +21,11 @@ import re
 from collections.abc import Mapping
 from dataclasses import dataclass, field
 from pathlib import Path
+from types import MappingProxyType
 from typing import Any
 
 __all__ = [
+    "PARAM_KEYS",
     "FeatureConfig",
     "LlmConfig",
     "LlmConfigError",
@@ -51,6 +53,12 @@ _PROVIDER_KEYS = {
     "local_base_url",
     "local_api_key_envs",
 }
+PARAM_KEYS = ("temperature", "top_p", "seed", "max_tokens", "response_format", "reasoning_effort")
+# 값 범위는 서버 문서 기준이다(명세의 temperature 0..2·max_tokens 1..32768 은 쓰지 않는다).
+# 근거: docs/spikes/llm_params.md §2 (temperature 0~1, max_tokens 1~4096, reasoning_effort low|medium|high).
+TEMPERATURE_RANGE = (0.0, 1.0)
+MAX_TOKENS_RANGE = (1, 4096)
+REASONING_EFFORTS = ("low", "medium", "high")
 BACKENDS = ("api", "local")
 BACKEND_ENV = "LLM_BACKEND"
 
@@ -104,6 +112,10 @@ class FeatureConfig:
     name: str
     provider: str
     model: str
+    params: Mapping[str, Any] = field(default_factory=dict)  # 호출 파라미터(읽기 전용 사본)
+
+    def __post_init__(self) -> None:
+        object.__setattr__(self, "params", MappingProxyType(dict(self.params)))
 
 
 @dataclass(frozen=True)
@@ -118,6 +130,35 @@ def _is_num(v: Any) -> bool:
 
 def _nonempty(v: Any) -> bool:
     return isinstance(v, str) and v.strip() != ""
+
+
+def _check_params(fname: str, raw: Any) -> dict[str, Any]:
+    """feature params 검증. 오류에는 키 이름만 싣고 값은 싣지 않는다."""
+    if not isinstance(raw, Mapping):
+        raise LlmConfigError(f"feature {fname!r}: params 는 매핑이어야 한다")
+    extra = set(raw) - set(PARAM_KEYS)
+    if extra:
+        raise LlmConfigError(f"feature {fname!r}: 알 수 없는 params 키 {sorted(map(str, extra))}")
+    for k, v in raw.items():
+        if k == "temperature":
+            ok = _is_num(v) and TEMPERATURE_RANGE[0] <= v <= TEMPERATURE_RANGE[1]
+        elif k == "top_p":
+            ok = _is_num(v) and 0 < v <= 1
+        elif k == "seed":
+            ok = isinstance(v, int) and not isinstance(v, bool) and v >= 0
+        elif k == "max_tokens":
+            ok = (
+                isinstance(v, int)
+                and not isinstance(v, bool)
+                and MAX_TOKENS_RANGE[0] <= v <= MAX_TOKENS_RANGE[1]
+            )
+        elif k == "response_format":
+            ok = isinstance(v, Mapping) and dict(v) == {"type": "json_object"}
+        else:  # reasoning_effort
+            ok = isinstance(v, str) and v in REASONING_EFFORTS
+        if not ok:
+            raise LlmConfigError(f"feature {fname!r}: params.{k} 값이 허용 범위 밖이다")
+    return dict(raw)
 
 
 def _env_names(name: str, key: str, envs: Any, *, allow_empty: bool) -> tuple[str, ...]:
@@ -247,13 +288,20 @@ def parse_config(data: Mapping[str, Any], env: Mapping[str, str] | None = None) 
                 f"feature {norm_seen[norm]!r}·{fname!r} 이 같은 env 변수 {norm} 로 정규화된다"
             )
         norm_seen[norm] = fname
-        if not isinstance(r, Mapping) or set(r) != {"provider", "model"}:
-            raise LlmConfigError(f"feature {fname!r}: provider·model 두 키만 있어야 한다")
+        if (
+            not isinstance(r, Mapping)
+            or not {"provider", "model"} <= set(r)
+            or set(r) - {"provider", "model", "params"}
+        ):
+            raise LlmConfigError(
+                f"feature {fname!r}: provider·model 필수, params 선택 외의 키는 둘 수 없다"
+            )
         if not _nonempty(r["provider"]) or not _nonempty(r["model"]):
             raise LlmConfigError(f"feature {fname!r}: provider·model 이 비어 있다")
         if r["provider"] not in providers:
             raise LlmConfigError(f"feature {fname!r}: 없는 provider {r['provider']!r} 를 참조한다")
-        features[fname] = FeatureConfig(fname, r["provider"], r["model"])
+        params = _check_params(fname, r["params"]) if "params" in r else {}
+        features[fname] = FeatureConfig(fname, r["provider"], r["model"], params)
     cfg = LlmConfig(providers=providers, features=features)
     if env is not None:
         used: dict[str, set[str]] = {n: set() for n in providers}
@@ -371,8 +419,13 @@ def _parse_yaml_subset(text: str) -> dict[str, Any]:
     return data
 
 
-def load_config(path: str | Path, env: Mapping[str, str] | None = None) -> LlmConfig:
-    """파일(.json 또는 YAML 부분집합)을 읽어 검증한다. env 기본값은 os.environ."""
+def load_config(
+    path: str | Path, env: Mapping[str, str] | None = None, *, check_keys: bool = True
+) -> LlmConfig:
+    """파일(.json 또는 YAML 부분집합)을 읽어 검증한다. env 기본값은 os.environ.
+
+    check_keys=False 면 참조한 키 env 변수의 존재 확인을 생략한다(설정 값만 읽는 호출자용).
+    """
     p = Path(path)
     try:
         text = p.read_text(encoding="utf-8")
@@ -385,4 +438,6 @@ def load_config(path: str | Path, env: Mapping[str, str] | None = None) -> LlmCo
             raise LlmConfigError(f"JSON 파싱 실패: {exc}") from None
     else:
         data = _parse_yaml_subset(text)
+    if not check_keys:
+        return parse_config(data, None)
     return parse_config(data, os.environ if env is None else env)

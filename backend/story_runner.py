@@ -17,7 +17,8 @@ from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 BUNDLE_SCHEMA = "kc-chat-bundle/v1"
-TIMEOUT_S = 90
+TIMEOUT_S = 90  # sprint-3 §6.4 R = 프론트 상한 100초 - 10초
+LLM_BUDGET_S = 75  # §6.4 B = R - 15초. 자식 파이프라인에 --llm-budget-s 로 넘긴다
 MAX_BUNDLE_BYTES = 1024 * 1024
 # 자식에게 넘기는 env 허용 목록. 나머지(관리자 토큰·다른 키 등)는 넘기지 않는다.
 # LLM 키는 이 이름들만. .env 는 자식이 core.llm 허용 목록 로더로 직접 읽는다.
@@ -25,6 +26,7 @@ _ENV_ALLOW = (
     "PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV",
     "NVIDIA_API_KEY", "NVIDIA_API_KEY_A", "NVIDIA_API_KEY_B", "CHAT_MODEL", "SCHEDULE_MODEL",
     "KC_TARGET_REGION", "KC_DATA_DIR",
+    "KC_VAR_DIR", "KC_SCHEDULE_CACHE", "KC_SCHEDULE_RETRY_UNVERIFIED",
 )
 
 
@@ -47,13 +49,15 @@ def _child_env() -> dict[str, str]:
     return env
 
 
-def run_story(text: str, trip: tuple[str, str] | None, db: Path, *, timeout: int = TIMEOUT_S) -> dict:
+def run_story(text: str, trip: tuple[str, str] | None, db: Path, *, timeout: int = TIMEOUT_S,
+              llm_budget_s: int = LLM_BUDGET_S) -> dict:
     tmp = Path(tempfile.mkdtemp(prefix="kc_story_"))
     try:
         src = tmp / "text.txt"
         src.write_text(text, encoding="utf-8")
         out = tmp / "out"
-        cmd = [*_base_cmd(), "--text-file", str(src), "--db", str(db), "--out", str(out)]
+        cmd = [*_base_cmd(), "--text-file", str(src), "--db", str(db), "--out", str(out),
+               "--llm-budget-s", str(llm_budget_s)]
         if trip:
             cmd += ["--trip-from", trip[0], "--trip-to", trip[1]]
         try:

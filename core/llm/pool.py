@@ -61,6 +61,13 @@ class KeyPool:
                 return KeyLease(name, value)
         return None
 
+    def wait_s(self) -> float:
+        """지금 acquire() 하면 키를 얻기까지 기다릴 초. 쓸 수 있는 키가 있으면 0."""
+        now = self._clock()
+        if any(self._until.get(n, 0.0) <= now for n, _ in self._keys):
+            return 0.0
+        return max(min(self._until[n] for n, _ in self._keys) - now, 0.0)
+
     async def acquire(self) -> KeyLease:
         """다음 사용 가능한 키. 전부 쉬는 중이면 가장 빨리 풀리는 때까지 기다린다.
 

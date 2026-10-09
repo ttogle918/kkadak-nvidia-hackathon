@@ -243,3 +243,33 @@ def test_child_env_allow_matches_backend():
 
 def test_fixed_reply_matches_spec():
     assert FIXED == "일정을 지금 정리하지 못했어요. 잠시 뒤 다시 보내 주세요."
+
+
+def test_fixed_reply_matches_backend_constant():
+    from backend import chat
+
+    assert st.SCHEDULE_UNAVAILABLE_REPLY["ko"] == chat.SCHEDULE_UNAVAILABLE_REPLY["ko"]
+
+
+def test_child_env_cache_arg_wins_over_shell_env(monkeypatch):
+    monkeypatch.setenv("KC_SCHEDULE_CACHE", "on")
+    monkeypatch.setenv("KC_VAR_DIR", "/tmp/x")
+    env = st.child_env("off")
+    assert env["KC_SCHEDULE_CACHE"] == "off" and env["KC_VAR_DIR"] == "/tmp/x"
+    assert env["APP_PROCESS_ROLE"] == "agent"
+
+
+def test_case_runs_record_schedule_source_and_attempts(tmp_path, monkeypatch):
+    cached = {**GOOD, "schedule": {"source": "cache", "attempts": 0, "model": "m"}}
+    calls = []
+    monkeypatch.setattr(st.subprocess, "run", fake_run_factory(calls, [cached, GOOD]))
+    db = tmp_path / "x.db"
+    db.write_bytes(b"")
+    out = tmp_path / "res"
+    rc = st.main(["--suite", str(write_suite(tmp_path, [CASE])), "--layer", "pipeline", "--runs", "2",
+                  "--db", str(db), "--out", str(out), "--label", "t", "--cache", "on"])
+    assert rc == 0
+    res = json.loads(next(out.glob("t-pipeline-*.json")).read_text(encoding="utf-8"))
+    r0, r1 = res["case_runs"]
+    assert (r0["schedule_source"], r0["attempts"]) == ("cache", 0)
+    assert (r1["schedule_source"], r1["attempts"]) == (None, None)

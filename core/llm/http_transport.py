@@ -11,7 +11,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
-from collections.abc import Sequence
+from collections.abc import Mapping, Sequence
 from typing import Any
 from urllib.parse import urlsplit
 
@@ -79,6 +79,7 @@ class HttpxTransport:
         base_url: str,
         api_key: str | None,
         messages: Sequence[Message],
+        params: Mapping[str, Any] | None = None,
     ) -> TransportResponse:
         url = _endpoint(base_url)
         headers = {"Content-Type": "application/json"}
@@ -90,6 +91,8 @@ class HttpxTransport:
             "max_tokens": self._max_tokens,
             "stream": False,
         }
+        if params:  # params 의 max_tokens 가 생성자 기본값보다 우선. stream·model·messages 는 덮지 못한다
+            body.update({k: v for k, v in params.items() if k not in ("model", "messages", "stream")})
         # httpx timeout 은 읽기 간격 단위라 천천히 계속 보내는 응답은 못 막는다. 전체 시간 상한을 따로 둔다(W7).
         async with (
             asyncio.timeout(provider.timeout_s),

@@ -11,7 +11,7 @@ import os
 import time
 from collections.abc import Awaitable, Callable, Mapping, Sequence
 from dataclasses import dataclass
-from typing import Protocol
+from typing import Any, Protocol
 
 from core.audit import AuditLog
 from core.llm.config import (
@@ -48,6 +48,7 @@ class Transport(Protocol):
         base_url: str,
         api_key: str | None,  # local 백엔드에 키가 없으면 None
         messages: Sequence[Message],
+        params: Mapping[str, Any] | None = None,  # feature params 가 비어 있지 않을 때만 넘긴다
     ) -> TransportResponse: ...
 
 
@@ -112,6 +113,14 @@ class LlmClient:
             raise UnknownFeature(f"알 수 없는 feature: {feature!r}")
         return self._sems[(fc.provider, self._backends[feature])].locked()
 
+    def key_wait_s(self, feature: str) -> float:
+        """feature 호출이 지금 키를 얻기까지 기다릴 초(쿨다운 중이면 >0). 키 풀이 없으면 0."""
+        fc = self._config.features.get(feature)
+        if fc is None:
+            raise UnknownFeature(f"알 수 없는 feature: {feature!r}")
+        pool = self._pools[(fc.provider, self._backends[feature])]
+        return pool.wait_s() if pool else 0.0
+
     async def complete(self, feature: str, messages: Sequence[Message]) -> str:
         fc = self._config.features.get(feature)
         if fc is None:
@@ -121,11 +130,16 @@ class LlmClient:
         backend = self._backends[feature]
         pool = self._pools[(fc.provider, backend)]
         async with self._sems[(fc.provider, backend)]:
-            call_id = self._audit.call(
-                f"llm:{feature}", {"model": fc.model, "messages": len(messages), "backend": backend}
-            )
+            args: dict[str, Any] = {
+                "model": fc.model,
+                "messages": len(messages),
+                "backend": backend,
+            }
+            if fc.params:
+                args["params"] = sorted(fc.params)  # 키 이름만(값은 남기지 않는다)
+            call_id = self._audit.call(f"llm:{feature}", args)
             try:
-                text = await self._call(provider, backend, pool, fc.model, messages)
+                text = await self._call(provider, backend, pool, fc.model, messages, fc.params)
             except BaseException as exc:
                 self._audit.error(call_id, exc)
                 raise
@@ -139,6 +153,7 @@ class LlmClient:
         pool: KeyPool | None,
         model: str,
         messages: Sequence[Message],
+        params: Mapping[str, Any],
     ) -> str:
         last = "응답 없음"
         base_url = provider.base_url_for(backend)
@@ -146,6 +161,7 @@ class LlmClient:
         for _ in range(len(provider.key_envs_for(backend)) or 1):
             lease: KeyLease | None = await pool.acquire() if pool else None
             kname = lease.name if lease else "없음"
+            extra: dict[str, Any] = {"params": params} if params else {}
             try:
                 resp = await self._transport.send(
                     provider=provider,
@@ -153,6 +169,7 @@ class LlmClient:
                     base_url=base_url,
                     api_key=lease.value if lease else None,
                     messages=messages,
+                    **extra,
                 )
             except asyncio.CancelledError:
                 raise

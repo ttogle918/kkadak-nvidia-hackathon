@@ -81,3 +81,17 @@ def test_lease_repr_hides_value_and_empty_pool_rejected():
         KeyPool([], cooldown_s=1, timeout_s=1)
     with pytest.raises(ValueError):
         KeyPool([("a", "1"), ("a", "2")], cooldown_s=1, timeout_s=1)
+
+
+def test_wait_s_reports_seconds_until_a_key_is_usable():
+    now = [100.0]
+    pool = KeyPool([("A", "a"), ("B", "b")], cooldown_s=30, timeout_s=60, clock=lambda: now[0])
+    assert pool.wait_s() == 0.0
+    pool.cool_down("A")
+    assert pool.wait_s() == 0.0  # B 가 남아 있다
+    pool.cool_down("B", 10)
+    assert pool.wait_s() == 10.0
+    now[0] = 105.0
+    assert pool.wait_s() == 5.0
+    now[0] = 111.0
+    assert pool.wait_s() == 0.0

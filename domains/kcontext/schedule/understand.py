@@ -10,8 +10,10 @@
 
 from __future__ import annotations
 
+import hashlib
 import json
 import re
+import time
 from collections.abc import Callable, Mapping
 from datetime import date, timedelta
 from typing import Any
@@ -29,7 +31,17 @@ from .validate import (
     squash_map,
 )
 
-__all__ = ["MAX_ANCHORS", "MAX_QUOTE_CHARS", "MAX_TEXT_CHARS", "SYSTEM_PROMPT", "understand"]
+__all__ = [
+    "MAX_ANCHORS",
+    "MAX_QUOTE_CHARS",
+    "MAX_TEXT_CHARS",
+    "PROMPT_SHA",
+    "RETRY_CODES",
+    "SYSTEM_PROMPT",
+    "CompleteUnavailable",
+    "understand",
+    "understand_with_meta",
+]
 
 Complete = Callable[[str, str], str]
 
@@ -60,6 +72,14 @@ Rules:
 - For a hotel, "from" is the check-in time and "to" the check-out time.
 - Do not output free time. Do not output coordinates.
 """
+
+PROMPT_SHA = hashlib.sha256(SYSTEM_PROMPT.encode("utf-8")).hexdigest()[:12]
+# 다시 불러 볼 만한 LLM 실패(D15 ③). 입력 검증·주입 차단은 여기에 없다.
+RETRY_CODES = ("LLM_FAILED", "LLM_EMPTY", "LLM_BAD_JSON", "LLM_UNEXPECTED_SHAPE")
+
+
+class CompleteUnavailable(Exception):
+    """``complete`` 가 던지면 LLM_FAILED 와 함께 LLM_UNAVAILABLE 문제를 남기고 재시도하지 않는다."""
 
 
 def _problem(code: str, message: str) -> dict[str, str]:
@@ -423,8 +443,84 @@ def understand(
 ) -> dict[str, Any]:
     """자유형 일정 글 → ``{"anchors": [...], "free_slots": [...], "problems": [{code, message}]}``.
 
-    예외는 던지지 않는다(잘못된 인자 제외). 쓸 수 없는 입력·응답은 problems 로 알린다.
+    1회만 부른다. 예외는 던지지 않는다(잘못된 인자 제외). 쓸 수 없는 입력·응답은 problems 로 알린다.
     """
+    return _understand_once(
+        text, complete=complete, trip_from=trip_from, trip_to=trip_to, day_start=day_start,
+        day_end=day_end, min_slot_min=min_slot_min, hotel_block_min=hotel_block_min,
+    )  # fmt: skip
+
+
+def understand_with_meta(
+    text: str,
+    *,
+    complete: Complete,
+    max_attempts: int = 1,
+    budget_s: float | None = None,
+    attempt_timeout_s: float | None = None,
+    retry_unverified: bool = False,
+    clock: Callable[[], float] = time.monotonic,
+    **kw: Any,
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    """``understand`` + 예산 안 재시도(D15 ③). meta ``{"source": "llm", "attempts": int, "prompt_sha"}``.
+
+    다시 부르는 조건: 실패 종류가 RETRY_CODES(+retry_unverified 면 NO_ANCHOR_VERIFIED)이고
+    ``budget_s is None or 경과 + attempt_timeout_s + 키 대기 <= budget_s`` (timeout 을 모르면 남은 시간 > 0).
+    키 대기 = ``complete.key_wait_s()``(있으면) — 직전 실패로 키가 쿨다운 중일 때 acquire 가 기다릴 초.
+    같은 ``complete`` 만 부른다(다른 백엔드로 넘어가지 않는다, D6).
+    """
+    if max_attempts < 1:
+        raise ValueError("max_attempts 는 1 이상이어야 한다")
+    calls = 0
+
+    def counted(system: str, user: str) -> str:
+        nonlocal calls
+        calls += 1
+        return complete(system, user)
+
+    t0 = clock()
+    notes: list[dict[str, str]] = []
+    out: dict[str, Any] = {}
+    for n in range(1, max_attempts + 1):
+        out = _understand_once(text, complete=counted, **kw)
+        codes = {p["code"] for p in out["problems"]}
+        retry_on = set(RETRY_CODES) | ({"NO_ANCHOR_VERIFIED"} if retry_unverified else set())
+        failed = [c for c in (*RETRY_CODES, "NO_ANCHOR_VERIFIED") if c in codes and c in retry_on]
+        if not failed or "LLM_UNAVAILABLE" in codes or n == max_attempts:
+            break
+        elapsed = clock() - t0
+        key_wait = 0.0
+        waiter = getattr(complete, "key_wait_s", None)
+        if callable(waiter):
+            try:
+                key_wait = max(float(waiter()), 0.0)
+            except Exception:  # noqa: BLE001 - 대기 시간을 못 구하면 0 으로 본다
+                key_wait = 0.0
+        if budget_s is not None and (
+            elapsed + attempt_timeout_s + key_wait > budget_s
+            if attempt_timeout_s is not None
+            else elapsed + key_wait >= budget_s
+        ):
+            notes.append(_problem("RETRY_SKIPPED_BUDGET", "예산이 모자라 다시 부르지 않음"))
+            break
+        notes.append(_problem("LLM_RETRY", f"{n}회차 {failed[0]} 후 재시도"))
+    out["problems"] = notes + out["problems"]
+    if any(p["code"] == "LLM_UNAVAILABLE" for p in out["problems"]):
+        calls = 0
+    return out, {"source": "llm", "attempts": calls, "prompt_sha": PROMPT_SHA}
+
+
+def _understand_once(
+    text: str,
+    *,
+    complete: Complete,
+    trip_from: str | None = None,
+    trip_to: str | None = None,
+    day_start: str = "08:00",
+    day_end: str = "23:00",
+    min_slot_min: int = 30,
+    hotel_block_min: int = 60,
+) -> dict[str, Any]:
     problems: list[dict[str, str]] = []
     empty = {"anchors": [], "free_slots": [], "problems": problems}
     if not callable(complete):
@@ -459,6 +555,8 @@ def understand(
         raw = complete(SYSTEM_PROMPT, user)
     except Exception as e:  # noqa: BLE001 - LLM 호출 실패는 problems 로만 알린다
         problems.append(_problem("LLM_FAILED", f"LLM 호출 실패 ({type(e).__name__})"))
+        if isinstance(e, CompleteUnavailable):
+            problems.append(_problem("LLM_UNAVAILABLE", "LLM 클라이언트를 만들 수 없음(키·설정)"))
         return empty
     if not isinstance(raw, str) or not raw.strip():
         problems.append(_problem("LLM_EMPTY", "LLM 응답이 비어 있음"))

@@ -27,8 +27,8 @@ export const ENDPOINTS = {
   decideAudit: 'POST /audit/{id}/decision  {decision}  — 사람 전용 승인 API',
 };
 
-/** 요청 타임아웃(ms). LLM 응답이 느릴 수 있어 넉넉하되 90초 이내. */
-export const REQUEST_TIMEOUT_MS = 80_000;
+/** 요청 타임아웃(ms). sprint-3 §6.4 F — backend 파이프라인 한도(90초)보다 10초 길어야 고정 문구가 먼저 온다. */
+export const REQUEST_TIMEOUT_MS = 100_000;
 
 /** backend 오류 code -> 화면용 문구. 서버가 준 message 는 쓰지 않는다(내부 문구·세부가 새지 않게). */
 const ERROR_MESSAGES = {

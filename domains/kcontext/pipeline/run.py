@@ -17,7 +17,7 @@ from typing import Any
 
 from domains.kcontext.index import LocalIndex
 from domains.kcontext.places import PlaceBook, load_places
-from domains.kcontext.schedule import understand
+from domains.kcontext.schedule import RETRY_CODES, ScheduleCache, understand_with_meta
 from domains.kcontext.story import COVERAGE_NOTE, build_mentions, to_card
 from domains.kcontext.story.finder import DEFAULT_LIMIT
 
@@ -79,13 +79,47 @@ def run_story_pipeline(
     limit: int = DEFAULT_LIMIT,
     places: PlaceBook | None = None,
     now: datetime | None = None,
+    max_attempts: int = 2,
+    budget_s: float | None = None,
+    attempt_timeout_s: float | None = None,
+    retry_unverified: bool = False,
+    cache: ScheduleCache | None = None,
+    cache_key: str | None = None,
 ) -> dict[str, Any]:
-    """묶음(dict)을 돌려준다. 디스크에 쓰지 않는다. db 가 LocalIndex 면 닫지 않는다."""
+    """묶음(dict)을 돌려준다. 묶음 디스크 쓰기는 없다(캐시 쓰기는 cache 가 있을 때만).
+
+    db 가 LocalIndex 면 닫지 않는다. ``bundle["schedule"]`` 에 이해 결과의 출처를 남긴다(§6.5).
+    """
     book = places if places is not None else load_places()
     t_from, t_to = trip if trip else (None, None)
-    sched = understand(text, complete=complete, trip_from=t_from, trip_to=t_to)
+    use_cache = cache is not None and cache_key is not None
+    hit = cache.get(cache_key) if use_cache else None  # type: ignore[union-attr,arg-type]
+    cache_problems: list[dict[str, str]] = []
+    if hit is not None and hit["result"].get("anchors"):
+        sched = hit["result"]
+        schedule = {
+            "source": "cache",
+            "attempts": 0,
+            "model": hit["meta"].get("model"),
+            "prompt_sha": hit["meta"].get("prompt_sha"),
+            "cache_created_at": hit["created_at"],
+        }
+    else:
+        sched, meta = understand_with_meta(
+            text, complete=complete, trip_from=t_from, trip_to=t_to, max_attempts=max_attempts,
+            budget_s=budget_s, attempt_timeout_s=attempt_timeout_s,
+            retry_unverified=retry_unverified,
+        )  # fmt: skip
+        meta["model"] = getattr(complete, "model", None)
+        schedule = {**meta, "cache_created_at": None}
+        failed = any(p["code"] in RETRY_CODES for p in sched["problems"])
+        if use_cache and sched["anchors"] and not failed and meta["attempts"] > 0:
+            try:
+                cache.put(cache_key, sched, meta)  # type: ignore[union-attr,arg-type]
+            except OSError as e:
+                cache_problems.append(_problem("CACHE_UNAVAILABLE", f"캐시를 쓸 수 없음 ({type(e).__name__})"))  # fmt: skip
     anchors: list[dict[str, Any]] = [dict(a) for a in sched["anchors"]]
-    problems: list[dict[str, str]] = [dict(p) for p in sched["problems"]]
+    problems: list[dict[str, str]] = [dict(p) for p in sched["problems"]] + cache_problems
     _attach_coords(anchors, book, problems)
 
     visits = [a for a in anchors if a.get("type") == "visit" and a.get("name")]
@@ -108,6 +142,7 @@ def run_story_pipeline(
     stamp = (now or datetime.now(UTC)).astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     return {
         "schema": BUNDLE_SCHEMA,
+        "schedule": schedule,
         "generated_at": stamp,
         "trip": {"from": t_from, "to": t_to} if trip else None,
         "itinerary": {"anchors": anchors, "free_slots": sched["free_slots"]},

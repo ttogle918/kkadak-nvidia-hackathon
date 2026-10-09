@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import argparse
 import asyncio
+import dataclasses
 import json
 import os
 import sys
@@ -20,7 +21,6 @@ from pathlib import Path
 
 from core.audit import AuditLog, MemorySink
 from core.llm import (
-    FeatureConfig,
     HttpxTransport,
     LlmClient,
     LlmConfig,
@@ -30,9 +30,10 @@ from core.llm import (
 )
 from domains.kcontext.paths import repo_root
 
-from .understand import MAX_TEXT_CHARS, understand
+from .understand import MAX_TEXT_CHARS, CompleteUnavailable, understand
 
-FEATURE = "chat"  # 전용 feature 를 config 에 더하지 않고 chat 설정을 재사용한다
+FEATURE = "schedule"  # yaml 에 없으면 chat 설정을 재사용한다(T308 이 schedule feature 를 더한다)
+FALLBACK_FEATURE = "chat"
 MAX_TOKENS = 4096  # reasoning 모델은 추론에 토큰을 쓰므로 넉넉히
 
 
@@ -45,12 +46,13 @@ def _make_complete():
     root = repo_root()
     env = resolve_env(root / ".env")
     cfg = load_config(root / "deploy" / "llm.chat.yaml", env)
+    feature = FEATURE if FEATURE in cfg.features else FALLBACK_FEATURE
     model = (os.environ.get("SCHEDULE_MODEL") or os.environ.get("CHAT_MODEL") or "").strip()
     if model:
-        fc = cfg.features[FEATURE]
+        fc = cfg.features[feature]
         cfg = LlmConfig(
             providers=cfg.providers,
-            features={**cfg.features, FEATURE: FeatureConfig(FEATURE, fc.provider, model)},
+            features={**cfg.features, feature: dataclasses.replace(fc, model=model)},
         )
     run_id = f"schedule-{uuid.uuid4().hex[:8]}"
     audit = AuditLog(MemorySink(), run_id=run_id, actor="kcontext:schedule")
@@ -58,8 +60,32 @@ def _make_complete():
 
     def complete(system: str, user: str) -> str:
         msgs = [{"role": "system", "content": system}, {"role": "user", "content": user}]
-        return asyncio.run(client.complete(FEATURE, msgs))
+        return asyncio.run(client.complete(feature, msgs))
 
+    complete.model = cfg.features[feature].model  # type: ignore[attr-defined]
+    complete.key_wait_s = lambda: client.key_wait_s(feature)  # type: ignore[attr-defined]
+    return complete
+
+
+def make_lazy_complete(factory=None):
+    """첫 호출 때 클라이언트를 만든다. 만들기 실패(키·설정)는 CompleteUnavailable 로 알린다."""
+    state: dict = {}
+
+    def complete(system: str, user: str) -> str:
+        if "fn" not in state:
+            if "err" in state:
+                raise CompleteUnavailable(state["err"])
+            try:
+                state["fn"] = (factory or _make_complete)()
+            except Exception as e:
+                state["err"] = type(e).__name__
+                raise CompleteUnavailable(state["err"]) from e
+            complete.model = getattr(state["fn"], "model", None)  # type: ignore[attr-defined]
+            complete.key_wait_s = getattr(state["fn"], "key_wait_s", None)  # type: ignore[attr-defined]
+        return state["fn"](system, user)
+
+    complete.model = None  # type: ignore[attr-defined]
+    complete.key_wait_s = None  # type: ignore[attr-defined]
     return complete
 
 

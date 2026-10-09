@@ -2,7 +2,14 @@
 # 호스트에서는 NVIDIA 공개 엔드포인트(키 필요), 샌드박스 안에서는 D1 에 따라 base_url 을
 # https://inference.local/v1 로 바꿔 끼운다(키는 게이트웨이 provider 가 주입).
 # 모델은 env CHAT_MODEL 로 덮어쓴다. 기본값은 /v1/models 에 있는 것을 확인했다(2026-10-07).
+# 주의: provider timeout_s 40 은 schedule 뿐 아니라 일반 챗봇(chat)에도 적용된다 — 의도된 변화(D15 ②).
+# timeout_s 40 = BASELINE 의 T_llm (eval/BASELINE.md "시간 예산", D15 ②, sprint-3.md §6.4).
 providers:
-  nvidia: {api_key_envs: [NVIDIA_API_KEY], base_url: "https://integrate.api.nvidia.com/v1", max_concurrency: 2, timeout_s: 60}
+  nvidia: {api_key_envs: [NVIDIA_API_KEY], base_url: "https://integrate.api.nvidia.com/v1", max_concurrency: 2, timeout_s: 40}
+# schedule: 일정 이해 호출. params 는 eval/BASELINE.md 에서 "켬"인 것만(D15 ①, sprint-3.md §6.3).
+#   S5 temperature 0 켬 · S6 seed 끔(5회 중 3회 동일, docs/spikes/llm_params.md §4) · S7 json_object 끔(효과 측정 불가, §5).
+#   S8 reasoning_effort low 켬(2026-10-09, T311 미달 — 40초 한도 폴백 2건, 사람 승인. 스파이크 지연 5~11초).
+#   값 범위는 서버 문서 기준(docs/spikes/llm_params.md §2). chat 은 params 없음(일반 챗봇 그대로).
 features:
   chat: {provider: nvidia, model: "openai/gpt-oss-20b"}
+  schedule: {provider: nvidia, model: "openai/gpt-oss-20b", params: {temperature: 0, reasoning_effort: low}}

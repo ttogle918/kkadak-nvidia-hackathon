@@ -50,7 +50,7 @@ LLM_FAIL_CODES = ("LLM_FAILED", "LLM_EMPTY", "LLM_BAD_JSON", "LLM_UNEXPECTED_SHA
 # 폴백으로 세는 결과(기대 ok 케이스에서). 두 층의 이름을 합친 목록이다.
 FALLBACK_OUTCOMES = ("fallback_llm", "fallback_unverified", "fallback_chat", "schedule_unavailable",
                      "timeout", "error")  # fmt: skip
-# D15 ⑤ 의 고정 문구. backend 상수(T310 이 만든다)와 같은 값이어야 한다 — T310 머지 뒤 일치를 테스트한다.
+# D15 ⑤ 의 고정 문구. backend 상수(T310 이 만든다)와 같은 값이어야 한다 — 테스트가 일치를 확인한다.
 SCHEDULE_UNAVAILABLE_REPLY = {"ko": "일정을 지금 정리하지 못했어요. 잠시 뒤 다시 보내 주세요."}
 
 # backend/story_runner.py 의 _ENV_ALLOW 사본(D7 ③ — 셸 env 를 통째로 넘기지 않는다). 테스트가 일치를 확인한다.
@@ -58,6 +58,7 @@ CHILD_ENV_ALLOW = (
     "PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV",
     "NVIDIA_API_KEY", "NVIDIA_API_KEY_A", "NVIDIA_API_KEY_B", "CHAT_MODEL", "SCHEDULE_MODEL",
     "KC_TARGET_REGION", "KC_DATA_DIR",
+    "KC_VAR_DIR", "KC_SCHEDULE_CACHE", "KC_SCHEDULE_RETRY_UNVERIFIED",
 )  # fmt: skip
 
 REPO_ROOT = Path(__file__).resolve().parents[2]
@@ -132,6 +133,15 @@ def classify_api(status: int | None, body: Mapping | None, expect_status: str) -
     if not isinstance(bundle, Mapping) and SCHEDULE_UNAVAILABLE_REPLY["ko"] in _reply_ko(body):
         return "schedule_unavailable"
     return "no_anchors_expected" if expect_status == "no_anchors" else "fallback_chat"
+
+
+def _schedule_meta(bundle: Mapping | None) -> dict:
+    """묶음 schedule 의 source·attempts 값만(없으면 null). 원문은 기록하지 않는다."""
+    s = bundle.get("schedule") if isinstance(bundle, Mapping) else None
+    s = s if isinstance(s, Mapping) else {}
+    src, att = s.get("source"), s.get("attempts")
+    return {"schedule_source": src if isinstance(src, str) else None,
+            "attempts": att if isinstance(att, int) and not isinstance(att, bool) else None}
 
 
 def _compare(case: Mapping, anchors: list[dict] | None) -> dict:
@@ -250,7 +260,7 @@ def run_pipeline_once(case: Mapping, db: Path, timeout_s: int, cache: str) -> di
             except (OSError, ValueError):
                 bundle = None
     outcome = classify_pipeline(code, bundle, expect_status)
-    rec = {"outcome": outcome, "ms": ms, "problem_codes": _codes_of(bundle)}
+    rec = {"outcome": outcome, "ms": ms, "problem_codes": _codes_of(bundle), **_schedule_meta(bundle)}
     rec.update(_compare(case, _anchors_of(bundle)))
     return rec
 
@@ -277,6 +287,8 @@ def run_api_once(case: Mapping, base: str) -> dict:
     bundle = body.get("bundle") if isinstance(body, Mapping) else None
     rec = {"outcome": classify_api(status, body, expect_status), "ms": ms,
            "http_status": status, "problem_codes": _codes_of(bundle)}  # fmt: skip
+    if isinstance(bundle, Mapping) and isinstance(bundle.get("schedule"), Mapping):
+        rec.update(_schedule_meta(bundle))
     rec.update(_compare(case, _anchors_of(bundle)))
     return rec
 

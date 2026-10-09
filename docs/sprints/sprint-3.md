@@ -823,6 +823,15 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 
 ---
 
+
+### Stage 2 에서 이월 (2026-10-09)
+- **변동 목표 미달**(파이프라인 7 > 4, API 4 > 2, S5+S8): 원인은 low 추론에서 회차마다 앵커 일부를 놓치는 재현율 흔들림(ampm_01·pm_01·header_01·outdict_01·long_01·en_basic_01·en_list_01). 조치: H10 검수 뒤 같은 구성으로 재판정, 그래도 미달이면 다음 스프린트. 목표는 낮추지 않는다. D15 보충.
+- **W5** 성공 경로의 행사 검색 시간(`attach_events`)이 §6.4 예산 밖 → T313 에서 남은 시간으로 한도.
+- **W9** `schedule` 필드가 backend 를 모양 검증 없이 통과 → T313 v2 수용 때 검증.
+- **W7** 캐시 키에 `LLM_BACKEND*`·주입 규칙 버전 없음 → 다음 결정 보충 때 검토.
+- **key_wait 명시 인자화**: `understand_with_meta` 가 `complete.key_wait_s` 를 duck typing 으로 읽음(래퍼가 끼면 조용히 0 — fail-open). T312 에서 `run.py` 를 고칠 때 `key_wait: Callable[[], float] | None` 명시 인자로 바꾸고 예외 시 보수값.
+- T326(규칙 대체): 착수 조건(폴백 대부분 `fallback_llm`) 불성립 — 폴백 0. 착수하지 않음.
+
 ## 완료 기록
 (스테이지마다 `/stage` 가 기록한다)
 

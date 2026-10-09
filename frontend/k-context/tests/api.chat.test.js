@@ -71,9 +71,9 @@ test('네트워크 실패는 code=network', async () => {
   await assert.rejects(() => createHttpApi({ baseUrl: BASE }).getMessages(), (e) => e.code === 'network' && !e.message.includes('secret'));
 });
 
-test('타임아웃: 응답이 없으면 abort 되어 code=timeout (90초 이내)', async () => {
+test('타임아웃: 응답이 없으면 abort 되어 code=timeout (100초 기준)', async () => {
   const { REQUEST_TIMEOUT_MS } = await import('../src/api/http.js');
-  assert.ok(REQUEST_TIMEOUT_MS <= 90_000);
+  assert.equal(REQUEST_TIMEOUT_MS, 100_000);
   const realSet = globalThis.setTimeout;
   globalThis.setTimeout = (fn, ms, ...a) => realSet(fn, ms === REQUEST_TIMEOUT_MS ? 5 : ms, ...a); // 대기 시간만 단축
   try {

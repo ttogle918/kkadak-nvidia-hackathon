@@ -7,11 +7,14 @@ audit 에는 모델명·메시지 수·백엔드만 남고 사용자 본문·키
 from __future__ import annotations
 
 import asyncio
+import dataclasses
 import os
 import re
 import threading
+import time
 import uuid
 from collections import deque
+from collections.abc import Callable
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -27,11 +30,10 @@ from backend.chat_story import (
 from backend.schedule_gate import looks_like_schedule
 from backend.security_log import entries_from_events
 from backend.settings import REPO_ROOT, Settings
-from backend.story_runner import StoryRunnerError, run_story
+from backend.story_runner import LLM_BUDGET_S, StoryRunnerError, run_story
 from core.audit import AuditEvent, AuditLog, JsonlSink
 from core.guard import Verdict, scan
 from core.llm import (
-    FeatureConfig,
     HttpxTransport,
     LlmClient,
     LlmConfig,
@@ -86,6 +88,27 @@ BLOCKED_REPLY = {
     "en": "That is outside the permitted scope, so I cannot access it. "
     "I will keep answering from public tourism data.",
 }
+
+# 시간 예산(sprint-3 §6.4). F = 프론트 요청 상한(frontend http.js REQUEST_TIMEOUT_MS 와 같은 100초).
+FRONT_LIMIT_S = 100
+FALLBACK_MARGIN_S = 5
+DEFAULT_LLM_TIMEOUT_S = 45.0  # 설정에서 provider timeout_s 를 못 읽을 때(§6.4 기본 예산)
+
+# D15 ④ 캐시 적중 표시. 서버가 붙이는 고정 문구(LLM 이 만든 문구가 아니다).
+CACHE_REUSED_NOTE = {"ko": "이전 결과 재사용", "en": "Reused a previous result"}
+
+# D15 ⑤ 고정 문구. LLM 이 만든 문장이 아니며 LLM 맥락에도 넣지 않는다.
+SCHEDULE_UNAVAILABLE_REPLY = {
+    "ko": "일정을 지금 정리하지 못했어요. 잠시 뒤 다시 보내 주세요.",
+    "en": "I couldn't organize your schedule right now. Please try again shortly.",
+}
+NO_SCHEDULE_REPLY = {
+    "ko": "일정으로 정리할 항목을 찾지 못했어요.",
+    "en": "I couldn't find schedule items to organize.",
+}
+# 파이프라인 묶음 problems 의 LLM 실패 코드(§6.5 #4·#5). 코드 문자열만 읽는다(domains import 금지).
+_LLM_FAILED_CODES = frozenset({"LLM_FAILED", "LLM_EMPTY", "LLM_BAD_JSON", "LLM_UNEXPECTED_SHAPE"})
+_LLM_UNAVAILABLE_CODE = "LLM_UNAVAILABLE"
 
 _URL = re.compile(r"https?://\S+", re.IGNORECASE)
 _PATH = re.compile(r"(?<![\w.])((?:/[\w.\-]+)+|~/[\w.\-/]*|[A-Za-z]:\\[^\s]*)")
@@ -150,14 +173,17 @@ class ChatService:
         settings: Settings,
         *,
         transport: Transport | None = None,
+        clock: Callable[[], float] = time.monotonic,
         env: dict[str, str] | None = None,
         config_path: Path | None = None,
         dotenv_path: Path | None = None,
     ) -> None:
         self._settings = settings
         self._transport = transport or HttpxTransport(max_tokens=CHAT_MAX_TOKENS)
+        self._clock = clock
         self._env = env  # None 이면 호출 시점에 셸 env → .env 허용 목록 순으로 해석
         self._config_path = config_path or CONFIG_PATH
+        self._t_llm: float | None = None
         self._dotenv = dotenv_path or DOTENV_PATH
         self._client: LlmClient | None = None
         self._run_id = f"backend-chat-{uuid.uuid4().hex[:8]}"  # 파일 stem = run_id, 재시작 충돌 방지
@@ -206,7 +232,7 @@ class ChatService:
                 fc = cfg.features[FEATURE]
                 cfg = LlmConfig(
                     providers=cfg.providers,
-                    features={**cfg.features, FEATURE: FeatureConfig(FEATURE, fc.provider, model)},
+                    features={**cfg.features, FEATURE: dataclasses.replace(fc, model=model)},
                 )
             self._client = LlmClient(cfg, self._transport, self._audit, env=env)
         except (LlmConfigError, KeyError):
@@ -235,13 +261,32 @@ class ChatService:
         body = SearchBody.model_validate(args)
         return run_catalog(self._settings.catalog_dir, "search", body.model_dump(by_alias=True, exclude_none=False))
 
+    def _llm_timeout_s(self) -> float:
+        """T_llm — chat 기능 provider 의 timeout_s(설정). 한 번만 읽어 저장한다. 못 읽으면 기본 예산 값."""
+        if self._t_llm is None:
+            try:
+                cfg = load_config(self._config_path, None, check_keys=False)  # 키 없어도 값은 읽는다
+                self._t_llm = float(cfg.providers[cfg.features[FEATURE].provider].timeout_s)
+            except (LlmConfigError, KeyError, OSError):
+                self._t_llm = DEFAULT_LLM_TIMEOUT_S
+        return self._t_llm
+
+    def _fixed(self, text: str, reply_text_: dict[str, str], mark: int) -> ChatResult:
+        """고정 문구 응답. 사용자 문장과 답 모두 LLM 맥락에 넣지 않는다."""
+        user = self._new("user", text)
+        reply = self._new("agent", dict(reply_text_))
+        with self._lock:
+            self._history.append((user, False))
+            self._history.append((reply, False))
+        return ChatResult(reply, entries_from_events(self._sink.since(mark), run_id=self._run_id))
+
     def _story_fallback(self, kind: str) -> None:
         """일정 흐름을 못 썼다 — 사유 종류만 audit 에 남기고(본문·경로 없음) 일반 챗봇으로 간다."""
         cid = self._audit.call("kc_chat_story", {"stage": "fallback"})
         self._audit.error(cid, StoryRunnerError(kind))
 
     async def _story(self, text: str, context: dict[str, Any] | None) -> ChatResult | None:
-        """None 이면 일반 챗봇으로 폴백(사유는 audit)."""
+        """None 이면 일반 챗봇으로 폴백(색인 없음·일정 아님+예산 있음). 일정 실패는 고정 문구 ChatResult."""
         if not self._story_lock.acquire(blocking=False):
             raise ChatBusy
         try:
@@ -251,18 +296,32 @@ class ChatService:
             trip = context["trip"] if context else None
             mark = self._sink.mark()
             cid = self._audit.call("kc_chat_story", {"chars": len(text), "trip": trip is not None})
+            t0 = self._clock()
             try:
-                raw = await asyncio.to_thread(run_story, text, trip, self._settings.index_db)
+                raw = await asyncio.to_thread(run_story, text, trip, self._settings.index_db,
+                                              llm_budget_s=LLM_BUDGET_S)
                 bundle = clean_bundle(raw)
-            except StoryRunnerError as exc:
+            except StoryRunnerError as exc:  # §6.5 #6 — 한도 초과·비정상 종료·묶음 없음
                 self._audit.error(cid, exc)
-                return None
+                return self._fixed(text, SCHEDULE_UNAVAILABLE_REPLY, mark)
             except BadBundle:
                 self._audit.error(cid, StoryRunnerError("bad_shape"))
-                return None
+                return self._fixed(text, SCHEDULE_UNAVAILABLE_REPLY, mark)
             if bundle["status"] == "no_anchors":
-                self._audit.error(cid, StoryRunnerError("no_anchors"))
-                return None
+                codes = {p.get("code") for p in bundle["problems"]}
+                if codes & _LLM_FAILED_CODES:  # #4 — 일반 챗봇으로 덮지 않는다(D15 ⑤)
+                    self._audit.error(cid, StoryRunnerError("llm_failed"))
+                    return self._fixed(text, SCHEDULE_UNAVAILABLE_REPLY, mark)
+                if _LLM_UNAVAILABLE_CODE in codes:  # #5
+                    self._audit.error(cid, StoryRunnerError("llm_unavailable"))
+                    return self._fixed(text, SCHEDULE_UNAVAILABLE_REPLY, mark)
+                # #3·#7 — 일정이 아니다. 남은 예산이 LLM 1회 한도 이상일 때만 일반 챗봇.
+                elapsed = self._clock() - t0
+                if elapsed + self._llm_timeout_s() <= FRONT_LIMIT_S - FALLBACK_MARGIN_S:
+                    self._audit.error(cid, StoryRunnerError("no_anchors"))
+                    return None
+                self._audit.error(cid, StoryRunnerError("no_budget"))
+                return self._fixed(text, NO_SCHEDULE_REPLY, mark)
             bt = bundle.get("trip")
             if isinstance(bt, dict) and isinstance(bt.get("from"), str) and isinstance(bt.get("to"), str):
                 trip = (bt["from"], bt["to"])
@@ -270,7 +329,11 @@ class ChatService:
             n, m, k = counts(bundle)
             self._audit.result(cid, {"anchors": n, "mentions": m, "events": k, "problems": len(bundle["problems"])})
             user = self._new("user", text)
-            reply = self._new("agent", reply_text(bundle))
+            text_out: Any = reply_text(bundle)
+            sched = bundle.get("schedule")
+            if isinstance(sched, dict) and sched.get("source") == "cache":  # D15 ④ — 서버 고정 문구
+                text_out = {k: f"{v} {CACHE_REUSED_NOTE[k]}." for k, v in text_out.items()}
+            reply = self._new("agent", text_out)
             with self._lock:
                 self._history.append((user, False))  # 고정 문구는 LLM 맥락에 넣지 않는다
                 self._history.append((reply, False))

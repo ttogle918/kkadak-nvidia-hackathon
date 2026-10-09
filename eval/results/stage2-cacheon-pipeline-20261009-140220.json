@@ -1,0 +1,325 @@
+{
+  "schema": "kc-eval-stability/v1",
+  "label": "stage2-cacheon",
+  "layer": "pipeline",
+  "runs": 3,
+  "cache": "on",
+  "git_head": "f856969c566d90b0a7e2b3d2f42150c1ff3d623a",
+  "llm_config_sha256": "e8568d87d8f2d1cf4d049c1b99d19bd8865db3e9ce660b2f6d92c90a38aa87c2",
+  "child_env_names": [
+    "APP_PROCESS_ROLE",
+    "HOME",
+    "KC_SCHEDULE_CACHE",
+    "LANG",
+    "PATH",
+    "VIRTUAL_ENV"
+  ],
+  "model_env": {
+    "CHAT_MODEL": null,
+    "SCHEDULE_MODEL": null
+  },
+  "started_at": "2026-10-09T14:02:20Z",
+  "finished_at": "2026-10-09T14:02:51Z",
+  "interrupted": false,
+  "est_calls": 18,
+  "case_runs": [
+    {
+      "id": "sch_ko_basic_01",
+      "run": 1,
+      "outcome": "ok",
+      "ms": 15115,
+      "problem_codes": [
+        "QUOTE_NOT_FOUND",
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 2,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "창덕궁",
+          "from": "2026-10-15T10:00",
+          "to": null
+        },
+        {
+          "type": "hotel",
+          "name": "종로3가",
+          "from": null,
+          "to": null
+        }
+      ],
+      "coords": 2,
+      "pairs": 2,
+      "expected": 3,
+      "missing": 1,
+      "extra": 0,
+      "field_fail": [],
+      "exact": false
+    },
+    {
+      "id": "sch_ko_ampm_01",
+      "run": 1,
+      "outcome": "ok",
+      "ms": 5206,
+      "problem_codes": [
+        "AMPM_ASSUMED",
+        "QUOTE_NOT_FOUND",
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 1,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "경복궁",
+          "from": "2026-10-16T15:00",
+          "to": null
+        }
+      ],
+      "coords": 1,
+      "pairs": 1,
+      "expected": 2,
+      "missing": 1,
+      "extra": 0,
+      "field_fail": [],
+      "exact": false
+    },
+    {
+      "id": "sch_en_basic_01",
+      "run": 1,
+      "outcome": "ok",
+      "ms": 8829,
+      "problem_codes": [
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 2,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "Gyeongbokgung",
+          "from": "2026-10-16T10:00",
+          "to": null
+        },
+        {
+          "type": "visit",
+          "name": "Gwanghwamun",
+          "from": "2026-10-16T14:00",
+          "to": null
+        }
+      ],
+      "coords": 2,
+      "pairs": 2,
+      "expected": 2,
+      "missing": 0,
+      "extra": 0,
+      "field_fail": [],
+      "exact": true
+    },
+    {
+      "id": "sch_ko_basic_01",
+      "run": 2,
+      "outcome": "ok",
+      "ms": 134,
+      "problem_codes": [
+        "QUOTE_NOT_FOUND",
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 2,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "창덕궁",
+          "from": "2026-10-15T10:00",
+          "to": null
+        },
+        {
+          "type": "hotel",
+          "name": "종로3가",
+          "from": null,
+          "to": null
+        }
+      ],
+      "coords": 2,
+      "pairs": 2,
+      "expected": 3,
+      "missing": 1,
+      "extra": 0,
+      "field_fail": [],
+      "exact": false
+    },
+    {
+      "id": "sch_ko_ampm_01",
+      "run": 2,
+      "outcome": "ok",
+      "ms": 153,
+      "problem_codes": [
+        "AMPM_ASSUMED",
+        "QUOTE_NOT_FOUND",
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 1,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "경복궁",
+          "from": "2026-10-16T15:00",
+          "to": null
+        }
+      ],
+      "coords": 1,
+      "pairs": 1,
+      "expected": 2,
+      "missing": 1,
+      "extra": 0,
+      "field_fail": [],
+      "exact": false
+    },
+    {
+      "id": "sch_en_basic_01",
+      "run": 2,
+      "outcome": "ok",
+      "ms": 115,
+      "problem_codes": [
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 2,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "Gyeongbokgung",
+          "from": "2026-10-16T10:00",
+          "to": null
+        },
+        {
+          "type": "visit",
+          "name": "Gwanghwamun",
+          "from": "2026-10-16T14:00",
+          "to": null
+        }
+      ],
+      "coords": 2,
+      "pairs": 2,
+      "expected": 2,
+      "missing": 0,
+      "extra": 0,
+      "field_fail": [],
+      "exact": true
+    },
+    {
+      "id": "sch_ko_basic_01",
+      "run": 3,
+      "outcome": "ok",
+      "ms": 138,
+      "problem_codes": [
+        "QUOTE_NOT_FOUND",
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 2,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "창덕궁",
+          "from": "2026-10-15T10:00",
+          "to": null
+        },
+        {
+          "type": "hotel",
+          "name": "종로3가",
+          "from": null,
+          "to": null
+        }
+      ],
+      "coords": 2,
+      "pairs": 2,
+      "expected": 3,
+      "missing": 1,
+      "extra": 0,
+      "field_fail": [],
+      "exact": false
+    },
+    {
+      "id": "sch_ko_ampm_01",
+      "run": 3,
+      "outcome": "ok",
+      "ms": 172,
+      "problem_codes": [
+        "AMPM_ASSUMED",
+        "QUOTE_NOT_FOUND",
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 1,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "경복궁",
+          "from": "2026-10-16T15:00",
+          "to": null
+        }
+      ],
+      "coords": 1,
+      "pairs": 1,
+      "expected": 2,
+      "missing": 1,
+      "extra": 0,
+      "field_fail": [],
+      "exact": false
+    },
+    {
+      "id": "sch_en_basic_01",
+      "run": 3,
+      "outcome": "ok",
+      "ms": 136,
+      "problem_codes": [
+        "DAY_UNTIMED"
+      ],
+      "n_anchors": 2,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "Gyeongbokgung",
+          "from": "2026-10-16T10:00",
+          "to": null
+        },
+        {
+          "type": "visit",
+          "name": "Gwanghwamun",
+          "from": "2026-10-16T14:00",
+          "to": null
+        }
+      ],
+      "coords": 2,
+      "pairs": 2,
+      "expected": 2,
+      "missing": 0,
+      "extra": 0,
+      "field_fail": [],
+      "exact": true
+    }
+  ],
+  "summary": {
+    "runs_total": 9,
+    "expected_ok_runs": 9,
+    "outcomes": {
+      "ok": 9
+    },
+    "fallback_count": 0,
+    "fallback_rate": 0.0,
+    "varying_cases": 0,
+    "cases_measured": 3,
+    "count_variation_rate": 0.0,
+    "exact_count": 3,
+    "exact_rate": 0.3333,
+    "anchor_recall": 0.7143,
+    "anchor_precision": 1.0,
+    "latency_ms": {
+      "p50": 153,
+      "p95": 15115,
+      "ok_p50": 153,
+      "ok_p95": 15115
+    },
+    "problem_codes": {
+      "AMPM_ASSUMED": 3,
+      "DAY_UNTIMED": 9,
+      "QUOTE_NOT_FOUND": 6
+    },
+    "coord_attach_rate": 1.0
+  }
+}
