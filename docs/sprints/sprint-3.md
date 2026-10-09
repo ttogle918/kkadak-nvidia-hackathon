@@ -849,4 +849,17 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 - 회귀: pytest 1,668 passed · node 312 · ruff 통과 · `kc.py validate` 0 · `kc.py run --check --known-failures eval/BASELINE.md` 0 (gate 22/24 known-failure 2 · mentions 13/13 · judge 18/18 · guard 7/7)
 - reviewer: 1차 FAIL(블로커 1 — 측정기가 셸 env 전체를 자식에 전달, D7 ③) → 수정 후 PASS
 - 기준선 요약: 파이프라인 폴백 2/54 · 변동 케이스 8/18 · 일치 35/54 · p95 27.1s / API 폴백 1/30 · 변동 4/10 · 일치 17/30 · p95 46.6s → T_llm 40s
-- **Stage 2 착수 조건 미충족: D15 사람 승인 대기**
+- ~~Stage 2 착수 조건 미충족: D15 사람 승인 대기~~ → D15 승인(2026-10-09, `f856969`)
+
+### Stage 2 — 안정화 (2026-10-09, 커밋 `b848d29`)
+- 태스크별 파일
+  - T308 `core/llm/{config,client,http_transport}.py` · `deploy/llm.{chat,example}.yaml` · `tests/core/llm/test_kc3_llm_params.py`
+  - T309 `domains/kcontext/schedule/{understand,cache(신규),__main__,__init__}.py` · `domains/kcontext/pipeline/{run,__main__}.py` · `tests/domains/kcontext/schedule/test_kc3_schedule_{retry,cache}.py` · `tests/domains/kcontext/pipeline/{conftest,test_kc3_pipeline_cache,test_kc3_attempt_timeout}.py`
+  - T310 `backend/{story_runner,chat}.py` · `frontend/k-context/src/api/http.js` · `tests/backend/test_kc3_chat_failure.py` · `frontend/k-context/tests/api.timeout.test.js` · `eval/kc_eval/stability.py`
+  - reviewer 수정: `core/llm/pool.py` `wait_s` · `client.key_wait_s` · 캐시 적중 문구 · 설정 1회 읽기 · 실패 시 45초
+  - T311 `eval/BASELINE.md` "Stage 2 뒤"·"S8 켬"·"결론" · `eval/results/stage2{,s8}-*.json`(8개, 실호출 약 174)
+  - T326 착수하지 않음(조건 불성립)
+- 회귀: pytest 1,751 · node 313 · ruff · `kc.py run --check` 0
+- reviewer: 1차 FAIL(캐시 적중 표시 누락 B1, 경고 8) → 2차 FAIL(D15 문구와 S8 충돌 B2) → D15 보충 후 통과
+- 결과: 기준선 → S5+S8 — 파이프라인 폴백 2→0 · 일치 35→40/54 · 재현율 .74→.84 · p95 27→13초 / API 폴백 1→0 · 일치 17→17 · p95 47→10초 / 변동 8→7·4→4(미달, 이월) / 캐시 켬 변동 0
+
