@@ -1,12 +1,13 @@
 # nvidia-hackathon
 
 NVIDIA 에이전트 스택(OpenShell · NemoClaw · NVIDIA Agent Skills) 위에서 만드는 프로젝트. 팀 까딱이.
-방향: 한국의 문화와 역사를 새롭게 탐색·해석·활용하는 에이전트 (OpenShell 사용이 목적). 세부 주제는 미정 —
+방향: 한국의 문화와 역사를 새롭게 탐색·해석·활용하는 에이전트 (해커톤 때는 OpenShell 사용이 목적이었고, 이후 선택 기능 — D20). 세부 주제는 미정 —
 정해지면 이 문서 맨 위에 한 줄 소개와 절대 규칙을 추가한다.
 참고: `/home/hyun/MaintQ-NVIDIA` 는 같은 스택을 쓴 선행 프로젝트다. 코드는 가져오지 않고, 필요할 때만 패턴을 참고한다.
 
 ## 스택 배치
-- **OpenShell** — 에이전트가 도는 샌드박스. 정책 템플릿 `deploy/openshell/policy.yaml`(기본 전부 차단).
+> 해커톤(10/7) 이후 OpenShell·NemoClaw 는 **선택 기능**이다(D20). 제품은 호스트에서 돌고, 필수 보안은 앱 코드 장치로 보장한다. 필수·선택 구분: `deploy/README.md`.
+- **OpenShell** (선택) — 샌드박스 시연 경로. 정책 템플릿 `deploy/openshell/policy.yaml`(기본 전부 차단).
 - **NemoClaw / OpenClaw** — 샌드박스 안 에이전트 런타임. 도구는 MCP 로 붙인다.
 - **추론** — 샌드박스 안에서는 `https://inference.local` 로만 호출. API 키는 게이트웨이 provider 에만 있다(`scripts/gateway_setup.sh`).
 - **Agent Skills** — 우리 스킬은 `skills/`, NVIDIA 카탈로그 스킬은 `.claude/skills/`.

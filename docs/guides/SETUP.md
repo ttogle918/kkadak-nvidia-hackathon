@@ -4,6 +4,19 @@
 > 순수 Ubuntu 머신이면 **0단계를 건너뛰고 1단계부터** 하면 된다.
 > ⚠ 표시는 이 레포에서 직접 확인하지 못한 부분이다. 규칙 4에 따라 NemoClaw/OpenShell 설치 명령은 공식 문서로 재확인할 것.
 
+## 필수 / 선택 한눈에 (D20)
+제품(backend · 파이프라인 · 화면)은 호스트에서 돈다. OpenShell·NemoClaw 는 **선택**이다 — 샌드박스 시연을 할 때만 깐다.
+
+| 단계 | 구분 | 비고 |
+|---|---|---|
+| 0 WSL2 | 필수(Windows 일 때) | Docker Desktop 은 선택 |
+| 1 기본 패키지 · 2 Git · 4 Python·uv · 8 클론·의존성 | **필수** | |
+| 3 Node.js | 필수(프론트 테스트) | 화면만 띄울 때는 python http.server 로 충분 |
+| 9 키 설정 | **필수** | `.env` 의 `NVIDIA_API_KEY` 만 있으면 된다. 셸 export 는 게이트웨이용(선택) |
+| 5 Docker · 7 OpenShell·NemoClaw · 10 게이트웨이 | 선택 | 샌드박스 시연 전용 |
+| 6 Claude Code · 11 Agent Skills · 13 | 개발 도구 | 제품 실행과 무관 |
+| 12 환경 점검 | pytest·ruff 는 필수, `preflight.sh` 는 선택 | `preflight.sh` 는 지금 openshell·게이트웨이 없음을 FAIL 로 센다(D20 후속으로 WARN 화 예정) |
+
 ## 0. Windows 에서 WSL2 + Ubuntu (PowerShell 관리자)
 
 ```powershell
@@ -57,7 +70,7 @@ source ~/.bashrc
 uv --version
 ```
 
-## 5. Docker 확인
+## 5. Docker 확인 (선택 — 샌드박스 시연)
 
 ```bash
 docker version
@@ -75,7 +88,7 @@ claude --version
 claude          # 첫 실행 때 로그인
 ```
 
-## 7. NVIDIA 스택 — OpenShell · NemoClaw ⚠
+## 7. NVIDIA 스택 — OpenShell · NemoClaw ⚠ (선택 — 샌드박스 시연)
 
 이 머신에서는 `~/.local/bin/{openshell,openshell-gateway,openshell-sandbox,nemoclaw}` 와 npm 전역 `nemoclaw`(`~/.nemoclaw/source`, 원본 `github.com/NVIDIA/NemoClaw`) · `openclaw` 로 깔려 있다. 즉 공식 설치 스크립트가 한 번에 깐 형태다.
 
@@ -99,17 +112,17 @@ cd nvidia-hackathon
 uv sync                      # .venv 생성 + 의존성(dev 그룹 포함)
 ```
 
-## 9. 키 설정 (값은 절대 커밋하지 않는다 — 규칙 1)
+## 9. 키 설정 (필수 — 값은 절대 커밋하지 않는다, 규칙 1)
 
 1. <https://build.nvidia.com> 에서 API 키 발급.
 2. 호스트 셸에 export (샌드박스 이미지·리포에 넣지 않는다):
 
 ```bash
 cp .env.example .env         # .env 는 gitignore. 필요하면 NVIDIA_API_KEY_A/_B, NGC_API_KEY 도 채운다
-export NVIDIA_API_KEY=nvapi-...     # 게이트웨이 등록에는 셸 env 가 읽힌다
+export NVIDIA_API_KEY=nvapi-...     # (선택) 게이트웨이 등록에만 필요 — 제품은 .env 만 읽는다
 ```
 
-## 10. 게이트웨이 · 추론 provider 등록
+## 10. 게이트웨이 · 추론 provider 등록 (선택 — 샌드박스 시연)
 
 ```bash
 openshell gateway info                 # healthy 인지 확인 (게이트웨이 이름 nemoclaw, 127.0.0.1:8080)
@@ -129,7 +142,7 @@ npx skills add NVIDIA/skills --skill <name> --agent claude-code
 ## 12. 환경 점검 · 회귀 테스트
 
 ```bash
-scripts/preflight.sh            # 도구·Docker·GPU·게이트웨이·키 점검 (읽기 전용)
+scripts/preflight.sh            # (선택) 도구·Docker·GPU·게이트웨이·키 점검 (읽기 전용) — openshell 이 없으면 FAIL 이 나온다(D20 후속)
 scripts/preflight.sh --live     # 키 유효성까지(채팅 1토큰 호출)
 
 uv run python -m pytest -q      # 테스트
