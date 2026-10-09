@@ -1,0 +1,251 @@
+{
+  "schema": "kc-eval-stability/v1",
+  "label": "verify-partial",
+  "layer": "api",
+  "runs": 5,
+  "cache": "off",
+  "git_head": "02563d5e9aba9b80a21c26c95896810a35e2d2e2",
+  "llm_config_sha256": "f0efe39f5528b68281e806a7c12c57931abddae9a894f73597d953d362576333",
+  "child_env_names": null,
+  "model_env": {
+    "CHAT_MODEL": null,
+    "SCHEDULE_MODEL": null
+  },
+  "started_at": "2026-10-09T14:39:12Z",
+  "finished_at": "2026-10-09T14:40:34Z",
+  "interrupted": false,
+  "est_calls": 15,
+  "case_runs": [
+    {
+      "id": "sch_ko_basic_01",
+      "run": 1,
+      "outcome": "ok",
+      "ms": 20554,
+      "http_status": 200,
+      "problem_codes": [
+        "LLM_RETRY",
+        "AMPM_ASSUMED",
+        "DAY_UNTIMED"
+      ],
+      "schedule_source": "llm",
+      "attempts": 2,
+      "n_anchors": 3,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "창덕궁",
+          "from": "2026-10-15T10:00",
+          "to": null
+        },
+        {
+          "type": "visit",
+          "name": "익선동",
+          "from": "2026-10-15T02:00",
+          "to": null
+        },
+        {
+          "type": "hotel",
+          "name": "종로3가",
+          "from": null,
+          "to": null
+        }
+      ],
+      "coords": 3,
+      "pairs": 3,
+      "expected": 3,
+      "missing": 0,
+      "extra": 0,
+      "field_fail": [
+        {
+          "i": 1,
+          "field": "from"
+        }
+      ],
+      "exact": false
+    },
+    {
+      "id": "sch_ko_basic_01",
+      "run": 2,
+      "outcome": "ok",
+      "ms": 17621,
+      "http_status": 200,
+      "problem_codes": [
+        "LLM_RETRY",
+        "QUOTE_NOT_FOUND",
+        "DAY_UNTIMED"
+      ],
+      "schedule_source": "llm",
+      "attempts": 2,
+      "n_anchors": 2,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "창덕궁",
+          "from": "2026-10-15T10:00",
+          "to": null
+        },
+        {
+          "type": "hotel",
+          "name": "종로3가",
+          "from": null,
+          "to": null
+        }
+      ],
+      "coords": 2,
+      "pairs": 2,
+      "expected": 3,
+      "missing": 1,
+      "extra": 0,
+      "field_fail": [],
+      "exact": false
+    },
+    {
+      "id": "sch_ko_basic_01",
+      "run": 3,
+      "outcome": "ok",
+      "ms": 4608,
+      "http_status": 200,
+      "problem_codes": [
+        "AMPM_ASSUMED",
+        "DAY_UNTIMED"
+      ],
+      "schedule_source": "llm",
+      "attempts": 1,
+      "n_anchors": 3,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "창덕궁",
+          "from": "2026-10-15T10:00",
+          "to": null
+        },
+        {
+          "type": "visit",
+          "name": "익선동",
+          "from": "2026-10-15T14:00",
+          "to": null
+        },
+        {
+          "type": "hotel",
+          "name": "종로3가",
+          "from": null,
+          "to": null
+        }
+      ],
+      "coords": 3,
+      "pairs": 3,
+      "expected": 3,
+      "missing": 0,
+      "extra": 0,
+      "field_fail": [],
+      "exact": true
+    },
+    {
+      "id": "sch_ko_basic_01",
+      "run": 4,
+      "outcome": "ok",
+      "ms": 27557,
+      "http_status": 200,
+      "problem_codes": [
+        "LLM_RETRY",
+        "QUOTE_NOT_FOUND",
+        "DAY_UNTIMED"
+      ],
+      "schedule_source": "llm",
+      "attempts": 2,
+      "n_anchors": 2,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "창덕궁",
+          "from": "2026-10-15T10:00",
+          "to": null
+        },
+        {
+          "type": "hotel",
+          "name": "종로3가",
+          "from": null,
+          "to": null
+        }
+      ],
+      "coords": 2,
+      "pairs": 2,
+      "expected": 3,
+      "missing": 1,
+      "extra": 0,
+      "field_fail": [],
+      "exact": false
+    },
+    {
+      "id": "sch_ko_basic_01",
+      "run": 5,
+      "outcome": "ok",
+      "ms": 8568,
+      "http_status": 200,
+      "problem_codes": [
+        "LLM_RETRY",
+        "AMPM_ASSUMED",
+        "DAY_UNTIMED"
+      ],
+      "schedule_source": "llm",
+      "attempts": 2,
+      "n_anchors": 3,
+      "anchors": [
+        {
+          "type": "visit",
+          "name": "창덕궁",
+          "from": "2026-10-15T10:00",
+          "to": null
+        },
+        {
+          "type": "visit",
+          "name": "익선동",
+          "from": "2026-10-15T14:00",
+          "to": null
+        },
+        {
+          "type": "hotel",
+          "name": "종로3가",
+          "from": null,
+          "to": null
+        }
+      ],
+      "coords": 3,
+      "pairs": 3,
+      "expected": 3,
+      "missing": 0,
+      "extra": 0,
+      "field_fail": [],
+      "exact": true
+    }
+  ],
+  "summary": {
+    "runs_total": 5,
+    "expected_ok_runs": 5,
+    "outcomes": {
+      "ok": 5
+    },
+    "fallback_count": 0,
+    "fallback_rate": 0.0,
+    "varying_cases": 1,
+    "cases_measured": 1,
+    "count_variation_rate": 0.4,
+    "exact_count": 2,
+    "exact_rate": 0.4,
+    "anchor_recall": 0.8667,
+    "anchor_precision": 1.0,
+    "latency_ms": {
+      "p50": 17621,
+      "p95": 27557,
+      "ok_p50": 17621,
+      "ok_p95": 27557
+    },
+    "problem_codes": {
+      "AMPM_ASSUMED": 3,
+      "DAY_UNTIMED": 5,
+      "LLM_RETRY": 4,
+      "QUOTE_NOT_FOUND": 2
+    },
+    "coord_attach_rate": 1.0
+  }
+}

@@ -87,8 +87,9 @@ def test_input_errors_and_injection_are_not_retried():
 def test_unverified_retry_only_when_enabled():
     bad = json.dumps({"anchors": [{"type": "visit", "name": "없음", "quote": "원문에 없는 구절"}]},
                      ensure_ascii=False)  # fmt: skip
-    s = Seq([bad, OK])
-    _, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, clock=s.clock, **TRIP)
+    s = Seq([bad, OK])  # QUOTE_NOT_FOUND 부분 재시도(D15 보충 2)는 끄고 NO_ANCHOR_VERIFIED 만 본다
+    _, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, retry_partial=False,
+                                   clock=s.clock, **TRIP)  # fmt: skip
     assert meta["attempts"] == 1
     s = Seq([bad, OK])
     r, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, retry_unverified=True,

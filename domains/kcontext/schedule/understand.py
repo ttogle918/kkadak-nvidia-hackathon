@@ -459,6 +459,7 @@ def understand_with_meta(
     budget_s: float | None = None,
     attempt_timeout_s: float | None = None,
     retry_unverified: bool = False,
+    retry_partial: bool = True,
     clock: Callable[[], float] = time.monotonic,
     **kw: Any,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -466,6 +467,8 @@ def understand_with_meta(
 
     다시 부르는 조건: 실패 종류가 RETRY_CODES(+retry_unverified 면 NO_ANCHOR_VERIFIED)이고
     ``budget_s is None or 경과 + attempt_timeout_s + 키 대기 <= budget_s`` (timeout 을 모르면 남은 시간 > 0).
+    ``retry_partial`` 이면 QUOTE_NOT_FOUND 가 남은 결과도 같은 조건으로 1회 더 부르고, 검증된 앵커가 더 많은 쪽을 쓴다
+    (같거나 2회차가 LLM 실패면 1회차). 최종 problems = 선택된 시도의 문제 + 재시도 기록.
     키 대기 = ``complete.key_wait_s()``(있으면) — 직전 실패로 키가 쿨다운 중일 때 acquire 가 기다릴 초.
     같은 ``complete`` 만 부른다(다른 백엔드로 넘어가지 않는다, D6).
     """
@@ -481,12 +484,22 @@ def understand_with_meta(
     t0 = clock()
     notes: list[dict[str, str]] = []
     out: dict[str, Any] = {}
+    first_partial: dict[str, Any] | None = None  # 부분 결과 재시도 중이면 1회차 결과
     for n in range(1, max_attempts + 1):
-        out = _understand_once(text, complete=counted, **kw)
+        cur = _understand_once(text, complete=counted, **kw)
+        if first_partial is not None:  # 부분 결과 재시도의 2회차 — 앵커가 더 많은 쪽만 쓴다
+            fcodes = {p["code"] for p in cur["problems"]}
+            better = (
+                not fcodes & set(RETRY_CODES) and len(cur["anchors"]) > len(first_partial["anchors"])
+            )
+            out = cur if better else first_partial
+            break
+        out = cur
         codes = {p["code"] for p in out["problems"]}
         retry_on = set(RETRY_CODES) | ({"NO_ANCHOR_VERIFIED"} if retry_unverified else set())
         failed = [c for c in (*RETRY_CODES, "NO_ANCHOR_VERIFIED") if c in codes and c in retry_on]
-        if not failed or "LLM_UNAVAILABLE" in codes or n == max_attempts:
+        partial = retry_partial and not failed and "QUOTE_NOT_FOUND" in codes
+        if not (failed or partial) or "LLM_UNAVAILABLE" in codes or n == max_attempts:
             break
         elapsed = clock() - t0
         key_wait = 0.0
@@ -503,7 +516,9 @@ def understand_with_meta(
         ):
             notes.append(_problem("RETRY_SKIPPED_BUDGET", "예산이 모자라 다시 부르지 않음"))
             break
-        notes.append(_problem("LLM_RETRY", f"{n}회차 {failed[0]} 후 재시도"))
+        notes.append(_problem("LLM_RETRY", f"{n}회차 {failed[0] if failed else 'QUOTE_NOT_FOUND'} 후 재시도"))
+        if partial:
+            first_partial = out
     out["problems"] = notes + out["problems"]
     if any(p["code"] == "LLM_UNAVAILABLE" for p in out["problems"]):
         calls = 0

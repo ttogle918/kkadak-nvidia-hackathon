@@ -863,3 +863,11 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 - reviewer: 1차 FAIL(캐시 적중 표시 누락 B1, 경고 8) → 2차 FAIL(D15 문구와 S8 충돌 B2) → D15 보충 후 통과
 - 결과: 기준선 → S5+S8 — 파이프라인 폴백 2→0 · 일치 35→40/54 · 재현율 .74→.84 · p95 27→13초 / API 폴백 1→0 · 일치 17→17 · p95 47→10초 / 변동 8→7·4→4(미달, 이월) / 캐시 켬 변동 0
 
+### Stage 2 보완 — 부분 결과 재시도·캐시 제외 (2026-10-09, D15 보충 2)
+- 계기: 수동 확인(실제 서버)에서 데모 문장이 앵커 3개/2개를 오가고 2개짜리가 캐시에 고정됨.
+- 파일: `domains/kcontext/schedule/{understand,cache}.py`(retry_partial, 캐시 v2) · `domains/kcontext/pipeline/{run,__main__}.py`(캐시 쓰기·읽기 제외, `KC_SCHEDULE_RETRY_PARTIAL`) · `backend/story_runner.py`·`eval/kc_eval/stability.py`(env 허용 목록) · `tests/domains/kcontext/pipeline/test_kc3_partial_retry.py`(17) · `test_kc3_schedule_retry.py`(1줄)
+- 실측: 데모 문장 캐시 끔 — 파이프라인 5/5 · API 3/5 앵커 3개 (`eval/results/verify-partial-*`). 개선, 보장 아님.
+- 회귀: pytest 1,770 · node 313 · ruff · eval check 0
+- reviewer: FAIL(B3 옛 캐시 적중) → PASS. 이월 유지(W5·W9 → T313, W7, key_wait 명시 인자 → T312)
+- 주의: Stage 2 측정값(`eval/BASELINE.md`)은 이 보완 이전 코드 기준이다. T323 최종 측정에서 함께 반영한다.
+

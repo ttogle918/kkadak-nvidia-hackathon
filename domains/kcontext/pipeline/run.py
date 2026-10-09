@@ -70,6 +70,12 @@ def _unique_card_ids(cards: list[dict[str, Any]]) -> None:
             c["card"]["id"] = f"{cid}_{seen[cid]}"
 
 
+def _unfit(res: dict[str, Any]) -> bool:
+    """캐시에 있어선 안 되는 결과(부분·실패) — 적중으로 치지 않는다(심층 방어)."""
+    bad = {"QUOTE_NOT_FOUND", *RETRY_CODES}
+    return any(isinstance(p, dict) and p.get("code") in bad for p in res.get("problems", []))
+
+
 def run_story_pipeline(
     text: str,
     *,
@@ -83,6 +89,7 @@ def run_story_pipeline(
     budget_s: float | None = None,
     attempt_timeout_s: float | None = None,
     retry_unverified: bool = False,
+    retry_partial: bool = True,
     cache: ScheduleCache | None = None,
     cache_key: str | None = None,
 ) -> dict[str, Any]:
@@ -95,7 +102,7 @@ def run_story_pipeline(
     use_cache = cache is not None and cache_key is not None
     hit = cache.get(cache_key) if use_cache else None  # type: ignore[union-attr,arg-type]
     cache_problems: list[dict[str, str]] = []
-    if hit is not None and hit["result"].get("anchors"):
+    if hit is not None and hit["result"].get("anchors") and not _unfit(hit["result"]):
         sched = hit["result"]
         schedule = {
             "source": "cache",
@@ -108,12 +115,13 @@ def run_story_pipeline(
         sched, meta = understand_with_meta(
             text, complete=complete, trip_from=t_from, trip_to=t_to, max_attempts=max_attempts,
             budget_s=budget_s, attempt_timeout_s=attempt_timeout_s,
-            retry_unverified=retry_unverified,
+            retry_unverified=retry_unverified, retry_partial=retry_partial,
         )  # fmt: skip
         meta["model"] = getattr(complete, "model", None)
         schedule = {**meta, "cache_created_at": None}
         failed = any(p["code"] in RETRY_CODES for p in sched["problems"])
-        if use_cache and sched["anchors"] and not failed and meta["attempts"] > 0:
+        partial = any(p["code"] == "QUOTE_NOT_FOUND" for p in sched["problems"])  # 불완전할 수 있는 결과는 고정하지 않는다
+        if use_cache and sched["anchors"] and not failed and not partial and meta["attempts"] > 0:
             try:
                 cache.put(cache_key, sched, meta)  # type: ignore[union-attr,arg-type]
             except OSError as e:

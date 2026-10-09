@@ -26,7 +26,7 @@ __all__ = ["CACHE_ENV", "ScheduleCache", "cache_enabled", "default_root", "key_f
 CACHE_ENV = "KC_SCHEDULE_CACHE"  # on(기본) | off
 LLM_CONFIG = Path("deploy") / "llm.chat.yaml"
 _KEY = re.compile(r"^[0-9a-f]{64}$")
-_VERSION = 1
+_VERSION = 2  # 1: 부분 결과(QUOTE_NOT_FOUND)가 들어 있을 수 있었다 — 없음으로 본다
 
 
 def cache_enabled(env: dict[str, str] | None = None) -> bool:

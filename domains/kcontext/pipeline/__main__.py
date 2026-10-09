@@ -3,7 +3,7 @@
     python -m domains.kcontext.pipeline --text-file F [--trip-from YYYY-MM-DD --trip-to YYYY-MM-DD] \
         --db PATH --out DIR [--limit N] [--force] [--llm-budget-s 75] [--require-llm]
 
-env: KC_SCHEDULE_CACHE=on|off(기본 on) · KC_SCHEDULE_RETRY_UNVERIFIED=on|off(기본 off) · KC_VAR_DIR.
+env: KC_SCHEDULE_CACHE=on|off(기본 on) · KC_SCHEDULE_RETRY_UNVERIFIED=on|off(기본 off) · KC_SCHEDULE_RETRY_PARTIAL=on|off(기본 on) · KC_VAR_DIR.
 
 표준출력은 요약 한 줄 JSON 뿐. 종료 코드: 0 묶음을 썼다(앵커가 0개면 status=no_anchors) · 2 실행 조건 미충족.
 """
@@ -57,6 +57,10 @@ def _on(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in ("on", "1", "true", "yes")
 
 
+def _env_off(name: str) -> bool:
+    return os.environ.get(name, "").strip().lower() in ("off", "0", "false", "no")
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m domains.kcontext.pipeline")
     ap.add_argument("--text-file", type=Path, required=True)
@@ -101,6 +105,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             budget_s=a.llm_budget_s,
             attempt_timeout_s=_attempt_timeout_s(),
             retry_unverified=_on("KC_SCHEDULE_RETRY_UNVERIFIED"),
+            retry_partial=not _env_off("KC_SCHEDULE_RETRY_PARTIAL"),
             cache=cache,
             cache_key=key_for(text, trip) if cache is not None else None,
         )
