@@ -1,5 +1,5 @@
 // http API — 실제 backend 연결. mock.js 와 같은 메서드 이름·시그니처를 가진다.
-// 연결된 것: getMessages·sendMessage·getCards·getCard·getSources·getRationale. 나머지는 아직 ApiNotImplementedError.
+// 연결된 것: getMessages·sendMessage·getAuditLog·decideAudit(+ getCards·getCard·getSources·getRationale 는 backend fixture 용). getItinerary·getRoutes 는 아직 ApiNotImplementedError.
 // 구현할 때: ENDPOINTS 표(제안)를 확정하고 request() 로 채운다. 신원(요청자·승인자)은 클라이언트가 보내지 않는다 — 서버가 세션에서 정한다.
 
 import { validateCard, validateSource } from './schema.js';
@@ -42,7 +42,26 @@ const ERROR_MESSAGES = {
   not_found: '찾을 수 없습니다',
   bad_id: '요청 형식이 올바르지 않습니다',
   internal_error: '서버에서 오류가 발생했습니다',
+  already_decided: '이미 결정된 항목입니다',
+  not_decidable: '결정할 수 없는 항목입니다',
+  self_approval: '만든 주체는 자신의 요청을 결정할 수 없습니다',
+  validation_error: '요청이 올바르지 않습니다',
 };
+
+const AUDIT_KINDS = ['ok', 'deny', 'pend', 'approved', 'rejected'];
+const isStr = (v) => typeof v === 'string';
+/** 서버 보안 로그 항목을 화면이 쓰는 필드만 골라 검증한다. 모양이 틀리면 null(그 항목은 버린다). */
+export function sanitizeAuditEntry(e) {
+  if (!e || typeof e !== 'object' || !isStr(e.id) || !e.id || !isStr(e.time) || !AUDIT_KINDS.includes(e.kind)) return null;
+  const tx = e.text;
+  const text = isStr(tx) ? tx : tx && typeof tx === 'object' && isStr(tx.ko) && isStr(tx.en) ? { ko: tx.ko, en: tx.en } : null;
+  if (text == null) return null;
+  return {
+    id: e.id.slice(0, 200), time: e.time.slice(0, 32), kind: e.kind, text,
+    decided_by: isStr(e.decided_by) ? e.decided_by.slice(0, 100) : null,
+    ...(isStr(e.decided_at) ? { decided_at: e.decided_at.slice(0, 40) } : {}),
+  };
+}
 
 function apiError(code, status) {
   const e = new Error(ERROR_MESSAGES[code] ?? `요청에 실패했습니다 (${status ?? '?'})`);
@@ -147,9 +166,22 @@ export function createHttpApi({ baseUrl = '/api' } = {}) {
       }
       return { reply: data.reply, logs: Array.isArray(data.logs) ? data.logs : [], bundle };
     },
-    getAuditLog: nope('getAuditLog'),
-    async decideAudit(id, decision) { // eslint-disable-line no-unused-vars
-      throw new ApiNotImplementedError('decideAudit', baseUrl);
+    /** GET /audit -> AuditEntry[] (backend/routers/review.py). 모양이 틀린 항목은 버린다. */
+    async getAuditLog() {
+      const data = await requestJson(baseUrl, '/audit');
+      if (!Array.isArray(data)) throw apiError('bad_response');
+      return data.map(sanitizeAuditEntry).filter(Boolean);
+    },
+    /**
+     * POST /audit/{id}/decision {decision} -> AuditEntry. 사람 전용 — 본문은 decision 뿐이다(신원·사유 없음, 결정자는 서버가 채운다).
+     * @param {string} id  @param {'approve'|'reject'} decision
+     */
+    async decideAudit(id, decision) {
+      if (decision !== 'approve' && decision !== 'reject') throw apiError('validation_error');
+      const data = await requestJson(baseUrl, `/audit/${encodeURIComponent(String(id))}/decision`, { method: 'POST', body: { decision } });
+      const entry = sanitizeAuditEntry(data);
+      if (!entry) throw apiError('bad_response');
+      return entry;
     },
   };
 }

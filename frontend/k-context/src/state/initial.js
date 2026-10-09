@@ -52,6 +52,8 @@ export function createInitialState(overrides = {}) {
     error: null,
     // --- 챗봇이 정리한 일정(kc-chat-bundle/v1, 검증된 것) — 없으면 null. 있으면 타임라인·지도·카드가 이것으로 바뀐다 ---
     chatBundle: null,
+    // --- 여행 기간 입력(D22, 선택 보조): {from,to} 문자열. 요청의 trip 은 여기서만 만든다 ---
+    tripInput: { from: '', to: '' },
     // --- 하단 패널 높이 단계 ---
     panelLevel: 'default', // 'collapsed' | 'default' | 'expanded'
     // --- 모바일 시트 ---

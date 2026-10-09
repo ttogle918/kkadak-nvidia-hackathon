@@ -165,7 +165,10 @@ def test_cli_env_off_disables_partial_retry(tmp_path, monkeypatch):
     assert llm.n == 1
 
 
-def _write_cache(cache, key, res, v=2):
+def _write_cache(cache, key, res, v=None):
+    from domains.kcontext.schedule import cache as cache_mod
+
+    v = cache_mod._VERSION if v is None else v
     cache.root.mkdir(parents=True, exist_ok=True)
     body = {"v": v, "created_at": "2026-10-01T00:00:00Z", "meta": {"model": "m", "prompt_sha": "p"},
             "result": res}  # fmt: skip
@@ -187,6 +190,14 @@ def test_cache_partial_entry_is_not_a_hit(env):
 def test_cache_v1_entry_is_not_a_hit(env):
     go, cache, key = env
     _write_cache(cache, key, _res([]), v=1)
+    s = Seq([TWO])
+    b = go(s)
+    assert s.n == 1 and b["schedule"]["source"] == "llm"
+
+
+def test_cache_v2_entry_before_d21_is_not_a_hit(env):
+    go, cache, key = env
+    _write_cache(cache, key, _res([]), v=2)
     s = Seq([TWO])
     b = go(s)
     assert s.n == 1 and b["schedule"]["source"] == "llm"

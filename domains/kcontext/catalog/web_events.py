@@ -22,6 +22,7 @@ from domains.kcontext.regions import Region
 
 from .model import Evidence, Observation, Schedule
 from .rules import classify_venue, norm_text
+from .target import region_ids
 
 __all__ = ["SOURCE_ID", "default_events_file", "make_web_fetcher", "observation_from_record",
            "observations_from_records"]
@@ -72,7 +73,7 @@ def observations_from_records(records: Iterable[EventRecord], *, region: Region)
         places = None
     out = []
     for r in records:
-        if r.region != region.id:
+        if r.region not in region_ids(region):
             continue
         o = observation_from_record(r, region=region, places=places)
         if o is not None:

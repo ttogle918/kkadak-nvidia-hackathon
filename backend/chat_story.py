@@ -9,7 +9,7 @@ from __future__ import annotations
 import math
 import re
 from collections.abc import Callable, Mapping
-from datetime import date
+from datetime import date, timedelta
 from typing import Any
 
 CONTEXT_SCHEMA = "chat-context/v1"
@@ -390,39 +390,80 @@ def derive_trip(plans: list[dict[str, Any]]) -> tuple[str, str] | None:
     return (days[0], days[-1]) if (b - a).days + 1 <= MAX_TRIP_DAYS else None
 
 
-def build_search_args(bundle: dict[str, Any], trip: tuple[str, str] | None) -> dict[str, Any] | None:
-    """`/api/events/search` 와 같은 요청 형식. trip 을 알 수 없으면 None."""
-    plans = plans_from_anchors(bundle["itinerary"]["anchors"])
-    trip = trip or derive_trip(plans)
-    if trip is None:
+# 행사 검색 범위를 어느 기준으로 정했는지 coverage_note 에 남기는 고정 문구(D22 ③)
+RANGE_NOTES = {
+    "anchors": "일정 날짜 범위로 찾았어요",
+    "trip": "여행 기간으로 찾았어요",
+    "today": "날짜를 몰라 오늘부터 7일 안에서 찾았어요",
+}
+TODAY_WINDOW_DAYS = 7
+
+
+def anchor_range(anchors: list[Any]) -> tuple[str, str] | None:
+    """모든 앵커의 from·to 날짜 중 최소~최대. 비었거나 31일을 넘으면 None."""
+    days = sorted({d for a in anchors if isinstance(a, dict) for d in (_day(a.get("from")), _day(a.get("to"))) if d})
+    if not days:
         return None
-    return {"trip": {"from": trip[0], "to": trip[1]}, "itinerary": plans,
+    n = (date.fromisoformat(days[-1]) - date.fromisoformat(days[0])).days + 1
+    return (days[0], days[-1]) if n <= MAX_TRIP_DAYS else None
+
+
+def event_range(bundle: dict[str, Any], trip: tuple[str, str] | None,
+                today: date | None) -> tuple[tuple[str, str] | None, str | None]:
+    """((from, to), 기준 "anchors"|"trip"|"today"). 우선순위: 일정 앵커 날짜 → 화면 여행 기간 → 오늘부터 7일."""
+    r = anchor_range(bundle["itinerary"]["anchors"])
+    if r is not None:
+        return r, "anchors"
+    if trip is not None:
+        return trip, "trip"
+    if today is not None:
+        return (today.isoformat(), (today + timedelta(days=TODAY_WINDOW_DAYS - 1)).isoformat()), "today"
+    return None, None
+
+
+def build_search_args(bundle: dict[str, Any], trip: tuple[str, str] | None,
+                      today: date | None = None) -> dict[str, Any] | None:
+    """`/api/events/search` 와 같은 요청 형식. 범위를 정할 수 없으면 None."""
+    rng, _ = event_range(bundle, trip, today)
+    if rng is None:
+        return None
+    plans = plans_from_anchors(bundle["itinerary"]["anchors"])
+    return {"trip": {"from": rng[0], "to": rng[1]}, "itinerary": plans,
             "free_slots": slots_from_free(bundle["itinerary"]["free_slots"])}
 
 
+def _add_note(bundle: dict[str, Any], phrase: str) -> None:
+    note = bundle.get("coverage_note")
+    bundle["coverage_note"] = f"{note} {phrase}."[:CAP_TEXT] if isinstance(note, str) and note else f"{phrase}."
+
+
 def attach_events(bundle: dict[str, Any], trip: tuple[str, str] | None,
-                  search: Callable[[dict[str, Any]], dict[str, Any]], *, skip: bool = False) -> None:
+                  search: Callable[[dict[str, Any]], dict[str, Any]], *, skip: bool = False,
+                  today: date | None = None) -> None:
     """검색을 호출해 bundle["events"]·["events_rationale"] 을 채운다.
 
+    범위 우선순위(D22 ③): 일정 앵커 날짜 최소~최대 → trip → today 부터 7일. 쓴 기준을 coverage_note 에 고정 문구로 남긴다.
     못 하면 events=None + EVENTS_UNAVAILABLE(사실만). ``skip`` 이면 검색을 부르지 않고(시간 예산 부족, W5)
     ``coverage_note`` 에 고정 문구를 덧붙인다.
     """
     bundle.pop("events_rationale", None)
-    args = None if skip else build_search_args(bundle, trip)
+    rng, basis = (None, None) if skip else event_range(bundle, trip, today)
+    args = None if rng is None else build_search_args(bundle, trip, today)
     res: Any = None
     if args is not None:
         try:
             res = search(args)
         except Exception:  # noqa: BLE001 - 내부 오류 본문은 싣지 않는다
             res = None
+    if basis is not None:
+        _add_note(bundle, RANGE_NOTES[basis])
     if not isinstance(res, dict) or "error" in res or not isinstance(res.get("events"), list):
         bundle["events"] = None
-        msg = EVENTS_SKIPPED_NOTE if skip else "주변 행사를 지금 확인하지 못함"
+        msg = EVENTS_SKIPPED_NOTE if skip else (
+            "주변 행사를 지금 확인하지 못함" if args is not None else "여행 기간과 일정 날짜를 몰라 행사를 찾지 않았어요")
         bundle["problems"].append(_problem("EVENTS_UNAVAILABLE", msg))
         if skip:
-            note = bundle.get("coverage_note")
-            bundle["coverage_note"] = f"{note} {EVENTS_SKIPPED_NOTE}."[:CAP_TEXT] \
-                if isinstance(note, str) and note else f"{EVENTS_SKIPPED_NOTE}."
+            _add_note(bundle, EVENTS_SKIPPED_NOTE)
     else:
         bundle["events"] = res
         er = event_rationale(res)

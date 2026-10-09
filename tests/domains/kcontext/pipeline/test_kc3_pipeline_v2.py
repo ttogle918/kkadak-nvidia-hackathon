@@ -117,6 +117,11 @@ def test_rationale_keys_follow_unique_card_ids(idx, book):
     ids = [c["card"]["id"] for c in b["cards"]]
     assert len(ids) == len(set(ids)) and any(i.endswith("_2") for i in ids)
     check_receiver_rules(b)
+    # B2: 각 언급의 card_id 는 최종 카드 id 와 같고 rationale 키 = "mention:" + card_id
+    mids = [m["card_id"] for r in b["mentions"]["anchors"] for m in r["mentions"]]
+    assert mids == ids and len(set(mids)) == len(mids)
+    assert any(i.endswith("_2") for i in mids)
+    assert all(f"mention:{i}" in b["rationale"] for i in mids)
 
 
 def test_provider_minutes_flow_into_legs(idx, book):
@@ -246,3 +251,48 @@ def test_loopback_osm_url_is_used_with_capped_budget(idx, book, monkeypatch):
     assert seen["budget"] <= 10.0 and seen["url"] == "http://127.0.0.1:5000"
     assert b["routes"][0]["legs"][0]["walk_min"] == 7
     assert not [p for p in b["problems"] if p["code"] == "ROUTE_PROVIDER_REMOTE_REFUSED"]
+
+
+# ---- D21 ② 이름 끝 조사
+def _particle_book(tmp_path):
+    rows = [{"name": n, "aliases": [], "lat": a, "lng": b, "source": "합성", "verified_at": "2026-10-07", "note": ""}
+            for n, a, b in (("○○궁", 37.5, 127.0), ("○○동", 37.51, 127.01))]  # fmt: skip
+    p = tmp_path / "pb.json"
+    p.write_text(json.dumps(rows, ensure_ascii=False), encoding="utf-8")
+    return load_places(p)
+
+
+def _run_particle(tmp_path, name, quote, text, idx):
+    r = json.dumps({"anchors": [{"type": "visit", "name": name, "date": "10-15", "from": None, "to": None,
+                                 "quote": quote}]}, ensure_ascii=False)  # fmt: skip
+    return run_story_pipeline(text, complete=lambda s, u: r, db=idx, trip=TRIP, places=_particle_book(tmp_path),
+                              now=NOW, route_provider=TableRouteProvider({}))  # fmt: skip
+
+
+def test_particle_stripped_with_coords_and_mentions(tmp_path, idx):
+    with LocalIndex(":memory:") as i2:
+        i2.add([chunk("b1", "○○동 이야기")])
+        b = _run_particle(tmp_path, "○○동도", "10/15 ○○동도 들를 거야", "10/15 ○○동도 들를 거야", i2)
+    a = b["itinerary"]["anchors"][0]
+    assert a["name"] == "○○동" and (a["lat"], a["lng"]) == (37.51, 127.01)
+    codes = [p["code"] for p in b["problems"]]
+    assert "NAME_PARTICLE_STRIPPED" in codes and "COORD_UNKNOWN" not in codes
+    assert any("○○동도" in p["message"] and "○○동" in p["message"] for p in b["problems"])
+    assert len(b["cards"]) == 1  # 바뀐 이름으로 언급을 찾는다
+
+
+def test_particle_not_in_dictionary_stays(tmp_path, idx):
+    b = _run_particle(tmp_path, "□□도", "10/15 □□도 들를 거야", "10/15 □□도 들를 거야", idx)
+    a = b["itinerary"]["anchors"][0]
+    assert a["name"] == "□□도" and a["lat"] is None
+    codes = [p["code"] for p in b["problems"]]
+    assert "COORD_UNKNOWN" in codes and "NAME_PARTICLE_STRIPPED" not in codes
+
+
+def test_particle_stripped_name_must_be_in_quote(tmp_path, idx):
+    from domains.kcontext.pipeline.run import _strip_particle
+
+    book = _particle_book(tmp_path)
+    assert _strip_particle("○○동도", "10/15 ○○동도", book) == "○○동"
+    assert _strip_particle("○○동도", "10/15 다른 곳", book) is None
+    assert _strip_particle("○○동", "○○동", book) is None

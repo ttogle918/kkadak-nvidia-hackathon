@@ -100,6 +100,8 @@ function mention(m) {
   const src = isObj(m.source) ? m.source : {};
   const out = {
     article_id: optStr(m.article_id, CAP.id),
+    // 카드 id(= cards[].card.id, 근거 키 "mention:"+card_id). 문자열이 아니거나 상한을 넘으면 버린다(잘라 쓰면 다른 키가 된다).
+    card_id: typeof m.card_id === 'string' && m.card_id && m.card_id.length <= CAP.id ? m.card_id : null,
     king: optStr(m.king, CAP.short),
     date_label: optStr(m.date_label, CAP.short),
     title_summary: optStr(m.title_summary, CAP.text),

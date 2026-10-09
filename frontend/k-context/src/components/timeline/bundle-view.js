@@ -17,7 +17,7 @@ function rowNode(r, t) {
 }
 
 /** @param {object} bundle 검증된 chatBundle  @param {number} day 선택한 날(없는 날이면 첫 날로 본다) */
-export function bundleTimelineNode(bundle, day, t, { mock = bundle.sample ? 'mock' : null } = {}) {
+export function bundleTimelineNode(bundle, day, t, { mock = bundle.sample ? 'mock' : null, back = true } = {}) {
   const days = bundleDays(bundle);
   const cur = days.includes(day) ? day : (days[0] ?? 0);
   const rows = bundleTimelineFor(bundle, cur);
@@ -28,7 +28,7 @@ export function bundleTimelineNode(bundle, day, t, { mock = bundle.sample ? 'moc
       h('span', { class: 'timeline__title' }, t('timeline.bundle.title')),
       bundle.sample ? h('span', { class: 'cb-flag', dataset: { flag: 'sample' } }, t('bundle.sample')) : null,
       mock ? mockBadge(t, { kind: mock }) : null,
-      h('button', { type: 'button', class: 'timeline-min', dataset: { act: 'clear-bundle' } }, t('timeline.bundle.back'))),
+      back ? h('button', { type: 'button', class: 'timeline-min', dataset: { act: 'clear-bundle' } }, t('timeline.bundle.back')) : null), // 실제 모드에는 돌아갈 예시 일정이 없다
     scheduleNoteNode(bundle.schedule, t),
     days.length ? h('div', { class: 'timeline-days', role: 'tablist', 'aria-label': t('timeline.days') },
       days.map((d) => h('button', {
@@ -39,5 +39,5 @@ export function bundleTimelineNode(bundle, day, t, { mock = bundle.sample ? 'moc
     rows.length ? h('ol', { class: 'timeline__rows' }, rows.map((r) => rowNode(r, t)))
       : h('p', { class: 'timeline__empty', role: 'status' }, t('timeline.empty')),
     problems.length ? h('ul', { class: 'timeline-problems', 'aria-label': t('timeline.bundle.problems') },
-      problems.map((p) => h('li', { class: 'timeline-problems__item', dataset: { code: p.code } }, p.key ? t(p.key) : p.message))) : null);
+      problems.map((p) => h('li', { class: 'timeline-problems__item', dataset: { code: p.code } }, t(p.key, p.params)))) : null);
 }

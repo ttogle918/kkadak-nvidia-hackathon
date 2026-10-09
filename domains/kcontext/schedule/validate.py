@@ -116,9 +116,13 @@ def parse_llm_date(v: str) -> tuple[int | None, int, int] | None:
 
 
 def resolve_date(
-    year: int | None, month: int, day: int, trip: tuple[date, date] | None
+    year: int | None, month: int, day: int, trip: tuple[date, date] | None, today: date | None = None
 ) -> tuple[date | None, str | None]:
-    """(날짜, 문제코드). 연도 없는 날짜는 trip 범위 안에서 하나로 정해질 때만 보충한다."""
+    """(날짜, 문제코드). 연도 없는 날짜는 trip 범위 안에서 하나로 정해질 때만 보충한다.
+
+    trip 이 없으면 today(오늘, 포함) 이후 가장 가까운 그 월·일로 정하고 ("YEAR_ASSUMED") 코드를 함께 준다(D22 ②).
+    today 가 없으면 정하지 않는다("YEAR_UNKNOWN"). 존재하지 않는 날(2/29)은 다음에 존재하는 해로 간다.
+    """
     if year is not None:
         try:
             d = date(year, month, day)
@@ -128,7 +132,16 @@ def resolve_date(
             return None, "DATE_OUT_OF_TRIP"
         return d, None
     if trip is None:
-        return None, "YEAR_UNKNOWN"
+        if today is None:
+            return None, "YEAR_UNKNOWN"
+        for y in range(today.year, today.year + 9):  # 2/29 는 최대 8년 뒤
+            try:
+                d = date(y, month, day)
+            except ValueError:
+                continue
+            if d >= today:
+                return d, "YEAR_ASSUMED"
+        return None, "DATE_INVALID"
     hits: list[date] = []
     for y in range(trip[0].year, trip[1].year + 1):
         try:

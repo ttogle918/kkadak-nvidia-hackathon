@@ -20,7 +20,7 @@ test('초기 상태 키(README 표와 동일)', () => {
   assert.deepEqual(STATE_KEYS.sort(), [
     'added', 'chatBundle', 'data', 'day', 'error', 'expandedTags', 'hoverFact', 'immersion', 'input', 'lang', 'loaded', 'logs', 'messages',
     'minimizeChanges', 'mobileTab', 'mode', 'openEvidence', 'panelLevel', 'securityOpen', 'selectedNow', 'selectedRoute', 'selectedSeg',
-    'selectedTag', 'sending', 'settingsOpen', 'sheetOpen', 'skipped', 'theme',
+    'selectedTag', 'sending', 'settingsOpen', 'sheetOpen', 'skipped', 'theme', 'tripInput',
   ]);
   const s = createInitialState({ lang: 'en' });
   assert.equal(s.lang, 'en');
@@ -44,7 +44,7 @@ test('loadAll 실패는 error 로 남고 던지지 않는다', async () => {
   const actions = createActions({ store, api: createApi({ mode: 'http' }) });
   await actions.loadAll();
   assert.equal(store.getState().loaded, false);
-  assert.match(store.getState().error, /구현되지 않았습니다/);
+  assert.match(store.getState().error, /연결할 수 없습니다/);
 });
 
 test('send: 사용자 메시지 즉시 추가 → 응답과 로그 병합, 공격은 deny', async () => {

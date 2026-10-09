@@ -68,25 +68,25 @@ test('http: 형식이 어긋난 응답은 bad_response, 오류 본문은 새지 
   await assert.rejects(() => createHttpApi({ baseUrl: BASE }).getCard('nope'), (e) => e.code === 'not_found' && e.status === 404 && !e.message.includes('secret'));
 });
 
-test('resolveApi auto + backend 있음: 4개 메서드는 backend, 나머지는 mock(fetch 없음)', async () => {
+test('resolveApi auto + backend 있음: 4개 메서드(챗봇·보안 로그)는 backend, 나머지는 빈 값(fetch 없음)', async () => {
   const cards = fixture('cards.json');
   const calls = fake((url) => {
     if (url.endsWith('/messages')) return jsonRes(200, []);
-    if (url.endsWith('/cards')) return jsonRes(200, cards);
-    if (url.endsWith('/sources')) return jsonRes(200, fixture('sources.json'));
-    if (url.endsWith('/rationale')) return jsonRes(200, fixture('rationale.json')[cards[0].id]);
+    if (url.endsWith('/audit')) return jsonRes(200, []);
     return jsonRes(200, cards[0]);
   });
   const api = await resolveApi({ mode: 'auto', latencyMs: 0 });
   assert.equal(api.mode, 'chat');
-  assert.deepEqual(HTTP_METHODS.slice().sort(), ['getCard', 'getCards', 'getMessages', 'getRationale', 'getSources', 'sendMessage']);
+  assert.deepEqual(HTTP_METHODS.slice().sort(), ['decideAudit', 'getAuditLog', 'getMessages', 'sendMessage']);
   calls.length = 0;
-  await api.getCards(); await api.getCard(cards[0].id); await api.getSources(); await api.getRationale(cards[0].id);
-  assert.deepEqual(calls, [`${DEFAULT_CHAT_BASE}/cards`, `${DEFAULT_CHAT_BASE}/cards/${cards[0].id}`, `${DEFAULT_CHAT_BASE}/sources`, `${DEFAULT_CHAT_BASE}/cards/${cards[0].id}/rationale`]);
+  await api.getAuditLog();
+  assert.deepEqual(calls, [`${DEFAULT_CHAT_BASE}/audit`]);
   calls.length = 0;
-  await api.getItinerary(); await api.getRoutes(); await api.getAuditLog();
-  await assert.rejects(() => api.decideAudit('nope', 'approve'), /찾을 수 없음/); // mock 의 오류 — fetch 아님
-  assert.equal(calls.length, 0);
+  assert.deepEqual([await api.getCards(), await api.getSources(), await api.getRoutes()], [[], [], []]);
+  assert.deepEqual((await api.getItinerary()).timeline, []);
+  await assert.rejects(() => api.getCard(cards[0].id), (e) => e.code === 'not_found');
+  await assert.rejects(() => api.getRationale(cards[0].id), (e) => e.code === 'not_found');
+  assert.equal(calls.length, 0, '카드·근거는 서버를 부르지 않는다');
 });
 
 test('resolveApi auto + backend 없음: 전부 mock, ?api=mock·http 는 그대로', async () => {

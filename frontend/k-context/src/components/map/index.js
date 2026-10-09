@@ -2,7 +2,8 @@
 // 읽는 상태: mode day selectedSeg selectedRoute selectedNow lang data loaded. 쓰는 액션: selectSeg selectRoute selectNow.
 // 다른 components/* 를 import 하지 않는다. 변경이 있으면 가볍게 전체 재렌더하고, 포커스(data-fk)와 목록 스크롤은 되살린다.
 import { h, on, render } from '../../lib/dom.js';
-import { cardById, mockRegions, routeById } from '../../state/selectors.js';
+import { cardById, isRealApi, mockRegions, realScreen, routeById } from '../../state/selectors.js';
+import { realNote } from '../../lib/real-state.js';
 import { mockBadge } from '../../lib/mock-badge.js';
 import { VIEW_BOX, buildBaseMap } from './base-map.js';
 import { buildLabel, nowLabelSpec, segLabelSpec, stripGlyph } from './labels.js';
@@ -14,7 +15,7 @@ import { createKakaoView } from './kakao-view.js';
 import { sharedRenderer } from './renderer.js';
 import { buildBundleSvg, buildPinPanel, bundleHasPins } from './chat-layer.js';
 
-const WATCH = (s) => [s.mode, s.day, s.selectedSeg, s.selectedRoute, s.selectedNow, s.lang, s.data, s.loaded, s.chatBundle];
+const WATCH = (s) => [s.mode, s.day, s.selectedSeg, s.selectedRoute, s.selectedNow, s.lang, s.data, s.loaded, s.chatBundle, s.error];
 const same = (a, b) => a.every((v, i) => Object.is(v, b[i]));
 
 /** 지도 SVG. state 와 t 만으로 만드는 순수 렌더(노드 반환). */
@@ -159,7 +160,8 @@ export function mount(root, ctx) {
   const kakaoHost = h('div', { class: 'map-kakao', role: 'group', 'aria-label': t({ ko: '지도 (카카오맵)', en: 'Map (Kakao Maps)' }) });
   (ctx.mapRenderer ?? sharedRenderer()).then((r) => {
     if (destroyed || r.kind !== 'kakao') return;
-    try { kview = createKakaoView(r.kakao, kakaoHost, t); } catch (e) { console.warn('[map] 카카오 뷰 생성 실패, SVG 유지'); return; }
+    // 실제 모드에는 '내 위치' 예시 좌표를 그리지 않는다
+    try { kview = createKakaoView(r.kakao, kakaoHost, t, { myLocation: !isRealApi(api) }); } catch (e) { console.warn('[map] 카카오 뷰 생성 실패, SVG 유지'); return; }
     draw();
   }).catch(() => {});
 
@@ -183,6 +185,11 @@ export function mount(root, ctx) {
       if (kview) { try { kview.update(s); } catch { console.warn('[map] 카카오 지도 갱신 실패'); } }
       const fk = focusKey && root.querySelectorAll ? [...root.querySelectorAll('[data-fk]')].find((e) => e.dataset.fk === focusKey) : null;
       fk?.focus?.({ preventScroll: true });
+      return;
+    }
+    const rs = realScreen(s, api);
+    if (rs) { // 실제 모드, 묶음 없음: 예시 경로·내 위치 없이 빈 상태·오류 상태
+      render(root, h('div', { class: 'map', dataset: { module: 'map', real: rs } }, realNote(rs, 'map', t)));
       return;
     }
     const ready = s.loaded && s.data.itinerary && s.data.routes?.length && s.data.cards;

@@ -20,7 +20,7 @@ from typing import Any
 from domains.kcontext.catalog.routes import RouteProvider
 from domains.kcontext.geo.chain import make_agent_route_provider
 from domains.kcontext.index import LocalIndex
-from domains.kcontext.places import PlaceBook, load_places
+from domains.kcontext.places import PlaceBook, load_places, norm
 from domains.kcontext.schedule import RETRY_CODES, ScheduleCache, understand_with_meta
 from domains.kcontext.story import COVERAGE_NOTE, build_mentions, to_card
 from domains.kcontext.story.finder import DEFAULT_LIMIT
@@ -57,6 +57,25 @@ def _problem(code: str, message: str) -> dict[str, str]:
     return {"code": code, "message": message}
 
 
+# D21: 이름 끝 조사. 긴 것부터 시도한다.
+_PARTICLES = tuple(sorted(
+    ["이랑", "에서", "으로", "부터", "까지", "도", "은", "는", "이", "가", "을", "를", "에", "로", "와", "과", "랑", "만"],
+    key=len, reverse=True))
+
+
+def _strip_particle(name: str, quote: object, book: PlaceBook) -> str | None:
+    """사전에 없는 이름의 끝 조사를 하나 뗀 이름. 뗀 이름이 사전에 있고 source_quote 안에 있을 때만."""
+    if not isinstance(quote, str):
+        return None
+    n = name.strip()
+    for p in _PARTICLES:
+        if n.endswith(p) and len(n) > len(p):
+            cand = n[: -len(p)].strip()
+            if cand and book.lookup(cand) is not None and norm(cand) in norm(quote):
+                return cand
+    return None
+
+
 def _attach_coords(
     anchors: list[dict[str, Any]], book: PlaceBook, problems: list[dict[str, str]]
 ) -> None:
@@ -66,6 +85,13 @@ def _attach_coords(
             problems.append(_problem("ANCHOR_NO_NAME", "이름 없는 앵커 — 좌표·언급을 찾지 않음"))
             continue
         place = book.lookup(name)
+        if place is None:
+            stripped = _strip_particle(name, a.get("source_quote"), book)
+            if stripped is not None:
+                problems.append(_problem(
+                    "NAME_PARTICLE_STRIPPED", f"{name} → {stripped}: 이름 끝 조사를 떼고 장소 사전에서 찾음"))
+                a["name"], name = stripped, stripped
+                place = book.lookup(stripped)
         if place is None:
             a["lat"] = a["lng"] = None
             problems.append(_problem("COORD_UNKNOWN", f"{name}: 장소 사전에 없어 좌표를 비워 둠"))
@@ -167,6 +193,8 @@ def run_story_pipeline(
     ]
     cards = [c for _, _, c in pairs]
     _unique_card_ids(cards)
+    for _, m, c in pairs:  # 최종 카드 id 를 언급에 싣는다 — rationale 키 = "mention:" + card_id (카드를 안 만든 언급엔 없음)
+        m["card_id"] = c["card"]["id"]
     rationale: dict[str, Any] = {}
     for r, m, c in pairs[:MAX_RATIONALE]:
         excluded = int(r.get("excluded_count") or 0)  # 행(카드)별 실제 제외 수 — 앵커 이름으로 세지 않는다

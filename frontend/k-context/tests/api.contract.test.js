@@ -1,7 +1,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { createApi, API_METHODS, HTTP_METHODS } from '../src/api/index.js';
-import { ApiNotImplementedError } from '../src/api/http.js';
+import { ApiNotImplementedError, createHttpApi } from '../src/api/http.js';
 import { validateCard, validateRoute, validateSource } from '../src/api/schema.js';
 
 const mock = () => createApi({ mode: 'mock', latencyMs: 0 });
@@ -16,11 +16,16 @@ test('mock 과 http 는 같은 메서드 이름·인자 개수를 가진다', ()
   }
 });
 
-test('http 의 미구현 메서드는 명확한 에러를 던진다', async () => {
-  const h = createApi({ mode: 'http', baseUrl: '/x' });
-  for (const name of API_METHODS.filter((n) => !HTTP_METHODS.includes(n))) { // HTTP_METHODS 는 backend 연결로 구현됨
-    await assert.rejects(() => h[name]('a', 'approve'), (e) => e instanceof ApiNotImplementedError && e.message.includes(name));
+test('http 의 미구현 메서드는 명확한 에러를 던진다 (날 것의 createHttpApi). createApi(http) 는 예시 없이 빈 값', async () => {
+  const raw = createHttpApi({ baseUrl: '/x' });
+  for (const name of ['getItinerary', 'getRoutes']) {
+    await assert.rejects(() => raw[name](), (e) => e instanceof ApiNotImplementedError && e.message.includes(name));
   }
+  const h = createApi({ mode: 'http', baseUrl: '/x' }); // 실제 모드: HTTP_METHODS 만 backend, 나머지는 빈 값(D17)
+  assert.deepEqual(await h.getItinerary(), { anchors: [], free_slots: [], timeline: [], landmarks: [] });
+  assert.deepEqual([await h.getRoutes(), await h.getCards(), await h.getSources()], [[], [], []]);
+  for (const name of ['getCard', 'getRationale']) await assert.rejects(() => h[name]('x'), (e) => e.code === 'not_found');
+  assert.ok(API_METHODS.filter((n) => !HTTP_METHODS.includes(n)).every((n) => typeof h[n] === 'function'));
 });
 
 test('알 수 없는 mode 는 거부', () => {

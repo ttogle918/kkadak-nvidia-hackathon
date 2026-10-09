@@ -44,31 +44,31 @@ test('i18n: mock.* 키가 ko·en 에 모두 있다', () => {
   for (const k of ks) assert.ok(DICTS.en[k], k);
 });
 
-test('api.dataKinds: mock=전부 mock, chat=cards·sources·rationale 은 fixture·messages 는 server, 응답은 감싸지 않는다', async () => {
+test('api.dataKinds: mock=전부 mock, chat=itinerary·routes·cards·sources 는 empty·rationale 은 bundle·messages·audit 는 server, 응답은 감싸지 않는다', async () => {
   const m = createApi({ mode: 'mock', latencyMs: 0 });
   assert.deepEqual(m.dataKinds, DATA_KINDS.mock);
   assert.ok(Object.values(m.dataKinds).every((k) => k === 'mock'));
   const c = chatApi();
-  assert.equal(c.dataKinds.cards, 'fixture');
-  assert.equal(c.dataKinds.rationale, 'fixture');
+  assert.equal(c.dataKinds.cards, 'empty');
+  assert.equal(c.dataKinds.rationale, 'bundle');
   assert.equal(c.dataKinds.messages, 'server');
-  assert.equal(c.dataKinds.itinerary, 'mock');
+  assert.equal(c.dataKinds.audit, 'server');
+  assert.equal(c.dataKinds.itinerary, 'empty');
+  assert.deepEqual(createApi({ mode: 'http', latencyMs: 0 }).dataKinds, c.dataKinds, 'http 도 같다');
   assert.ok(Array.isArray(await m.getCards()), '응답은 그대로 배열');
   assert.equal(dataKindOf({}, 'cards'), 'mock', 'dataKinds 가 없으면 실제로 단정하지 않는다');
 });
 
-test('판정: backend 없음(mock)=전체 MOCK, 서버+번들 없음=mock·fixture, 서버+실제 번들=실제', () => {
+test('판정: backend 없음(mock)=전체 MOCK, 서버+번들 없음=예시 없음(empty), 서버+실제 번들=실제', () => {
   const s0 = createInitialState();
   const mock = createApi({ mode: 'mock', latencyMs: 0 });
   assert.equal(screenStatus(s0, mock), 'all-mock');
   assert.deepEqual(mockRegions(s0, mock), { timeline: 'mock', routes: 'mock', map: 'mock', cards: 'mock', rationale: 'mock', hideRationale: false, myLocation: 'mock' });
 
   const chat = chatApi();
-  assert.equal(screenStatus(s0, chat), 'mock');
+  assert.equal(screenStatus(s0, chat), 'empty');
   const r = mockRegions(s0, chat);
-  assert.equal(r.timeline, 'mock');
-  assert.equal(r.cards, 'fixture');
-  assert.equal(r.rationale, 'fixture');
+  assert.deepEqual([r.timeline, r.routes, r.map, r.cards, r.rationale, r.myLocation], [null, null, null, null, null, null]);
 
   const real = createInitialState({ chatBundle: bundle(false) });
   assert.equal(bundleKind(real, chat), 'server');
@@ -76,12 +76,13 @@ test('판정: backend 없음(mock)=전체 MOCK, 서버+번들 없음=mock·fixtu
   const rr = mockRegions(real, chat);
   assert.deepEqual([rr.timeline, rr.routes, rr.map, rr.cards, rr.rationale], [null, null, null, null, null]);
   assert.equal(rr.hideRationale, true);
-  assert.equal(rr.myLocation, 'mock', '내 위치는 항상 예시');
+  assert.equal(rr.myLocation, null, '실제 모드에서는 내 위치(예시)를 그리지 않는다');
 
   // 같은 번들이어도 sample 이거나 backend 가 없으면 MOCK
   const sample = createInitialState({ chatBundle: bundle(true) });
   assert.equal(bundleKind(sample, chat), 'mock');
   assert.equal(mockRegions(sample, chat).timeline, 'mock');
+  assert.equal(screenStatus(sample, chat), 'mock');
   assert.equal(bundleKind(createInitialState({ chatBundle: bundle(false) }), mock), 'mock');
   assert.equal(screenStatus(sample, mock), 'all-mock');
 });
@@ -111,17 +112,18 @@ test('기본 화면(mock): 타임라인·카드·판단 근거·지도 경로 �
   assert.equal(badges(tb).length, 1);
 });
 
-test('서버 연결(chat), 번들 없음: 상단은 "서버는 챗봇 답만 실제"(MOCK 딱지 포함)', async () => {
-  const { mk } = await mountAll({}, chatApi());
+test('서버 연결(chat), 번들 없음: 상단은 "실제 서버 · 일정 대기"(MOCK 딱지 없음)', async () => {
+  const up = { ...chatApi(), getMessages: async () => [], getAuditLog: async () => [] }; // backend 가 떠 있는 상태
+  const { mk } = await mountAll({}, up);
   const tb = mk(topbar);
-  assert.match(tb.text, /MOCK 데이터 — 서버는 챗봇 답만 실제/);
-  assert.equal(tb.find((e) => e.dataset?.status)[0].dataset.status, 'mock');
-  assert.equal(badges(tb).length, 1);
+  assert.match(tb.text, /실제 서버 · 일정 대기/);
+  assert.equal(tb.find((e) => e.dataset?.status)[0].dataset.status, 'empty');
+  assert.equal(badges(tb).length, 0);
 });
 
-test('서버 연결(chat) + fixture 카드: 카드 영역 딱지는 fixture 종류', async () => {
+test('fixture 종류 api(예시를 서버가 주는 경우): 카드 영역 딱지는 fixture 종류 — 실제 모드(chat)는 이제 fixture 를 쓰지 않는다', async () => {
   const mockApi = createApi({ mode: 'mock', latencyMs: 0 });
-  const chat = chatApi();
+  const chat = { ...chatApi(), mode: 'fixture-test', dataKinds: { ...DATA_KINDS.mock, cards: 'fixture' } };
   const cardsData = await mockApi.getCards(); // 서버 fixture 는 mock 과 같은 내용 — 로드만 mock 으로 대신한다
   const { store, mk } = await mountAll({}, chat);
   store.setState({ data: { ...store.getState().data, cards: cardsData }, loaded: true });
@@ -144,8 +146,9 @@ test('실제 서버 번들: 타임라인·카드·지도·상단에 MOCK 딱지 
   assert.equal(badges(tb).length, 0);
   assert.match(tb.text, /챗봇이 정리한 일정 \(실제 서버\)/);
   assert.equal(ra.find((e) => e.dataset?.act === 'chip').length, 0, '칩 없음');
+  assert.match(ra.text, /판단 근거는 아직 준비 중이에요/);
+  assert.doesNotMatch(ra.text, /MOCK/, "실제 모드 문구에 MOCK 이 없다");
   assert.equal(ra.find((e) => e.dataset?.status === 'hidden').length, 1);
-  assert.match(ra.text, /판단 근거는 아직 준비 중이에요 \(MOCK 예시는 숨김\)/);
   assert.equal(badges(ra).length, 0);
 });
 
@@ -162,4 +165,17 @@ test('sample 번들(mock api): 타임라인·카드·지도에 MOCK 딱지, 판�
   await tick();
   assert.ok(ra.find((e) => e.dataset?.act === 'chip').length > 0, '번들이 없으면 근거 칩');
   assert.equal(badges(ra).length, 1);
+});
+
+test('명시 chat 인데 backend 가 꺼져 있으면 상단은 오류: "실제 서버에 연결하지 못했어요"(MOCK 딱지 없음), mock·auto 폴백은 그대로', async () => {
+  const { store, mk } = await mountAll({}, chatApi()); // localhost:1 — 닿지 않는다
+  assert.equal(store.getState().loaded, false);
+  assert.equal(screenStatus(store.getState(), chatApi()), 'error');
+  const tb = mk(topbar);
+  assert.equal(tb.find((e) => e.dataset?.status)[0].dataset.status, 'error');
+  assert.match(tb.text, /실제 서버에 연결하지 못했어요/);
+  assert.equal(badges(tb).length, 0);
+  // mock(auto 폴백 포함)은 전체 MOCK 그대로
+  const m = createApi({ mode: 'mock', latencyMs: 0 });
+  assert.equal(screenStatus({ ...createInitialState(), error: 'x', loaded: false }, m), 'all-mock');
 });

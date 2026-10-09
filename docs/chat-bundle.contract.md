@@ -37,7 +37,7 @@ backend 는 `domains`·`mcp_server` 를 import 하지 않는다(D3·D10). 파이
  "trip": {"from","to"} | null,
  "itinerary": {"anchors": [{type: visit|hotel, name, day, from, to, lat, lng, source_quote}],
                "free_slots": [{day, from, to, near, inferred, assumption:{ko,en}}]},
- "mentions": kc-mention/v1  // anchors[].mentions[]: {article_id, king, date_label, title_summary, quote(한문 원문), lang:"orig", locator, url, tier, source{...}}; 행마다 excluded_count(int, 주입 검사로 뺀 수 — 근거 pick 칩의 값)
+ "mentions": kc-mention/v1  // anchors[].mentions[]: {article_id, king, date_label, title_summary, quote(한문 원문), lang:"orig", locator, url, tier, source{...}}; 행마다 excluded_count(int, 주입 검사로 뺀 수 — 근거 pick 칩의 값); 언급마다 `card_id`(문자열, 카드를 만든 언급에만) = 그 언급의 `cards[].card.id`(같은 기사가 두 앵커에 걸리면 `story_A`, `story_A_2`). 근거 키 = `"mention:" + card_id`. 프론트는 이 필드가 정확히 일치할 때만 찾는다(id 를 추정하지 않는다)
  "events": /api/events/search 응답 본문 그대로 {events, excluded, problems, coverage} | null (검색 불가 시 null + problems 에 EVENTS_UNAVAILABLE)
  "cards": [{card, card_ready, missing}],   // card_ready=false 인 것은 화면이 '언급 기록' 간이 카드로 그린다
  "problems": [{code, message}], "coverage_note": "..."
@@ -118,7 +118,11 @@ story_routes_note: {"ko": "이야기 길 없음 — 근거 좌표가 있는 이�
 - 게이트: **시각·날짜 표현 하나 + (일정 어휘 또는 장소 이름) 하나 이상**일 때만 일정 흐름. 장소 이름은 `backend/fixtures/chat_places.json`(demo_places.json 의 사본; 사전이 바뀌면 같이 갱신). 한계: "10/15 경복궁은 어때?" 같은 질문은 오탐(비용은 파이프라인 1회, 앵커 0개이고 LLM 이 정상이면 남은 예산이 있을 때 일반 챗봇, 없으면 `NO_SCHEDULE_REPLY`). 날짜·시각이 없는 일정 글("경복궁 갔다가 익선동 갈 거야")은 미탐 — 일반 챗봇이 답한다.
 - 환경변수: `KC_INDEX_DB`(기본 `var/index/kcontext.db`, 없으면 일반 챗봇으로 폴백하고 audit 에 `index_missing`). 자식에게는 `backend/story_runner.py` 의 허용 목록(`_ENV_ALLOW`) 참조 + `LLM_BACKEND` 로 시작하는 변수 + `APP_PROCESS_ROLE=agent` 만 넘긴다(`.env` 는 자식이 core.llm 허용 목록 로더로 직접 읽음).
 - 실행: 임시 디렉터리에 text.txt 를 쓰고 `python -m domains.kcontext.pipeline --text-file --db --out [--trip-from --trip-to]`. 타임아웃 90초(`TIMEOUT_S`), 자식에 `--llm-budget-s 75` 를 넘긴다. bundle.json 1MB 상한, schema 가 허용 목록(v1·v2)에 없으면 거부, 끝나면 임시 디렉터리 삭제. 실패는 종류(timeout/exit/no_output/too_large/bad_json/bad_schema)만 audit 에 남기고 **고정 문구 `SCHEDULE_UNAVAILABLE_REPLY` 로 답한다**(일반 챗봇으로 폴백하지 않음, 자식 출력은 노출·기록하지 않음).
-- `context` 가 없으면 `--trip-*` 을 넘기지 않는다(파이프라인 CLI 의 trip 인자를 선택으로 바꿨다). 이때 연도 없는 날짜는 파이프라인이 problems 로 보고하고 앵커 날짜가 비므로 행사 검색 기간을 정할 수 없어 `events: null` + `EVENTS_UNAVAILABLE` 이 될 수 있다. 앵커에 완전한 날짜가 있으면 그 최소~최대 날짜(31일 이내)를 trip 으로 쓴다.
+- `context` 가 없으면 `--trip-*` 을 넘기지 않는다(파이프라인 CLI 의 trip 인자를 선택으로 바꿨다). 이때 연도 없는 날짜는 파이프라인이 problems 로 보고하고 앵커 날짜가 비므로 행사 검색 기간을 정할 수 없어 `events: null` + `EVENTS_UNAVAILABLE` 이 될 수 있다. 이 설명은 D22 로 바뀌었다 — 아래 "행사 검색 범위·연도 추정(D22)" 참고.
 - 행사 검색: 방문(visit) 앵커 중 날짜·시작 시각이 있는 것만 Plan 으로(끝 시각이 없으면 시작+60분 가정, `end_assumed: true`). 숙소는 Plan 에서 뺀다. free_slots 는 `{date, from, to}` 로 변환(자정을 넘기면 23:59 까지). 카탈로그가 비어 0건이어도 정상(`events.events == []`).
 - 상한: 앵커 20 · 앵커당 언급 5 · 카드 100 · problems 100, 넘으면 잘라서 `TRUNCATED`. 동시 실행은 일정 흐름 1건(`ChatBusy` 429). backend 프로세스는 LLM 을 직접 부르지 않는다(일반 챗봇 답 제외).
 - 일정 흐름 대화는 다음 턴 LLM 맥락에 넣지 않는다(고정 문구·bundle 은 맥락 아님). bundle 은 서버에 보관하지 않는다.
+
+## 행사 검색 범위·연도 추정 (D22)
+- **연도 추정**: trip 이 없고 연도도 없는 날짜는 오늘(KST, 오늘 포함) 이후 가장 가까운 그 월·일로 정하고 problems 에 `YEAR_ASSUMED`(메시지에 정한 날짜, "확인 필요")를 남긴다. 2/29 처럼 그 해에 없는 날은 다음에 존재하는 해. trip 이 있거나 연도를 쓴 날짜는 그대로. (`YEAR_UNKNOWN` 은 오늘 기준이 주어지지 않은 순수 함수 호출에서만 난다.)
+- **행사 검색 범위 우선순위**(backend `attach_events`, 날짜는 묶음 JSON 에서만 읽는다): ① 모든 앵커 from·to 날짜의 최소~최대(31일 이내) — 문장에 날짜가 있으면 trip 이 있어도 언제나 이것 → ② 요청의 `context.trip` → ③ 오늘(KST)부터 7일. 쓴 기준을 `coverage_note` 끝에 고정 문구로 덧붙인다: ① "일정 날짜 범위로 찾았어요." ② "여행 기간으로 찾았어요." ③ "날짜를 몰라 오늘부터 7일 안에서 찾았어요." (시간이 모자라 건너뛴 경우는 기준 문구 없이 기존 "시간이 모자라 행사 검색을 건너뜀." 만.) 범위를 정할 수 없는 경우(오늘 기준 없음)에만 `EVENTS_UNAVAILABLE` "여행 기간과 일정 날짜를 몰라 행사를 찾지 않았어요".

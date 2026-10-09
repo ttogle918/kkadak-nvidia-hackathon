@@ -14,22 +14,19 @@ from __future__ import annotations
 
 import argparse
 import json
-import os
 import sys
 import time
 from collections.abc import Sequence
 from datetime import datetime
 from pathlib import Path
 
-from domains.kcontext.regions import load_regions
-
 from .envkeys import CATALOG_KEY_NAMES, key_origin, resolve_catalog_env
 from .rules import KST
 from .sources import SourceError, load_sources, make_fetcher
 from .store import CatalogStore
+from .target import ENV as TARGET_ENV
+from .target import target_region
 from .updater import run_due, run_source
-
-TARGET_REGION = os.environ.get("KC_TARGET_REGION", "jung")  # data/regions/<id>.json
 
 
 def _env() -> dict[str, str]:
@@ -38,10 +35,10 @@ def _env() -> dict[str, str]:
 
 
 def _setup(args: argparse.Namespace):
-    regions = load_regions()
-    region = regions.get(args.region)
-    if region is None:
-        raise SystemExit(f"지역 {args.region!r} 이 data/regions/ 에 없다")
+    try:
+        region = target_region(args.region)
+    except ValueError as e:
+        raise SystemExit(str(e)) from None
     return CatalogStore(args.dir), region, _env()
 
 
@@ -71,7 +68,8 @@ def status(store: CatalogStore, sources: list[dict]) -> dict:
 def main(argv: Sequence[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="python -m domains.kcontext.catalog")
     ap.add_argument("--dir", type=Path, help="카탈로그 저장 폴더(기본 var/catalog 또는 KC_CATALOG_DIR)")
-    ap.add_argument("--region", default=TARGET_REGION)
+    ap.add_argument("--region", default=None,
+                    help=f"쉼표 목록 지역 id(기본: env {TARGET_ENV}, 없으면 기본 지역)")
     sub = ap.add_subparsers(dest="cmd", required=True)
     u = sub.add_parser("update")
     u.add_argument("--source", required=True)

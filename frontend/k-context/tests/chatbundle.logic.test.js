@@ -80,12 +80,12 @@ test('실록 카드 묶음은 언급이 있는 앵커만, 행사 상태는 tier 
   assert.equal(ok.items[0].unverified, false);
 });
 
-test('problems: 알려진 코드는 사전 키로(같은 키 한 번), 모르는 코드는 서버 문구 그대로', () => {
+test('problems: 알려진 코드는 사전 키로(같은 키 한 번), 모르는 코드는 일반 문구(서버 문구는 쓰지 않는다)', () => {
   const lines = problemLines({ problems: [
     { code: 'TIME_FORMAT', message: 'a' }, { code: 'TIME_NOT_IN_QUOTE', message: 'b' }, { code: 'ZZZ', message: '그대로' },
   ] });
-  assert.deepEqual(lines.map((l) => l.key), ['bundle.problem.time', null]);
-  assert.equal(lines[1].message, '그대로');
+  assert.deepEqual(lines.map((l) => l.key), ['bundle.problem.time', 'bundle.problem.generic']);
+  assert.ok(lines.every((l) => !('message' in l)), '서버 message 는 화면 값에 없다');
 });
 
 test('핀 좌표 변환: viewBox 안, 한 점은 가운데, 북쪽이 위', () => {

@@ -358,3 +358,44 @@ def test_child_env_passes_route_settings_only(monkeypatch):
 def test_negative_straight_or_walk_drops_routes(bad):
     b = clean_bundle(base(routes=[route(legs=[bad])]))
     assert "routes" not in b and codes(b) == ["FIELD_DROPPED"]
+
+
+# ---- D22 ③ 행사 검색 범위 우선순위 ----------------------------------------------------------
+def _undated(b):
+    for a in b["itinerary"]["anchors"]:
+        a["from"] = None
+    return b
+
+
+def test_event_range_anchors_win_over_trip():
+    from datetime import date
+    b = clean_bundle(base())
+    seen = []
+    attach_events(b, ("2026-10-01", "2026-10-30"), lambda a: seen.append(a) or result(), today=date(2026, 10, 10))
+    assert seen[0]["trip"] == {"from": "2026-10-15", "to": "2026-10-15"}
+    assert b["coverage_note"].endswith("일정 날짜 범위로 찾았어요.")
+
+
+def test_event_range_trip_when_no_anchor_dates():
+    b = _undated(clean_bundle(base()))
+    seen = []
+    attach_events(b, ("2026-10-01", "2026-10-30"), lambda a: seen.append(a) or result())
+    assert seen[0]["trip"] == {"from": "2026-10-01", "to": "2026-10-30"}
+    assert b["coverage_note"].endswith("여행 기간으로 찾았어요.")
+
+
+def test_event_range_today_window_when_nothing_else():
+    from datetime import date
+    b = _undated(clean_bundle(base()))
+    seen = []
+    attach_events(b, None, lambda a: seen.append(a) or result(), today=date(2026, 10, 10))
+    assert seen[0]["trip"] == {"from": "2026-10-10", "to": "2026-10-16"}
+    assert b["coverage_note"].endswith("날짜를 몰라 오늘부터 7일 안에서 찾았어요.")
+
+
+def test_event_range_no_today_no_search_states_fact():
+    b = _undated(clean_bundle(base()))
+    attach_events(b, None, lambda a: pytest.fail("검색이 불렸다"))
+    msg = next(p["message"] for p in b["problems"] if p["code"] == "EVENTS_UNAVAILABLE")
+    assert "여행 기간과 일정 날짜를 몰라" in msg
+

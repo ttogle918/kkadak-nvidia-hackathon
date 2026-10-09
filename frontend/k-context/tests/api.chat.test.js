@@ -84,7 +84,7 @@ test('타임아웃: 응답이 없으면 abort 되어 code=timeout (100초 기준
   } finally { globalThis.setTimeout = realSet; }
 });
 
-test("'chat' 모드: HTTP_METHODS(챗봇+카드·출처·근거)만 http, 나머지는 mock", async () => {
+test("'chat' 모드: HTTP_METHODS(챗봇+보안 로그)만 http, 나머지는 예시 없이 빈 값", async () => {
   const mock = createApi({ mode: 'mock', latencyMs: 0 });
   const chat = createApi({ mode: 'chat', baseUrl: BASE, latencyMs: 0 });
   assert.equal(chat.mode, 'chat');
@@ -92,11 +92,15 @@ test("'chat' 모드: HTTP_METHODS(챗봇+카드·출처·근거)만 http, 나머
   const http = createHttpApi({ baseUrl: BASE });
   for (const n of API_METHODS) assert.equal(chat[n].length, mock[n].length, `${n} 인자 개수`);
   const calls = fake(jsonRes(200, []));
-  // 목록 밖 메서드는 fetch 를 부르지 않고 mock 데이터를 돌려준다
-  assert.ok((await chat.getItinerary()) && (await chat.getAuditLog()) && (await chat.getRoutes()));
+  // 목록 밖 메서드는 fetch 를 부르지 않고 빈 값을 돌려준다(예시 데이터 없음)
+  assert.deepEqual(await chat.getRoutes(), []);
+  assert.deepEqual((await chat.getItinerary()).anchors, []);
   assert.equal(calls.length, 0);
   await chat.getMessages();
   assert.equal(calls.length, 1);
+  await chat.getAuditLog(); // 보안 로그는 서버
+  assert.equal(calls.length, 2);
+  assert.ok(calls[1].url.endsWith('/audit'));
   assert.equal(typeof http.getMessages, 'function');
 });
 

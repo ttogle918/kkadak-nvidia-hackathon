@@ -1,3 +1,5 @@
+from datetime import date
+
 from domains.kcontext.schedule import understand
 
 TRIP = {"trip_from": "2026-10-15", "trip_to": "2026-10-16"}
@@ -123,14 +125,40 @@ def test_midnight_crossing(fake):
     assert d2 == [("08:00", "23:00")]
 
 
-def test_no_trip_means_no_year_no_date(fake):
+def _noyear(fake, text, md, today):
+    reply = {"anchors": [{"name": "○○", "date": md, "from": "10:00", "to": "11:00", "quote": text}]}
+    return understand(text, complete=fake(reply), today=today)
+
+
+def test_no_trip_assumes_nearest_upcoming_date(fake):
+    # D22 ②: trip 없으면 오늘(포함) 이후 가장 가까운 그 월·일 + YEAR_ASSUMED
+    text = "10/15 ○○ 10:00-11:00"
+    r = _noyear(fake, text, "10-15", date(2026, 10, 10))
+    a = r["anchors"][0]
+    assert a["from"] == "2026-10-15T10:00" and a["day"] is None
+    ya = [p for p in r["problems"] if p["code"] == "YEAR_ASSUMED"]
+    assert ya and "2026-10-15" in ya[0]["message"] and "YEAR_UNKNOWN" not in codes(r)
+    # 오늘 날짜 포함
+    assert _noyear(fake, text, "10-15", date(2026, 10, 15))["anchors"][0]["from"] == "2026-10-15T10:00"
+    # 이미 지났으면 내년(거슬러 가지 않는다)
+    assert _noyear(fake, text, "10-15", date(2026, 10, 16))["anchors"][0]["from"] == "2027-10-15T10:00"
+
+
+def test_no_trip_feb29_goes_to_next_existing_year(fake):
+    text = "2/29 ○○ 10:00-11:00"
+    r = _noyear(fake, text, "02-29", date(2026, 10, 10))
+    assert r["anchors"][0]["from"] == "2028-02-29T10:00"
+
+
+def test_trip_and_explicit_year_unchanged_by_today(fake):
     text = "10/15 ○○ 10:00-11:00"
     reply = {"anchors": [{"name": "○○", "date": "10-15", "from": "10:00", "to": "11:00", "quote": text}]}
-    r = understand(text, complete=fake(reply))
-    a = r["anchors"][0]
-    assert a["from"] is None and a["to"] is None and a["day"] is None
-    assert {"YEAR_UNKNOWN", "TIME_WITHOUT_DATE"} <= set(codes(r))
-    assert r["free_slots"] == []
+    r = understand(text, complete=fake(reply), trip_from="2025-10-14", trip_to="2025-10-16", today=date(2026, 10, 10))
+    assert r["anchors"][0]["from"] == "2025-10-15T10:00" and "YEAR_ASSUMED" not in codes(r)
+    t2 = "2025-10-15 ○○ 10:00-11:00"
+    r = understand(t2, complete=fake({"anchors": [{"name": "○○", "date": "2025-10-15", "from": "10:00",
+                                                    "to": "11:00", "quote": t2}]}), today=date(2026, 10, 10))
+    assert r["anchors"][0]["from"] == "2025-10-15T10:00" and "YEAR_ASSUMED" not in codes(r)
 
 
 def test_explicit_year_without_trip(fake):

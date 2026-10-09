@@ -63,3 +63,11 @@ def test_bad_key_rejected(tmp_path):
 def test_cache_env_switch():
     assert cache_enabled({}) and cache_enabled({"KC_SCHEDULE_CACHE": "on"})
     assert not cache_enabled({"KC_SCHEDULE_CACHE": "off"})
+
+
+def test_key_includes_today_only_without_trip(tmp_path):
+    from datetime import date
+    a, b = date(2026, 10, 10), date(2026, 10, 11)
+    assert key_for(TEXT, None, root=tmp_path, today=a) != key_for(TEXT, None, root=tmp_path, today=b)
+    trip = ("2026-10-15", "2026-10-16")
+    assert key_for(TEXT, trip, root=tmp_path, today=a) == key_for(TEXT, trip, root=tmp_path, today=b)

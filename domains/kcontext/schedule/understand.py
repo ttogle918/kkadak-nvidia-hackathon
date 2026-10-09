@@ -16,7 +16,7 @@ import math
 import re
 import time
 from collections.abc import Callable, Mapping
-from datetime import date, timedelta
+from datetime import UTC, date, datetime, timedelta, timezone
 from typing import Any
 
 from core.guard import wrap
@@ -154,6 +154,11 @@ class _Text:
         return self.nt[a:b], [self.idx[x] for x in starts]
 
 
+def kst_today() -> date:
+    """오늘(KST). 연도 추정(D22 ②)의 기본 기준 — 테스트에서는 ``today`` 로 주입한다."""
+    return datetime.now(UTC).astimezone(timezone(timedelta(hours=9))).date()
+
+
 def _confirm_date(
     value: Any,
     qtext: str,
@@ -161,6 +166,7 @@ def _confirm_date(
     starts: list[int],
     trip: tuple[date, date] | None,
     *,
+    today: date | None = None,
     context: bool,
     label: str,
     problems: list[dict[str, str]],
@@ -186,8 +192,12 @@ def _confirm_date(
     if hit is None or (ly is not None and hit.year is not None and ly != hit.year):
         problems.append(_problem("DATE_NOT_IN_QUOTE", f"{label}: 원문에서 확인되지 않아 비움"))
         return None
-    d, code = resolve_date(hit.year, hit.month, hit.day, trip)
-    if d is None:
+    d, code = resolve_date(hit.year, hit.month, hit.day, trip, today)
+    if code == "YEAR_ASSUMED" and d is not None:
+        problems.append(_problem(
+            "YEAR_ASSUMED",
+            f"{label}: 연도가 없고 여행 기간도 없어 오늘 이후 가장 가까운 {d.isoformat()} 로 정했음 — 확인 필요"))
+    elif d is None:
         msg = {
             "YEAR_UNKNOWN": "연도가 없고 여행 기간(trip)도 없어 날짜를 정할 수 없음",
             "DATE_OUT_OF_TRIP": "여행 기간 밖의 날짜라 비움",
@@ -198,26 +208,36 @@ def _confirm_date(
     return d
 
 
+DAY_FROM, DAY_TO = 8 * 60, 21 * 60  # 낮 시간 후보 범위 08:00~20:59 (D21)
+DAYTIME_NOTE = "낮 시간 후보로 정함"
+
+
 def _confirm_time(
-    value: Any, qtext: str, label: str, problems: list[dict[str, str]], ampm: list[str]
-) -> int | None:
+    value: Any, qtext: str, label: str, problems: list[dict[str, str]]
+) -> tuple[int | None, int | None, bool]:
+    """(확인된 분, 낮 시간 대체 후보, 모호 여부). 모호하고 모델 값이 낮 시간 밖이며 안쪽 후보가 정확히 하나면 후보를 준다."""
     if value is None:
-        return None
+        return None, None, False
     mins = parse_hhmm(value) if isinstance(value, str) else None
     if mins is None:
         problems.append(_problem("TIME_FORMAT", f"{label}: 시각 형식을 읽을 수 없어 비움"))
-        return None
+        return None, None, False
     ms = [m for m in find_times(qtext) if mins in m.minutes]
     if not ms:
         problems.append(_problem("TIME_NOT_IN_QUOTE", f"{label}: 원문에서 확인되지 않아 비움"))
-        return None
-    if all(m.ambiguous for m in ms) and not 8 * 60 <= mins < 13 * 60:
-        ampm.append(f"{label} {_hhmm(mins)}")
-    return mins
+        return None, None, False
+    amb = all(m.ambiguous for m in ms)
+    alt = None
+    if amb and not DAY_FROM <= mins < DAY_TO:
+        inner = {x for m in ms for x in m.minutes if DAY_FROM <= x < DAY_TO}
+        if len(inner) == 1 and all(sum(DAY_FROM <= x < DAY_TO for x in m.minutes) == 1 for m in ms):
+            alt = next(iter(inner))
+    return mins, alt, amb
 
 
 def _clean_candidate(
-    c: Any, n: int, text: _Text, trip: tuple[date, date] | None, problems: list[dict[str, str]]
+    c: Any, n: int, text: _Text, trip: tuple[date, date] | None, problems: list[dict[str, str]],
+    today: date | None = None,
 ) -> dict[str, Any] | None:
     tag = f"anchor#{n}"
     if not isinstance(c, Mapping):
@@ -262,15 +282,32 @@ def _clean_candidate(
         typ = "visit"
 
     ampm: list[str] = []
-    d1 = _confirm_date(c.get("date"), qtext, text, starts, trip, context=True,
+    d1 = _confirm_date(c.get("date"), qtext, text, starts, trip, today=today, context=True,
                        label=f"{tag}.date", problems=problems)
     d2 = _confirm_date(c.get("to_date") if typ == "hotel" else None, qtext, text, starts, trip,
-                       context=False, label=f"{tag}.to_date", problems=problems)
-    t1 = _confirm_time(c.get("from"), qtext, f"{tag}.from", problems, ampm)
-    t2 = _confirm_time(c.get("to"), qtext, f"{tag}.to", problems, ampm)
+                       today=today, context=False, label=f"{tag}.to_date", problems=problems)
+    t1, alt1, amb1 = _confirm_time(c.get("from"), qtext, f"{tag}.from", problems)
+    t2, alt2, amb2 = _confirm_time(c.get("to"), qtext, f"{tag}.to", problems)
+    sw1 = sw2 = False
+    # from·to 는 한 쌍으로 판정한다: 둘 다 후보가 있으면 함께 바꿔 from < to 일 때만, 한쪽만이면 다른 쪽과 < 로 비교.
+    # (같은 값은 다음 날로 넘어가 24시간짜리가 되므로 <= 는 쓰지 않는다.)
+    if alt1 is not None and alt2 is not None:
+        if alt1 < alt2:
+            t1, t2, sw1, sw2 = alt1, alt2, True, True
+    elif alt1 is not None:
+        if t2 is None or alt1 < t2:
+            t1, sw1 = alt1, True
+    elif alt2 is not None and (t1 is None or t1 < alt2):
+        t2, sw2 = alt2, True
+    swapped = sw1 or sw2
+    for lab, v, amb, sw in ((f"{tag}.from", t1, amb1, sw1), (f"{tag}.to", t2, amb2, sw2)):
+        if amb and v is not None and (sw or not 8 * 60 <= v < 13 * 60):
+            ampm.append(f"{lab} {_hhmm(v)}")
     if ampm:
+        note = f" ({DAYTIME_NOTE})" if swapped else ""
         problems.append(_problem(
-            "AMPM_ASSUMED", f"{tag}: 오전·오후 표기가 없어 모델의 해석을 썼음({', '.join(ampm)}) — 확인 필요"))
+            "AMPM_ASSUMED",
+            f"{tag}: 오전·오후 표기가 없어 모델의 해석을 썼음({', '.join(ampm)}){note} — 확인 필요"))
     return {"type": typ, "name": name, "d1": d1, "d2": d2, "t1": t1, "t2": t2,
             "quote": norm_text(qtext), "tag": tag}
 
@@ -441,6 +478,7 @@ def understand(
     day_end: str = "23:00",
     min_slot_min: int = 30,
     hotel_block_min: int = 60,
+    today: date | None = None,
 ) -> dict[str, Any]:
     """자유형 일정 글 → ``{"anchors": [...], "free_slots": [...], "problems": [{code, message}]}``.
 
@@ -448,7 +486,7 @@ def understand(
     """
     return _understand_once(
         text, complete=complete, trip_from=trip_from, trip_to=trip_to, day_start=day_start,
-        day_end=day_end, min_slot_min=min_slot_min, hotel_block_min=hotel_block_min,
+        day_end=day_end, min_slot_min=min_slot_min, hotel_block_min=hotel_block_min, today=today,
     )  # fmt: skip
 
 
@@ -539,7 +577,10 @@ def _understand_once(
     day_end: str = "23:00",
     min_slot_min: int = 30,
     hotel_block_min: int = 60,
+    today: date | None = None,
 ) -> dict[str, Any]:
+    if today is None:
+        today = kst_today()
     problems: list[dict[str, str]] = []
     empty = {"anchors": [], "free_slots": [], "problems": problems}
     if not callable(complete):
@@ -595,7 +636,7 @@ def _understand_once(
     tx = _Text(text)
     anchors: list[dict[str, Any]] = []
     for n, c in enumerate(cands):
-        k = _clean_candidate(c, n, tx, trip, problems)
+        k = _clean_candidate(c, n, tx, trip, problems, today)
         if k is not None:
             anchors.append(_build_anchor(k, trip, problems))
     if not anchors and cands:

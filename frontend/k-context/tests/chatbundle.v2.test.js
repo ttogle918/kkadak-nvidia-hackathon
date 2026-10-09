@@ -59,7 +59,7 @@ test('v1 화면: 이동 구간은 "정보 없음", 점선 없음, 근거는 못 
   assert.equal(list.find((e) => e.dataset?.note === 'story-routes').length, 0);
   assert.equal(pinLinks(b).length, 0);
   assert.equal(buildBundleSvg(b, ko, null).find((e) => (e.attrs?.class ?? '').includes('map-straight')).length, 0);
-  assert.equal(rationaleFor(b, 'story_a'), null);
+  assert.equal(rationaleFor(b, 'story_a', 'mention'), null);
 });
 
 test('정상 v2: 모든 v2 필드가 정리된 복사본으로 들어온다', () => {
@@ -71,9 +71,14 @@ test('정상 v2: 모든 v2 필드가 정리된 복사본으로 들어온다', ()
   assert.deepEqual(Object.keys(b.events_rationale), ['event:e1']);
   assert.equal(b.rationale['mention:story_a'].chips[0].label.en, '◆ Grounded');
   assert.equal(b.story_routes_note.ko.startsWith('이야기 길 없음'), true);
-  assert.equal(rationaleFor(b, 'story_a').card_id, 'mention:story_a');
-  assert.equal(rationaleFor(b, 'e1').card_id, 'event:e1');
-  assert.equal(rationaleFor(b, 'zzz'), null);
+  assert.equal(rationaleFor(b, 'story_a', 'mention').card_id, 'mention:story_a');
+  assert.equal(rationaleFor(b, 'e1', 'event').card_id, 'event:e1');
+  assert.equal(rationaleFor(b, 'zzz', 'mention'), null);
+  // 종류별 맵만 본다: 언급 id 를 event 로, 행사 id 를 mention 으로 찾으면 없다. kind 가 없어도 찾지 않는다
+  assert.equal(rationaleFor(b, 'story_a', 'event'), null);
+  assert.equal(rationaleFor(b, 'e1', 'mention'), null);
+  assert.equal(rationaleFor(b, 'story_a'), null);
+  assert.equal(rationaleFor(b, 'mention:story_a', 'mention'), null, '접두어가 붙은 id 는 받지 않는다');
 });
 
 test('틀린 v2 필드는 그 필드만 비운다(v1 필드·다른 v2 필드는 그대로)', () => {
@@ -185,7 +190,7 @@ test('지도 점선: v2 routes 가 있을 때만, 같은 날 이웃 핀 사이 +
 test('schedule 출처 줄(타임라인만): cache -> 이전 결과 재사용(시각), rules -> 규칙으로 정리, llm 이면 없음, 카드에는 없음', () => {
   const mk = (sch) => ok(v2((r) => { r.schedule = sch; }));
   const cache = mk({ source: 'cache', attempts: 0, model: null, prompt_sha: 'x', cache_created_at: '2026-10-09T01:02:03Z' });
-  assert.match(flat(bundleTimelineNode(cache, 1, ko)), /이전 결과 재사용 \(2026-10-09T01:02:03Z\)/);
+  assert.match(flat(bundleTimelineNode(cache, 1, ko)), /이전 결과 재사용 \(10월 9일 10:02\)/);
   assert.doesNotMatch(bundleCardNodes(cache, ko).filter(Boolean).map(flat).join(' '), /재사용|규칙으로/); // 카드에는 두지 않는다(중복 방지)
   const rules = mk({ source: 'rules', attempts: 0, model: null, prompt_sha: 'x', cache_created_at: null });
   assert.match(flat(bundleTimelineNode(rules, 1, ko)), /규칙으로 정리\(장소 사전 이름만\)/);
@@ -219,14 +224,17 @@ test('근거 표시: v1 은 숨김, v2 는 선택 항목(언급 mention:/행사 
   assert.match(flat(v1.root), /MOCK 예시는 숨김/);
 
   const b = ok(v2());
-  const m = await mountRationale(b, { selectedNow: 'story_a' });
+  const m = await mountRationale(b, { mode: 'both', selectedSeg: 'story_a', selectedNow: null });
   assert.equal(m.root.find((e) => e.dataset?.act === 'chip').length, 1);
   assert.match(flat(m.root), /◆ 근거 있음/);
 
-  const e = await mountRationale(b, { selectedNow: 'e1' });
+  const e = await mountRationale(b, { mode: 'both', selectedSeg: null, selectedNow: 'e1' });
   assert.match(flat(e.root), /◆ 근거 있음/);
 
-  const none = await mountRationale(b, { selectedNow: 'unknown_card' });
+  const none = await mountRationale(b, { mode: 'both', selectedSeg: null, selectedNow: 'unknown_card' });
+  // 같은 id 라도 종류가 다르면 찾지 않는다(행사 칸에 언급 id)
+  const cross = await mountRationale(b, { mode: 'both', selectedSeg: null, selectedNow: 'story_a' });
+  assert.equal(cross.root.find((x) => x.dataset?.act === 'chip').length, 0);
   assert.equal(none.root.find((x) => x.dataset?.act === 'chip').length, 0);
   assert.match(flat(none.root), /이 카드의 판단 근거 없음/);
 });
@@ -274,6 +282,6 @@ test('W5: 칩 키가 __proto__·constructor·toString 이어도 렌더가 끝나
   const { openItem } = await import('../src/components/rationale/logic.js');
   assert.equal(openItem({ chips: [], items: {} }, 'toString'), null);
   assert.equal(openItem({ chips: [], items: {} }, '__proto__'), null);
-  const m = await mountRationale(b, { selectedNow: 'story_a' });
+  const m = await mountRationale(b, { mode: 'both', selectedSeg: 'story_a', selectedNow: null });
   assert.equal(m.root.find((e) => e.dataset?.act === 'chip').length, 2);
 });

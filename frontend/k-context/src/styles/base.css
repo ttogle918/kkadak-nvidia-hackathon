@@ -66,3 +66,8 @@ code { font-family: var(--font-mono); }
 .mock-badge__pill { border: 1.5px solid var(--c-warn); border-radius: var(--r-pill); padding: 0 6px; font-family: var(--font-mono); font-weight: 700; letter-spacing: .06em; line-height: 1.5; background: var(--c-surface); }
 .mock-badge__note { font-weight: 500; }
 .mock-row { display: flex; align-items: center; gap: var(--sp-2); padding: 2px var(--sp-2); }
+/* 실제 모드: 묶음 카드 선택 버튼 · 카카오 지도의 직선 연결 라벨 */
+.cb-select { margin-left: auto; border: 1px solid currentColor; background: transparent; color: inherit; border-radius: var(--r-sm); padding: 1px 8px; font-size: var(--fs-xs); cursor: pointer; }
+.cb-select.is-on { font-weight: 700; border-width: 2px; }
+.cb-mention.is-selected, .cb-event.is-selected { outline: 2px solid currentColor; outline-offset: 2px; }
+.map-kakao__straight { background: rgba(255, 255, 255, 0.85); color: #333; border: 1px dashed #555; border-radius: 4px; padding: 0 5px; font-size: 11px; white-space: nowrap; }

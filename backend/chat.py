@@ -16,6 +16,7 @@ import uuid
 from collections import deque
 from collections.abc import Callable
 from dataclasses import dataclass
+from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
 from typing import Any
 
@@ -168,6 +169,10 @@ class _TeeSink:
             return list(self.events)[start:]
 
 
+def _kst_today() -> date:
+    return datetime.now(UTC).astimezone(timezone(timedelta(hours=9))).date()
+
+
 class ChatService:
     def __init__(
         self,
@@ -175,6 +180,7 @@ class ChatService:
         *,
         transport: Transport | None = None,
         clock: Callable[[], float] = time.monotonic,
+        today: Callable[[], date] | None = None,
         env: dict[str, str] | None = None,
         config_path: Path | None = None,
         dotenv_path: Path | None = None,
@@ -182,6 +188,7 @@ class ChatService:
         self._settings = settings
         self._transport = transport or HttpxTransport(max_tokens=CHAT_MAX_TOKENS)
         self._clock = clock
+        self._today = today or _kst_today  # 행사 검색 범위 ⓒ 의 기준(테스트에서 주입)
         self._env = env  # None 이면 호출 시점에 셸 env → .env 허용 목록 순으로 해석
         self._config_path = config_path or CONFIG_PATH
         self._t_llm: float | None = None
@@ -332,7 +339,8 @@ class ChatService:
             budget = search_budget_s(self._clock() - t0, front_limit_s=FRONT_LIMIT_S,
                                      margin_s=FALLBACK_MARGIN_S)
             self._search_timeout_s = budget  # _story_lock 안에서만 쓴다(한 번에 한 흐름)
-            await asyncio.to_thread(attach_events, bundle, trip, self._search_events, skip=budget is None)
+            await asyncio.to_thread(attach_events, bundle, trip, self._search_events,
+                                    skip=budget is None, today=self._today())
             n, m, k = counts(bundle)
             self._audit.result(cid, {"anchors": n, "mentions": m, "events": k, "problems": len(bundle["problems"])})
             user = self._new("user", text)

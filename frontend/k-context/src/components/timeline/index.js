@@ -5,7 +5,8 @@ import { timelineView } from './logic.js';
 import { timelineRowNode, legendNode } from './timeline-row.js';
 import { bundleTimelineNode } from './bundle-view.js';
 import { mockBadge } from '../../lib/mock-badge.js';
-import { mockRegions } from '../../state/selectors.js';
+import { isRealApi, mockRegions, realScreen } from '../../state/selectors.js';
+import { realNote } from '../../lib/real-state.js';
 
 /**
  * @param {HTMLElement} root app-shell 이 준 슬롯 div
@@ -20,8 +21,15 @@ export function mount(root, ctx) {
     const keep = active && root.contains?.(active) && active.dataset?.act ? { act: active.dataset.act, value: active.dataset.value } : null;
     const s = store.getState();
     if (s.chatBundle) {
-      render(root, bundleTimelineNode(s.chatBundle, s.day, t, { mock: mockRegions(s, api).timeline }));
+      render(root, bundleTimelineNode(s.chatBundle, s.day, t, { mock: mockRegions(s, api).timeline, back: !isRealApi(api) }));
       restoreFocus(keep);
+      return;
+    }
+    const rs = realScreen(s, api);
+    if (rs) { // 실제 모드, 묶음 없음: 예시 일정 대신 빈 상태·오류 상태
+      render(root, h('div', { class: 'timeline', dataset: { module: 'timeline', real: rs } },
+        h('div', { class: 'timeline__head' }, h('span', { class: 'timeline__title' }, t('timeline.title'))),
+        realNote(rs, 'timeline', t, 'timeline__empty')));
       return;
     }
     const v = timelineView(s);
@@ -64,7 +72,7 @@ export function mount(root, ctx) {
   draw();
   const eq = (a, b) => a.every((v, i) => v === b[i]);
   const off = store.select(
-    (s) => [s.day, s.added, s.skipped, s.selectedNow, s.minimizeChanges, s.lang, s.data.itinerary, s.chatBundle],
+    (s) => [s.day, s.added, s.skipped, s.selectedNow, s.minimizeChanges, s.lang, s.data.itinerary, s.chatBundle, s.loaded, s.error],
     draw, { equals: eq },
   );
   return { destroy() { off(); offClick(); root.replaceChildren(); } };

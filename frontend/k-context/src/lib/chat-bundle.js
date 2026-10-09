@@ -146,25 +146,74 @@ export function eventsView(bundle) {
   return { items: list.map((e) => ({ ...e, unverified: e.tier == null || e.tier === 'C' })), empty: list.length === 0, unavailable: bundle?.events == null };
 }
 
+// 문제 코드 -> 사전 키. 서버 message 는 화면에 쓰지 않는다(내부 문구·세부가 새지 않게) — 코드별 고정 문구만.
+// 코드 출처: domains/kcontext/schedule/understand.py · pipeline/run.py · backend/chat_story.py 의 _problem( 호출.
+const K = 'bundle.problem.';
 const PROBLEM_KEYS = {
-  TIME_FORMAT: 'bundle.problem.time', TIME_NOT_IN_QUOTE: 'bundle.problem.time', TIME_WITHOUT_DATE: 'bundle.problem.time',
-  DATE_FORMAT: 'bundle.problem.date', DATE_NOT_IN_QUOTE: 'bundle.problem.date', DATE_INVALID: 'bundle.problem.date',
-  COORD_UNKNOWN: 'bundle.problem.coord', OVERLAP: 'bundle.problem.overlap', LONG_SPAN: 'bundle.problem.long_span',
-  DAY_UNTIMED: 'bundle.problem.untimed', FREE_SLOTS_INCOMPLETE: 'bundle.problem.free_incomplete',
-  EVENTS_UNAVAILABLE: 'bundle.problem.events', TRUNCATED: 'bundle.problem.truncated',
+  TIME_FORMAT: `${K}time`, TIME_NOT_IN_QUOTE: `${K}time`, TIME_WITHOUT_DATE: `${K}time`,
+  DATE_FORMAT: `${K}date`, DATE_NOT_IN_QUOTE: `${K}date`, DATE_INVALID: `${K}date`,
+  COORD_UNKNOWN: `${K}coord`, YEAR_ASSUMED: `${K}year_assumed`, OVERLAP: `${K}overlap`, LONG_SPAN: `${K}long_span`,
+  DAY_UNTIMED: `${K}untimed`, FREE_SLOTS_INCOMPLETE: `${K}free_incomplete`,
+  EVENTS_UNAVAILABLE: `${K}events`, TRUNCATED: `${K}truncated`,
+  AMPM_ASSUMED: `${K}ampm`, NAME_PARTICLE_STRIPPED: `${K}particle`,
+  BAD_FIELD_TYPE: `${K}partial`, CANDIDATE_BAD: `${K}dropped`, QUOTE_MISSING: `${K}dropped`, QUOTE_TOO_LONG: `${K}dropped`,
+  QUOTE_NOT_FOUND: `${K}dropped`, NAME_NOT_IN_QUOTE: `${K}partial`, NAME_MISSING: `${K}partial`, ANCHOR_NO_NAME: `${K}partial`,
+  TYPE_DOWNGRADED: `${K}type`, TYPE_UNKNOWN: `${K}type`,
+  TRIP_INVALID: `${K}trip`, INPUT_EMPTY: `${K}input_empty`, INPUT_TOO_LONG: `${K}input_long`,
+  INJECTION_BLOCKED: `${K}injection`, INPUT_SUSPICIOUS: `${K}suspicious`,
+  LLM_FAILED: `${K}llm`, LLM_UNAVAILABLE: `${K}llm`, LLM_EMPTY: `${K}llm`, LLM_BAD_JSON: `${K}llm`, LLM_UNEXPECTED_SHAPE: `${K}llm`,
+  TOO_MANY_ANCHORS: `${K}too_many`, NO_ANCHOR_VERIFIED: `${K}none_verified`,
+  FIELD_DROPPED: `${K}field_dropped`, ROUTE_PROVIDER_REMOTE_REFUSED: `${K}route_off`,
 };
+/** MENTION_<종류> 는 접두어로 한 문구에 묶는다. */
+const MENTION_KEY = `${K}mention`;
+const GENERIC_KEY = `${K}generic`;
+/** 사용자에게 보이지 않는 내부 동작 코드(재시도·캐시). */
+export const HIDDEN_PROBLEM_CODES = ['LLM_RETRY', 'RETRY_SKIPPED_BUDGET', 'CACHE_UNAVAILABLE'];
+/** 장소 이름을 붙일 수 있는 코드(이름 키는 `.named`). */
+const NAMED = new Set(['COORD_UNKNOWN', 'NAME_PARTICLE_STRIPPED', 'OVERLAP']);
 
-/** problems -> [{code, key|null, message}]. key 가 있으면 화면이 사전 문구를 쓰고, 없으면 서버 message 를 그대로(textContent 로) 보인다. 같은 key 는 한 번만. */
+/**
+ * 메시지에서 장소 이름을 뽑되, 묶음의 앵커 이름과 정확히 같은 것만 인정한다(아니면 null — 서버 문자열을 화면에 올리지 않는다).
+ * COORD_UNKNOWN "이름: …" · NAME_PARTICLE_STRIPPED "원래 → 떼낸 이름: …" · OVERLAP "일정이 겹침: 이름 / 이름".
+ */
+function problemName(code, message, names) {
+  const m = typeof message === 'string' ? message : '';
+  let found = [];
+  if (code === 'COORD_UNKNOWN') {
+    const i = m.indexOf(': ');
+    if (i > 0) found = [m.slice(0, i)];
+  } else if (code === 'NAME_PARTICLE_STRIPPED') {
+    const r = /^.+? → (.+?): /.exec(m);
+    if (r) found = [r[1]];
+  } else if (code === 'OVERLAP') {
+    const r = /^일정이 겹침: (.+) \/ (.+)$/.exec(m);
+    if (r) found = [r[1], r[2]];
+  }
+  return found.length && found.every((n) => names.has(n)) ? found.join(' · ') : null;
+}
+
+/**
+ * problems -> [{code, key, params?}]. 서버 message 는 쓰지 않는다: 알려진 코드는 고정 문구, 내부 동작 코드는 뺀다, 모르는 코드는 일반 문구.
+ * 같은 문구는 한 번만(장소 이름이 붙는 문구는 이름이 다르면 각각).
+ */
 export function problemLines(bundle) {
+  const names = new Set((bundle?.itinerary?.anchors ?? []).map((a) => a.name));
   const seen = new Set();
   const out = [];
   for (const p of bundle?.problems ?? []) {
-    const key = PROBLEM_KEYS[p.code] ?? null;
-    if (key) {
-      if (seen.has(key)) continue;
-      seen.add(key);
+    const code = String(p.code ?? '');
+    if (HIDDEN_PROBLEM_CODES.includes(code)) continue;
+    let key = PROBLEM_KEYS[code] ?? (code.startsWith('MENTION_') ? MENTION_KEY : GENERIC_KEY);
+    let params;
+    if (NAMED.has(code)) {
+      const name = problemName(code, p.message, names);
+      if (name) { key = `${key}.named`; params = { name }; }
     }
-    out.push({ code: p.code, key, message: p.message });
+    const id = `${key}|${params?.name ?? ''}`;
+    if (seen.has(id)) continue;
+    seen.add(id);
+    out.push(params ? { code, key, params } : { code, key });
   }
   return out;
 }
@@ -173,14 +222,15 @@ export function problemLines(bundle) {
 export const isV2Bundle = (bundle) => bundle?.schema === 'kc-chat-bundle/v2';
 
 /**
- * 선택한 항목 id 의 근거. 언급 카드면 "mention:"+id, 행사면 "event:"+id 로 찾는다(서버 호출 없음).
- * 이미 접두어가 붙은 id 도 받는다. 없으면 null.
+ * 선택한 항목의 근거. kind 가 'mention' 이면 rationale["mention:"+id], 'event' 면 events_rationale["event:"+id] 만 본다.
+ * 정확히 일치하는 키만 찾는다(대체 탐색 없음). 없으면 null.
  */
-export function rationaleFor(bundle, id) {
+export function rationaleFor(bundle, id, kind) {
   if (!isV2Bundle(bundle) || typeof id !== 'string' || !id) return null;
   const own = (map, key) => (map && Object.hasOwn(map, key) ? map[key] : null);
-  return own(bundle.rationale, id.startsWith('mention:') ? id : `mention:${id}`)
-    ?? own(bundle.events_rationale, id.startsWith('event:') ? id : `event:${id}`);
+  if (kind === 'mention') return own(bundle.rationale, `mention:${id}`);
+  if (kind === 'event') return own(bundle.events_rationale, `event:${id}`);
+  return null;
 }
 
 /** 근거 목록 -> {chips, items} (rationale/logic.js 의 mergeRationale 과 같은 규칙: 같은 key 는 먼저 온 것). */
@@ -215,4 +265,34 @@ export function pinLinks(bundle) {
     }
   }
   return out;
+}
+
+/**
+ * 실록 언급 -> 카드 id. 서버가 언급마다 싣는 card_id 를 그대로 쓴다(추정하지 않는다). card_id 가 없는 언급은 맵에 없다 → 선택 버튼도 없다.
+ * Map<mention 객체, card_id>.
+ */
+export function mentionCardIds(bundle) {
+  const out = new Map();
+  for (const r of bundle?.mentions?.anchors ?? []) {
+    for (const m of r.mentions) if (m.card_id) out.set(m, m.card_id);
+  }
+  return out;
+}
+
+const MONTHS_EN = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+/**
+ * 서버 시각(UTC ISO "…Z") -> 한국 시간 표시. ko "10월 10일 0:51" · en "Oct 10, 12:51 AM (KST)". 읽을 수 없으면 null(원문을 쓰지 않는다).
+ */
+export function formatServerTime(iso, lang = 'ko') {
+  if (typeof iso !== 'string' || !/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2}(\.\d+)?)?(Z|[+-]\d{2}:\d{2})$/.test(iso)) return null;
+  const ms = Date.parse(iso);
+  if (!Number.isFinite(ms)) return null;
+  const d = new Date(ms + 9 * 3600000); // KST = UTC+9 (서머타임 없음)
+  const mo = d.getUTCMonth();
+  const day = d.getUTCDate();
+  const h24 = d.getUTCHours();
+  const mm = String(d.getUTCMinutes()).padStart(2, '0');
+  if (lang === 'en') return `${MONTHS_EN[mo]} ${day}, ${h24 % 12 === 0 ? 12 : h24 % 12}:${mm} ${h24 < 12 ? 'AM' : 'PM'} (KST)`;
+  return `${mo + 1}월 ${day}일 ${h24}:${mm}`;
 }

@@ -100,6 +100,7 @@ export function mount(root /* HTMLElement */, ctx /* {store, api, t, actions} */
 | `logs` | `[]` | 보안 로그(AuditEntry[]) | logs |
 | `sending` | `false` | `send` 진행 중 | — |
 | `chatBundle` | `null` | 챗봇이 정리한 일정(kc-chat-bundle/v1, `api/bundle.js` 가 검증한 것) \| null. 있으면 타임라인·지도(핀)·카드(실록 기록·행사)가 이것으로 바뀐다. 계약 `docs/chat-bundle.contract.md` | `send`·`trySend`(응답 bundle) · `clearChatBundle` |
+| `tripInput` | `{from:'',to:''}` | 여행 기간 입력(선택 보조, D22) — 요청의 `context.trip` 은 실제 모드에서 여기서만 만든다. URL `?trip=시작..끝` 이 부팅 시 우선, 없으면 localStorage | `setTripInput` |
 | `data` | `{itinerary,routes,cards,sources: null}` | api 로 받은 원본 | (SEG/TAGS 상수) |
 | `loaded` / `error` | `false` / `null` | 로드 상태 | — |
 | `settingsOpen` | `false` | 설정 패널(보안 로그·언어·테마·최소 변경) 열림 | — |

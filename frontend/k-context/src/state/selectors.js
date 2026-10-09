@@ -47,9 +47,12 @@ export function pendingCount(logs) {
 //       ② chatBundle 이 있으면 타임라인·지도 핀·카드는 그 묶음이 기준이다 — 서버가 준 묶음(sample 아님, api.mode !== 'mock')만 실제.
 //       ③ chatBundle 이 있으면 mock 판단 근거(rationale)는 숨긴다(실제 결과와 섞이지 않게).
 
-/** 데이터 키의 종류: 'mock'|'fixture'|'server'|'none'. dataKinds 가 없으면 'mock'. */
+/** 데이터 키의 종류: 'mock'|'fixture'|'server'|'none'|'empty'|'bundle'. dataKinds 가 없으면 'mock'. */
 export const dataKindOf = (api, key) => api?.dataKinds?.[key] ?? 'mock';
 const isMockKind = (k) => k === 'mock' || k === 'fixture' || k == null;
+
+/** 실제 모드(명시 chat·http 또는 auto 에서 backend 가 떠 있는 chat)인가 — 예시 데이터를 쓰지 않는다(D17). */
+export const isRealApi = (api) => api?.mode === 'chat' || api?.mode === 'http';
 
 /** chatBundle 이 없으면 null, 있으면 'server'(실제) | 'mock'(sample 이거나 backend 없는 mock api). */
 export function bundleKind(state, api) {
@@ -58,24 +61,36 @@ export function bundleKind(state, api) {
 }
 
 /**
+ * 실제 모드에서 묶음이 없을 때 본문 영역이 보일 상태: 'error'(backend 에 닿지 못함) | 'empty'(일정 대기) | null(불러오는 중이거나 해당 없음).
+ */
+export function realScreen(state, api) {
+  if (!isRealApi(api) || state.chatBundle) return null;
+  if (state.error && !state.loaded) return 'error';
+  return state.loaded ? 'empty' : null;
+}
+
+/**
  * 영역별 MOCK 여부.
  * 반환: {timeline, routes, map, cards, rationale: 'mock'|'fixture'|null, hideRationale, myLocation}
- *  - routes: 경로 A·B·C 탭 줄(묶음 화면에는 없다)   - map: 지도의 선·핀   - myLocation: 지도의 '내 위치'(항상 예시 좌표)
+ *  - routes: 경로 A·B·C 탭 줄(묶음 화면에는 없다)   - map: 지도의 선·핀   - myLocation: 지도의 '내 위치'(예시 좌표 — 실제 모드에서는 null)
  */
 export function mockRegions(state, api) {
   const bk = bundleKind(state, api);
   const kind = (key) => { const k = dataKindOf(api, key); return isMockKind(k) ? (k === 'fixture' ? 'fixture' : 'mock') : null; };
+  const myLocation = isRealApi(api) ? null : 'mock';
   if (bk) {
     const m = bk === 'mock' ? 'mock' : null;
-    return { timeline: m, routes: null, map: m, cards: m, rationale: null, hideRationale: true, myLocation: 'mock' };
+    return { timeline: m, routes: null, map: m, cards: m, rationale: null, hideRationale: true, myLocation };
   }
-  return { timeline: kind('itinerary'), routes: kind('routes'), map: kind('routes') ?? kind('itinerary'), cards: kind('cards'), rationale: kind('rationale'), hideRationale: false, myLocation: 'mock' };
+  return { timeline: kind('itinerary'), routes: kind('routes'), map: kind('routes') ?? kind('itinerary'), cards: kind('cards'), rationale: kind('rationale'), hideRationale: false, myLocation };
 }
 
 /**
- * 상단 상태: 'all-mock'(백엔드 미연결 — 전체 MOCK) | 'bundle'(챗봇이 정리한 일정, 실제 서버) | 'mock'(서버는 연결됐지만 화면은 MOCK).
+ * 상단 상태: 'all-mock'(백엔드 미연결 — 전체 MOCK) | 'bundle'(챗봇이 정리한 일정, 실제 서버) | 'empty'(실제 서버, 일정 대기) | 'error'(실제 모드인데 backend 에 닿지 못함) | 'mock'(그 밖).
  */
 export function screenStatus(state, api) {
   if (api?.mode == null || api.mode === 'mock') return 'all-mock';
-  return bundleKind(state, api) === 'server' ? 'bundle' : 'mock';
+  if (bundleKind(state, api) === 'server') return 'bundle';
+  if (isRealApi(api) && !state.chatBundle) return state.error && !state.loaded ? 'error' : 'empty';
+  return 'mock';
 }

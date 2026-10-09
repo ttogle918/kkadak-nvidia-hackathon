@@ -18,7 +18,6 @@ from pathlib import Path
 
 from domains.kcontext.contract.errors import ContractError
 from domains.kcontext.geo.chain import make_route_provider
-from domains.kcontext.regions import load_regions
 
 from . import reports as reports_mod
 from .cards import build_now_cards
@@ -30,6 +29,7 @@ from .rules import KST, to_kst
 from .sources import SourceError, load_sources, make_fetcher
 from .store import CatalogStore
 from .stories import link_stories, load_stories
+from .target import target_region
 from .updater import run_source
 
 __all__ = ["ApiError", "handle", "main"]
@@ -92,6 +92,14 @@ def _changes_for(store: CatalogStore, ids: list[str], since: str | None) -> list
     return list(by.values())
 
 
+def _region():
+    """대상 지역(env). 지역을 쓰는 op 에서만 해석한다 — env 설정 오류가 다른 op 를 bad_request 로 만들지 않게."""
+    try:
+        return target_region()
+    except ValueError:
+        raise ApiError("internal_error", "대상 지역 설정이 올바르지 않다") from None
+
+
 def handle(
     op: str, args: Mapping, *, store: CatalogStore, now: datetime, actor: str | None = None,
     env: Mapping[str, str] | None = None, provider: RouteProvider | None = None,
@@ -100,8 +108,6 @@ def handle(
     now = to_kst(now)
     sources = load_sources()
     provider = provider or make_route_provider(os.environ)
-    region_id = os.environ.get("KC_TARGET_REGION", "jung")
-    region = load_regions()[region_id]
     if op in ADMIN_OPS:
         who = (actor or "").strip()
         if not who or who.casefold().startswith("agent:"):
@@ -163,7 +169,7 @@ def handle(
         try:
             return {"report": reports_mod.decide(store, str(args.get("report_id", "")),
                                                  str(args.get("decision", "")), reviewer=actor or "", now=now,
-                                                 region=region, note=str(args.get("note", "")))}
+                                                 region=_region(), note=str(args.get("note", "")))}
         except reports_mod.ReportError as e:
             raise ApiError("bad_request", str(e)) from None
     if op == "admin_link_check":
@@ -179,7 +185,7 @@ def handle(
     if op == "admin_refresh":
         sid = str(args.get("source_id", ""))
         try:
-            fetch = make_fetcher(sid, region=region, now=now, env=env)  # sample 키 수집은 CLI(--dir 지정) 전용
+            fetch = make_fetcher(sid, region=_region(), now=now, env=env)  # sample 키 수집은 CLI(--dir 지정) 전용
         except SourceError as e:
             raise ApiError("not_implemented", str(e)) from None
         return {"run": run_source(store, sid, fetch, now=now).__dict__}

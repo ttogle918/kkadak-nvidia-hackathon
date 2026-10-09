@@ -4,7 +4,7 @@
  "created_at": "2026-10-09",
  "reviewed": false,
  "synthetic": true,
- "provenance": "합성 입력 — 장소는 regions keywords·장소 사전 5곳만. 실제 인물·연도·행사명 없음. 기대값은 sprint-3 §5.1 규칙으로 사람이 정함(미검수)",
+ "provenance": "합성 입력 — 장소는 regions keywords·장소 사전 5곳만. 실제 인물·연도·행사명 없음. 기대값은 sprint-3 §5.1 규칙으로 사람이 정함(미검수) · 2026-10-10 D22 로 sch_ko_noyear_01·sch_en_noyear_01 기대값 변경(date \"*\", problems_include YEAR_ASSUMED; 사람 승인 D22) · sch_ko_particle_01 은 이름 포함 비교라 조사 떼기를 검증하지 못함(검증은 pipeline 테스트)",
  "cases": [
   {
    "id": "sch_ko_basic_01",
@@ -83,6 +83,75 @@
    },
    "tags": [
     "ampm"
+   ]
+  },
+  {
+   "id": "sch_ko_ampm_02",
+   "lang": "ko",
+   "synthetic": true,
+   "text": "10/16에 경복궁 10시, 광화문 1시",
+   "trip": {
+    "from": "2026-10-15",
+    "to": "2026-10-18"
+   },
+   "expect": {
+    "status": "ok",
+    "anchors": [
+     {
+      "type": "visit",
+      "name": "경복궁",
+      "date": "2026-10-16",
+      "from": "10:00",
+      "to": null
+     },
+     {
+      "type": "visit",
+      "name": "광화문",
+      "date": "2026-10-16",
+      "from": "13:00",
+      "to": null
+     }
+    ],
+    "problems_include": [
+     "AMPM_ASSUMED"
+    ]
+   },
+   "tags": [
+    "ampm",
+    "daytime"
+   ]
+  },
+  {
+   "id": "sch_ko_particle_01",
+   "lang": "ko",
+   "synthetic": true,
+   "text": "10/16에 경복궁 10시, 익선동도 들를 거야",
+   "trip": {
+    "from": "2026-10-15",
+    "to": "2026-10-18"
+   },
+   "expect": {
+    "status": "ok",
+    "anchors": [
+     {
+      "type": "visit",
+      "name": "경복궁",
+      "date": "2026-10-16",
+      "from": "10:00",
+      "to": null
+     },
+     {
+      "type": "visit",
+      "name": "익선동",
+      "date": null,
+      "from": null,
+      "to": null
+     }
+    ]
+   },
+   "tags": [
+    "particle",
+    "name_containment_check_only"
    ]
   },
   {
@@ -375,17 +444,17 @@
      {
       "type": "visit",
       "name": "경복궁",
-      "date": null,
+      "date": "*",
       "from": "*",
       "to": null
      }
     ],
     "problems_include": [
-     "YEAR_UNKNOWN"
+     "YEAR_ASSUMED"
     ]
    },
    "tags": [
-    "no_year_no_trip"
+    "no_year_assumed"
    ]
   },
   {
@@ -580,18 +649,18 @@
      {
       "type": "visit",
       "name": "Gyeongbokgung",
-      "date": null,
+      "date": "*",
       "from": "*",
       "to": null
      }
     ],
     "problems_include": [
-     "YEAR_UNKNOWN"
+     "YEAR_ASSUMED"
     ]
    },
    "tags": [
     "en",
-    "no_year_no_trip"
+    "no_year_assumed"
    ]
   },
   {

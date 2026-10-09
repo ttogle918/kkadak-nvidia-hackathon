@@ -8,9 +8,11 @@ import { resolveApi } from './api/index.js';
 import { safeBase } from './events/api.js';
 import { createInitialState } from './state/initial.js';
 import { createActions } from './state/actions.js';
+import { isRealApi } from './state/selectors.js';
 import { mountAppShell } from './components/layout/app-shell.js';
 import * as topbar from './components/layout/topbar.js';
 import * as settings from './components/layout/settings.js';
+import { initialTripInput } from './lib/trip.js';
 import { MODULES } from './modules.js';
 
 function initialFromUrl(search) {
@@ -40,6 +42,8 @@ export async function boot(rootEl = document.getElementById('app'), search = loc
   // ?base= 는 safeBase 로 검증한다(검증 실패 시 undefined → 기본 주소).
   const apiMode = ['mock', 'http', 'chat'].includes(q.get('api')) ? q.get('api') : 'auto';
   const api = await resolveApi({ mode: apiMode, baseUrl: safeBase(q.get('base')) || undefined });
+  if (isRealApi(api)) store.setState({ selectedSeg: null, selectedNow: null }); // 실제 모드의 기본 선택은 없음(예시 카드 id 를 들고 시작하지 않는다)
+  if (isRealApi(api)) store.setState({ tripInput: initialTripInput(search) }); // URL ?trip= 이 저장값보다 우선(D22)
   const t = createT(() => store.getState().lang);
   const actions = createActions({ store, api });
   const ctx = { store, api, t, actions };

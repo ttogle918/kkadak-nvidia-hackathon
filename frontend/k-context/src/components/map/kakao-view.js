@@ -3,7 +3,7 @@
 // 일정 앵커(itinerary.anchors)의 유효 좌표도 마커가 된다. lat/lng 가 null·비수치·범위 밖인 항목은 건너뛴다. 하나도 없으면 기본 중심만 보이고 '좌표 없음'을 표시한다.
 import { h } from '../../lib/dom.js';
 import { mockBadge } from '../../lib/mock-badge.js';
-import { bundlePins, pinInfo } from '../../lib/chat-bundle.js';
+import { bundlePins, pinInfo, pinLinks } from '../../lib/chat-bundle.js';
 import { pinInfoNode } from '../../lib/chat-bundle-view.js';
 
 // 기본 중심: 덕수궁 37.56556, 126.97489 (인접: 정동제일교회 37.56541, 126.97273).
@@ -72,7 +72,7 @@ export function collectGeo(state, t) {
 }
 
 /** 카카오 지도 뷰. host 는 영속 컨테이너(재렌더 때 같은 노드를 다시 붙인다). */
-export function createKakaoView(kakao, host, t) {
+export function createKakaoView(kakao, host, t, { myLocation = true } = {}) {
   const maps = kakao.maps;
   const center = () => new maps.LatLng(DEFAULT_CENTER.lat, DEFAULT_CENTER.lng);
   let map = null;
@@ -109,6 +109,27 @@ export function createKakaoView(kakao, host, t) {
   /** 챗봇이 정리한 일정: 좌표가 있는 앵커에만 핀(옛길 선·내 위치 없음). 누르면 정보창(DOM 노드 + textContent). */
   function updateBundle(bundle) {
     const pins = bundlePins(bundle);
+    const at = new Map(pins.map((p) => [p.key, p]));
+    // 같은 날 이웃 핀의 점선(D16: 직선 연결일 뿐 실제 길이 아니다) — SVG 지도와 같은 pinLinks() 데이터. 모양(점선)과 글자 라벨을 함께 둔다.
+    const links = pinLinks(bundle).filter((l) => at.has(l.from) && at.has(l.to));
+    for (const l of links) {
+      const a = at.get(l.from);
+      const b = at.get(l.to);
+      const pl = new maps.Polyline({
+        path: [new maps.LatLng(a.lat, a.lng), new maps.LatLng(b.lat, b.lng)],
+        strokeWeight: 3, strokeColor: '#555555', strokeOpacity: 0.7, strokeStyle: 'shortdot',
+      });
+      pl.setMap(map);
+      overlays.push(pl);
+    }
+    if (links.length && maps.CustomOverlay) {
+      const a = at.get(links[0].from);
+      const b = at.get(links[0].to);
+      const label = h('div', { class: 'map-kakao__straight', dataset: { straight: 'label' } }, `┈ ${t('map.bundle.straight_note')}`);
+      const o = new maps.CustomOverlay({ position: new maps.LatLng((a.lat + b.lat) / 2, (a.lng + b.lng) / 2), content: label, xAnchor: 0.5, yAnchor: 0, zIndex: 5 });
+      o.setMap(map);
+      overlays.push(o);
+    }
     for (const p of pins) {
       const pos = new maps.LatLng(p.lat, p.lng);
       const mk = new maps.Marker({ position: pos, title: p.name });
@@ -138,6 +159,7 @@ export function createKakaoView(kakao, host, t) {
       map.setBounds?.(bounds);
       status.replaceChildren();
     }
+    if (links.length) status.replaceChildren(`┈ ${t('map.bundle.straight_note')}`); // 오버레이를 못 쓰는 환경에서도 글자 라벨이 남는다
   }
 
   return {
@@ -169,7 +191,7 @@ export function createKakaoView(kakao, host, t) {
           });
         }
       }
-      const me = getMyLocation();
+      const me = myLocation ? getMyLocation() : null; // 실제 모드(myLocation=false)에는 예시 좌표를 그리지 않는다
       const myPt = validLatLng([me?.lat, me?.lng]) ? [me.lat, me.lng] : null;
       if (myPt) addMyLocation(new maps.LatLng(myPt[0], myPt[1]));
       const sched = [...markers.map((m) => [m.lat, m.lng]), ...lines.flatMap((l) => l.path)];

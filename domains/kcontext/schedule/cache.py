@@ -13,20 +13,20 @@ import os
 import re
 import unicodedata
 import uuid
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
 from domains.kcontext.paths import repo_root, var_dir
 
-from .understand import PROMPT_SHA
+from .understand import PROMPT_SHA, kst_today
 
 __all__ = ["CACHE_ENV", "ScheduleCache", "cache_enabled", "default_root", "key_for"]
 
 CACHE_ENV = "KC_SCHEDULE_CACHE"  # on(기본) | off
 LLM_CONFIG = Path("deploy") / "llm.chat.yaml"
 _KEY = re.compile(r"^[0-9a-f]{64}$")
-_VERSION = 2  # 1: 부분 결과(QUOTE_NOT_FOUND)가 들어 있을 수 있었다 — 없음으로 본다
+_VERSION = 4  # 4: D22 ② 연도 추정(YEAR_ASSUMED) · 3: D21 시각·조사 · 1: 부분 결과(QUOTE_NOT_FOUND)가 들어 있을 수 있었다 · 2: D21 이전 시각 해석 — 없음으로 본다
 
 
 def cache_enabled(env: dict[str, str] | None = None) -> bool:
@@ -37,7 +37,9 @@ def default_root() -> Path:
     return var_dir() / "cache" / "schedule"
 
 
-def key_for(text: str, trip: tuple[str, str] | None, *, root: Path | None = None) -> str:
+def key_for(text: str, trip: tuple[str, str] | None, *, root: Path | None = None,
+            today: date | None = None) -> str:
+    """trip 이 없으면 오늘(KST)을 키에 넣는다 — 연도 추정(D22 ②)이 날짜에 따라 달라지기 때문."""
     base = root if root is not None else repo_root()
     try:
         cfg_sha = hashlib.sha256((base / LLM_CONFIG).read_bytes()).hexdigest()
@@ -47,6 +49,7 @@ def key_for(text: str, trip: tuple[str, str] | None, *, root: Path | None = None
     payload = {
         "text": unicodedata.normalize("NFKC", text),
         "trip": list(trip) if trip else None,
+        "today": None if trip else (today or kst_today()).isoformat(),
         "prompt_sha": PROMPT_SHA,
         "llm_config_sha": cfg_sha,
         "model": model,

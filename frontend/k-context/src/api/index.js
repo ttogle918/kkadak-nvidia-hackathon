@@ -23,31 +23,45 @@ export const API_METHODS = [
 ];
 
 /**
- * 하이브리드('chat'·auto)에서 실제 backend 로 보내는 메서드 목록. 나머지는 mock.
- * backend 에 엔드포인트가 생기면 여기에 이름만 추가한다(getItinerary·getRoutes·getAuditLog·decideAudit 는 아직 mock).
+ * 실제 모드('chat'·'http')에서 backend 로 보내는 메서드. 나머지(itinerary·routes·cards·sources·card·rationale)는 예시를 쓰지 않고
+ * 빈 값을 돌려준다(D17) — 화면 데이터의 출처는 채팅 묶음이다.
  */
-export const HTTP_METHODS = ['getMessages', 'sendMessage', 'getCards', 'getCard', 'getSources', 'getRationale'];
+export const HTTP_METHODS = ['getMessages', 'sendMessage', 'getAuditLog', 'decideAudit'];
 
 /**
  * 화면 데이터의 출처 종류(표시용 메타 — 응답을 감싸지 않는다). api.dataKinds[키] 값:
  *  'mock'    프론트 data/ 의 고정 예시   'fixture' 서버가 주지만 backend/fixtures/screen 의 고정 예시(mock 과 같은 내용)
  *  'server'  실제 서버 응답              'none'    아직 서버에 없음(호출하면 ApiNotImplementedError)
- * 키: itinerary·routes·cards·sources·rationale·messages·audit. HTTP_METHODS 가 늘면 여기도 맞춘다.
+ *  'empty'   예시 없음 — 빈 값           'bundle'  채팅 묶음 안에서 온다(별도 호출 없음)
+ * 키: itinerary·routes·cards·sources·rationale·messages·audit. 'empty'·'bundle'·'server' 는 MOCK 이 아니다.
  */
+const REAL_KINDS = { itinerary: 'empty', routes: 'empty', cards: 'empty', sources: 'empty', rationale: 'bundle', messages: 'server', audit: 'server' };
 export const DATA_KINDS = {
   mock: { itinerary: 'mock', routes: 'mock', cards: 'mock', sources: 'mock', rationale: 'mock', messages: 'mock', audit: 'mock' },
-  chat: { itinerary: 'mock', routes: 'mock', cards: 'fixture', sources: 'fixture', rationale: 'fixture', messages: 'server', audit: 'mock' },
-  http: { itinerary: 'none', routes: 'none', cards: 'fixture', sources: 'fixture', rationale: 'fixture', messages: 'server', audit: 'none' },
+  chat: { ...REAL_KINDS },
+  http: { ...REAL_KINDS },
 };
 
-/** @param {{mode?:'mock'|'http', baseUrl?:string, latencyMs?:number}} opts */
+/** 실제 모드의 "예시 없음" 메서드. 카드·근거는 서버 호출 없이 not_found. */
+function emptyMethods() {
+  const notFound = () => Object.assign(new Error('찾을 수 없습니다'), { code: 'not_found' });
+  return {
+    async getItinerary() { return { anchors: [], free_slots: [], timeline: [], landmarks: [] }; },
+    async getRoutes() { return []; },
+    async getCards() { return []; },
+    async getCard(id) { throw notFound(id); }, // eslint-disable-line no-unused-vars
+    async getSources() { return []; },
+    async getRationale(cardId) { throw notFound(cardId); }, // eslint-disable-line no-unused-vars
+  };
+}
+
+/** @param {{mode?:'mock'|'http'|'chat', baseUrl?:string, latencyMs?:number}} opts */
 export function createApi({ mode = 'mock', baseUrl, latencyMs } = {}) {
   if (mode === 'mock') return { ...createMockApi({ latencyMs }), dataKinds: { ...DATA_KINDS.mock } };
-  if (mode === 'http') return { ...createHttpApi({ baseUrl }), dataKinds: { ...DATA_KINDS.http } };
-  if (mode === 'chat') {
-    // 하이브리드: HTTP_METHODS 만 실제 backend, 나머지는 mock.
+  if (mode === 'http' || mode === 'chat') {
+    // 실제 모드: HTTP_METHODS 만 backend. 예시는 쓰지 않는다(빈 값).
     const http = createHttpApi({ baseUrl });
-    const api = { ...createMockApi({ latencyMs }), mode: 'chat', baseUrl: http.baseUrl, dataKinds: { ...DATA_KINDS.chat } };
+    const api = { ...emptyMethods(), mode, baseUrl: http.baseUrl, dataKinds: { ...DATA_KINDS[mode] } };
     for (const n of HTTP_METHODS) api[n] = http[n];
     return api;
   }
@@ -61,7 +75,8 @@ export function createApi({ mode = 'mock', baseUrl, latencyMs } = {}) {
  * @param {{mode?:'auto'|'mock'|'http'|'chat', baseUrl?:string, latencyMs?:number, probeMs?:number}} opts
  */
 export async function resolveApi({ mode = 'auto', baseUrl, latencyMs, probeMs } = {}) {
-  if (mode !== 'auto') return createApi({ mode, baseUrl, latencyMs });
+  // 명시 chat·http 에 base 가 없으면 auto 와 같은 기본 주소(같은 출처 /api 는 정적 서버로 가서 501 이 난다)
+  if (mode !== 'auto') return createApi({ mode, baseUrl: mode === 'mock' ? baseUrl : baseUrl || DEFAULT_CHAT_BASE, latencyMs });
   const base = baseUrl || DEFAULT_CHAT_BASE;
   const up = await probeBackend(base, probeMs);
   return up ? createApi({ mode: 'chat', baseUrl: base, latencyMs }) : createApi({ mode: 'mock', latencyMs });

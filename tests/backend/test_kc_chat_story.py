@@ -269,9 +269,28 @@ def test_schedule_message_returns_bundle(make):
     assert t.calls == []  # LLM(일반 챗봇)은 부르지 않았다
     assert calls["story"][0][1] == ("2026-10-15", "2026-10-16")
     sa = calls["search"][0]
-    assert sa["trip"] == {"from": "2026-10-15", "to": "2026-10-16"} and len(sa["itinerary"]) == 2
+    # D22 ③ 보충: 일정 앵커 날짜가 있으면 trip 보다 우선한다
+    assert sa["trip"] == {"from": "2026-10-15", "to": "2026-10-15"} and len(sa["itinerary"]) == 2
     assert sa["free_slots"] == [{"date": "2026-10-15", "from": "12:00", "to": "15:00"}]
     assert any(x["kind"] == "ok" and "kc_chat_story" in x["text"]["ko"] for x in body["logs"])
+
+
+def test_undated_schedule_without_trip_searches_today_window(make):
+    from datetime import date
+
+    def story(text, trip):
+        b = bundle()
+        b["trip"] = None
+        for a in b["itinerary"]["anchors"]:
+            a["from"] = a["to"] = None
+        return b
+
+    c, _, calls, _ = make(story=story)
+    c.app.state.chat._today = lambda: date(2026, 10, 10)  # 주입 가능한 시계
+    r = c.post("/api/messages", json={"text": SCHED})
+    assert r.status_code == 200
+    assert calls["search"][0]["trip"] == {"from": "2026-10-10", "to": "2026-10-16"}
+    assert r.json()["bundle"]["coverage_note"].endswith("날짜를 몰라 오늘부터 7일 안에서 찾았어요.")
 
 
 def test_plain_message_has_no_bundle(make):

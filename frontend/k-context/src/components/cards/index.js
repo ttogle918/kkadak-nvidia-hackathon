@@ -6,10 +6,12 @@ import { renderNowCard } from './now-card.js';
 import { renderSourcePopover } from './source-popover.js';
 import { bundleCardNodes } from './bundle-view.js';
 import { mockBadge } from '../../lib/mock-badge.js';
-import { mockRegions } from '../../state/selectors.js';
+import { mockRegions, realScreen } from '../../state/selectors.js';
+import { realNote } from '../../lib/real-state.js';
+import { isV2Bundle } from '../../lib/chat-bundle.js';
 import { createLatestGuard, findSource, nowButtons, supportingFacts, visibleCards } from './logic.js';
 
-const BODY_KEYS = ['lang', 'mode', 'selectedSeg', 'selectedNow', 'immersion', 'expandedTags', 'added', 'skipped', 'data', 'loaded', 'selectedTag', 'chatBundle'];
+const BODY_KEYS = ['lang', 'mode', 'selectedSeg', 'selectedNow', 'immersion', 'expandedTags', 'added', 'skipped', 'data', 'loaded', 'selectedTag', 'chatBundle', 'error'];
 const POP_KEYS = ['lang', 'selectedTag', 'data', 'selectedSeg'];
 
 const changed = (a, b, keys) => keys.some((k) => !Object.is(a[k], b[k]));
@@ -56,13 +58,20 @@ export function mount(root, ctx) {
 
   function drawBody() {
     const s = store.getState();
-    if (s.chatBundle) { // 챗봇이 정리한 일정이 있으면 그 기록·행사 카드를 보인다(샘플 카드 대신)
-      render(body, bundleCardNodes(s.chatBundle, t, { mock: mockRegions(s, api).cards }));
-      return;
-    }
     // 다시 그리면 포커스가 사라지므로 fk 를 기억했다가 되돌린다
     const ae = doc()?.activeElement;
     const keepFk = ae && body.contains?.(ae) ? ae.dataset?.fk : null;
+    if (s.chatBundle) { // 챗봇이 정리한 일정이 있으면 그 기록·행사 카드를 보인다(샘플 카드 대신)
+      const b = s.chatBundle;
+      render(body, bundleCardNodes(b, t, { mock: mockRegions(s, api).cards, selectable: isV2Bundle(b), selectedSeg: s.selectedSeg, selectedNow: s.selectedNow }));
+      if (keepFk) focusFk(keepFk);
+      return;
+    }
+    const rs = realScreen(s, api);
+    if (rs) { // 실제 모드, 묶음 없음: 예시 카드 대신 빈 상태·오류 상태
+      render(body, realNote(rs, 'cards', t, 'cards-empty'));
+      return;
+    }
     const { old, now } = visibleCards(s);
     const nodes = [];
     if (old) {
@@ -140,6 +149,7 @@ export function mount(root, ctx) {
         break;
       }
       case 'why-pick': whyPick(); break;
+      case 'select-item': actions.selectBundleItem(el.dataset.kind, el.dataset.id); break; // 묶음 카드 → 근거 패널
       default: break;
     }
   });
