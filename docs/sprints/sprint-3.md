@@ -117,7 +117,7 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. 사람이 승인하면 
   ② **시간 예산은 프론트 요청 상한 100초에서 거꾸로 정한다**: backend 파이프라인 한도 = 90초, 파이프라인 안 LLM 예산 = 75초, LLM 1회 한도(`timeout_s`) = 기준선 p95 × 1.5(20~75초 사이로 자름). 숫자는 sprint-3 §6.4 표를 따른다.
   ③ LLM 응답이 실패·빈 응답·JSON 아님·형식 틀림이면 **같은 백엔드로 1회** 다시 부르되, **남은 LLM 예산이 LLM 1회 한도 이상일 때만**(첫 시도가 일찍 실패했을 때만) 부른다. 다른 백엔드로 넘어가지 않는다(D6).
   ④ quote 검증을 통과한 LLM 결과는 `var/cache/schedule/` 에 캐시한다. 키는 정규화한 입력 글·여행 기간·프롬프트 해시·LLM 설정 파일 해시·모델 덮어쓰기 env 다. 캐시 결과를 쓰면 묶음에 `schedule.source: "cache"` 와 원래 생성 시각을 남기고 화면은 "이전 결과 재사용"으로 표시한다. 평가는 캐시를 끈다.
-  ⑤ 일정 문장으로 판별됐는데 LLM 이 (재시도 뒤에도) 실패해 앵커를 얻지 못했거나 파이프라인이 한도를 넘기면, 일반 챗봇으로 넘기지 않고 고정 문구("일정을 지금 정리하지 못했어요 — 잠시 뒤 다시 보내 주세요")로 답한다. LLM 이 정상으로 답했는데 앵커가 0개(일정이 아님)일 때만, 남은 예산이 LLM 1회 한도 이상이면 일반 챗봇으로 간다. 입력·결과 조합별 동작은 sprint-3 §6.5 표다.
+  ⑤ 일정 문장으로 판별됐는데 LLM 이 (재시도 뒤에도) 실패해 앵커를 얻지 못했거나 파이프라인이 한도를 넘기면, 일반 챗봇으로 넘기지 않고 고정 문구("일정을 지금 정리하지 못했어요. 잠시 뒤 다시 보내 주세요.")로 답한다. LLM 이 정상으로 답했는데 앵커가 0개(일정이 아님)일 때만, 남은 예산이 LLM 1회 한도 이상이면 일반 챗봇으로 간다. 입력·결과 조합별 동작은 sprint-3 §6.5 표다.
 - **계기**: 같은 문장이 일정 3개/2개/일반 답 폴백으로 갈렸고(README), 시간 사슬이 어긋나 프론트(80초)가 backend(90초)보다 먼저 끊을 수 있었다.
 - **대안**: 캐시 없이 파라미터만 — 공급자가 결정성을 보장하지 않으면 같은 결과를 약속할 수 없어 기각. 실패 시 일반 챗봇 폴백 유지 — 일정 실패가 엉뚱한 답으로 가려지고 지연이 두 배가 되어 기각. 예산과 무관한 고정 재시도 — 프론트 한도를 넘어 기각. 규칙 대체 추출 — 재측정(T311)이 목표에 못 미칠 때 별도 결정으로 다시 검토(보류).
 
@@ -241,7 +241,7 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. 사람이 승인하면 
 
 ### 5.0 평가 패키지 import 규칙 (하나로 못 박음)
 - 평가 코드는 전부 `eval/kc_eval/` 패키지(`__init__.py` 는 T304 만 만들고 `__all__` 만 둔다). **`eval/__init__.py` 는 만들지 않는다**(`eval` 은 패키지가 아니다).
-- 실행 입구는 하나: `uv run python eval/kc.py <하위 명령>`. `eval/kc.py` 맨 위에서 `sys.path.insert(0, str(Path(__file__).resolve().parent))` 후 `from kc_eval import ...`(그 import 줄에 `# noqa: E402`). 하위 명령: `run`(offline), `stability`(T305), `snapshot-mentions`(T302), `gen-judge`(T303). `kc.py` 는 하위 명령을 실행할 때 해당 모듈을 **지연 import** 하고 `main(argv: list[str]) -> int` 를 부른다 — 그래서 T302·T303·T305 모듈이 아직 없어도 T304 는 끝난다(없는 모듈이면 "아직 없음" 종료 코드 2).
+- 실행 입구는 하나: `uv run python eval/kc.py <하위 명령>`. `eval/kc.py` 맨 위에서 `sys.path.insert(0, str(Path(__file__).resolve().parent))` 와 레포 루트(`backend`·`domains` import 용) 삽입 후 `from kc_eval import ...`(그 import 줄에 `# noqa: E402`). 하위 명령: `run`(offline), `stability`(T305), `snapshot-mentions`(T302), `gen-judge`(T303). `kc.py` 는 하위 명령을 실행할 때 해당 모듈을 **지연 import** 하고 `main(argv: list[str]) -> int` 를 부른다 — 그래서 T302·T303·T305 모듈이 아직 없어도 T304 는 끝난다(없는 모듈이면 "아직 없음" 종료 코드 2).
 - 테스트: `tests/eval/conftest.py`(T304) 가 같은 방식으로 `<repo>/eval` 을 `sys.path` 앞에 넣고, 테스트는 `from kc_eval import match` 처럼 import 한다. 다른 곳에서 `kc_eval` 을 import 하지 않는다.
 - 앵커 비교 규칙은 `kc_eval/match.py` 에만 있다. T304(offline)·T305(stability)·T323 모두 이것을 import 한다.
 
@@ -491,7 +491,7 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
   ```
   앵커 비교는 `from kc_eval.match import match_anchors`.
 - **핵심 로직**
-  1. pipeline 층: backend 와 같은 명령 `[sys.executable, "-m", "domains.kcontext.pipeline", "--text-file", f, "--db", db, "--out", tmp/"out", "--force"]` (+trip), env = 현재 env + `APP_PROCESS_ROLE=agent` + `KC_SCHEDULE_CACHE=<--cache>`, timeout `--timeout-s`. `out/bundle.json` 에서 앵커·problems.
+  1. pipeline 층: backend 와 같은 명령 `[sys.executable, "-m", "domains.kcontext.pipeline", "--text-file", f, "--db", db, "--out", tmp/"out", "--force"]` (+trip), env = **backend 와 같은 허용 목록**(`backend.story_runner._ENV_ALLOW` 와 같은 사본 + `LLM_BACKEND*` — Stage 1 은 제품 코드를 고치지 않으므로 사본을 두고 테스트가 두 목록이 같음을 단언한다. T310 이 목록을 늘리면 그 테스트가 잡는다. D7 ③) + `APP_PROCESS_ROLE=agent` + `KC_SCHEDULE_CACHE=<--cache>`. 현재 env 를 통째로 넘기지 않는다(Stage 1 reviewer 블로커), timeout `--timeout-s`. `out/bundle.json` 에서 앵커·problems.
   2. 분류: timeout → `timeout`; 종료 ≠ 0 → `error`; 앵커 ≥1 → `ok`; 앵커 0 + `LLM_FAIL_CODES` → `fallback_llm`; 앵커 0 + 기대 `no_anchors` → `no_anchors_expected`; 그 밖 앵커 0 → `fallback_unverified`.
   3. api 층: 순차 `POST {base}/messages` `{"text", "context": {"schema": "chat-context/v1", "lang", "trip"}}`(trip null 이면 뺌), 클라이언트 timeout 110초. 200 + `bundle.status == "ok"` → `ok`; 200 + 묶음 없음 + reply 가 고정 문구(T310 의 `SCHEDULE_UNAVAILABLE_REPLY.ko` 와 같음 — 문자열을 이 모듈 상수로 두고 T310 머지 뒤 일치를 테스트) → `schedule_unavailable`; 200 + 묶음 없음 → 기대 `no_anchors` 면 `no_anchors_expected`, 아니면 `fallback_chat`; 429·502·503 → `error`; 클라이언트 timeout → `timeout`.
   4. 실행 기록에 LLM 원문·묶음 전체·reply 를 저장하지 않는다(앵커 요약·문제 코드·ms·좌표 수만).

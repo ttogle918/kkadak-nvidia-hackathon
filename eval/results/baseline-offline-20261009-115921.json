@@ -1,0 +1,721 @@
+{
+  "schema": "kc-eval-result/v1",
+  "reviewed": false,
+  "git_head": "fb46d928af29b0fc0bde3fc080c45f6ad93c760c",
+  "suites": [
+    {
+      "suite": "gate",
+      "status": "ok",
+      "total": 24,
+      "passed": 22,
+      "failed": 2,
+      "metrics": {
+        "tp": 11,
+        "fp": 1,
+        "fn": 1,
+        "tn": 11,
+        "precision": 0.9167,
+        "recall": 0.9167
+      },
+      "cases": [
+        {
+          "id": "gate_t_demo",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_nodate_places",
+          "pass": false,
+          "detail": {
+            "expected": true,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_t_pm_vocab",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_hotel_ko",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_en_visit",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_day_n",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_en_checkin",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_morning",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_clock",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_itinerary_en",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_24h",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_t_outdict",
+          "pass": true,
+          "detail": {
+            "expected": true,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_f_what_is",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_time_only",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_place_only",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_date_place_q",
+          "pass": false,
+          "detail": {
+            "expected": false,
+            "actual": true
+          }
+        },
+        {
+          "id": "gate_f_en_about",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_hours_q",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_architecture",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_duration",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_date_only",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_en_dessert",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_cafe_history",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        },
+        {
+          "id": "gate_f_outdict_q",
+          "pass": true,
+          "detail": {
+            "expected": false,
+            "actual": false
+          }
+        }
+      ]
+    },
+    {
+      "suite": "mentions",
+      "status": "ok",
+      "total": 13,
+      "passed": 13,
+      "failed": 0,
+      "metrics": {
+        "snapshot_match": 13,
+        "no_match": 9,
+        "truncated": 2,
+        "labeled": 0,
+        "precision_at_3": null
+      },
+      "cases": [
+        {
+          "id": "men_001",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_002",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_003",
+          "pass": true,
+          "detail": {
+            "reason": [
+              null,
+              null
+            ],
+            "top": [
+              [
+                "wca_10608015_003",
+                "wia_11402015_006",
+                "wda_13201016_002"
+              ],
+              [
+                "wca_10608015_003",
+                "wia_11402015_006",
+                "wda_13201016_002"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "men_004",
+          "pass": true,
+          "detail": {
+            "reason": [
+              null,
+              null
+            ],
+            "top": [
+              [
+                "wda_11304018_001",
+                "wla_10107006_002",
+                "wga_10804006_001"
+              ],
+              [
+                "wda_11304018_001",
+                "wla_10107006_002",
+                "wga_10804006_001"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "men_005",
+          "pass": true,
+          "detail": {
+            "reason": [
+              null,
+              null
+            ],
+            "top": [
+              [
+                "wfa_10009019_001",
+                "wga_10404015_001",
+                "wja_10703027_001"
+              ],
+              [
+                "wfa_10009019_001",
+                "wga_10404015_001",
+                "wja_10703027_001"
+              ]
+            ]
+          }
+        },
+        {
+          "id": "men_006",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_007",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_008",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_009",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_010",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_011",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_012",
+          "pass": true,
+          "detail": {
+            "reason": [
+              "no_match",
+              "no_match"
+            ],
+            "top": [
+              [],
+              []
+            ]
+          }
+        },
+        {
+          "id": "men_013",
+          "pass": true,
+          "detail": {
+            "reason": [
+              null,
+              null
+            ],
+            "top": [
+              [
+                "wia_11401002_003",
+                "woa_10310004_002",
+                "wma_11108018_001"
+              ],
+              [
+                "wia_11401002_003",
+                "woa_10310004_002",
+                "wma_11108018_001"
+              ]
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "suite": "judge",
+      "status": "ok",
+      "total": 18,
+      "passed": 18,
+      "failed": 0,
+      "metrics": {
+        "by_trap": {
+          "AI 추출만 취소를 말함 — 취소로 확정하지 않는다": {
+            "passed": 1,
+            "total": 1
+          },
+          "같은 외부 id 는 한 행사": {
+            "passed": 1,
+            "total": 1
+          },
+          "같은 체계 다른 id 는 다른 행사": {
+            "passed": 1,
+            "total": 1
+          },
+          "공식 출처가 취소를 알림": {
+            "passed": 1,
+            "total": 1
+          },
+          "공식끼리 가격이 다르고 우열을 못 가림": {
+            "passed": 1,
+            "total": 1
+          },
+          "관심사 필수인데 맞지 않음": {
+            "passed": 1,
+            "total": 1
+          },
+          "끝난 행사": {
+            "passed": 1,
+            "total": 1
+          },
+          "보도자료의 취소(공식으로 인정)": {
+            "passed": 1,
+            "total": 1
+          },
+          "여행 날짜가 모두 정기 휴무 요일": {
+            "passed": 1,
+            "total": 1
+          },
+          "여행 날짜가 임시 휴무일": {
+            "passed": 1,
+            "total": 1
+          },
+          "여행 날짜에 열리지 않음": {
+            "passed": 1,
+            "total": 1
+          },
+          "정상 대조군 — 같은 외부 id 두 출처(공식 일치)와 관심사 일치": {
+            "passed": 1,
+            "total": 1
+          },
+          "정상 대조군 — 진행 중 행사": {
+            "passed": 1,
+            "total": 1
+          },
+          "제보만 취소를 말함 — 취소로 확정하지 않는다": {
+            "passed": 1,
+            "total": 1
+          },
+          "주최 홈페이지 > 공식 API 로 가격 충돌 해결": {
+            "passed": 1,
+            "total": 1
+          },
+          "지역 미확인": {
+            "passed": 1,
+            "total": 1
+          },
+          "지역 밖에서 열림": {
+            "passed": 1,
+            "total": 1
+          },
+          "행사명만 같음 — 합치지 않는다": {
+            "passed": 1,
+            "total": 1
+          }
+        }
+      },
+      "cases": [
+        {
+          "id": "trap_ended_01",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_cancelled_official",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_cancel_press",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_cancel_report",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_cancel_ai",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_out_of_region",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_region_unknown",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_date_not_open",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_closed_weekly",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_closed_dates",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "conflict_price_official",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "conflict_price_resolved",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "dedup_same_ext_id",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "dedup_scheme_diff_id",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "dedup_title_only",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "trap_interest_mismatch",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "control_normal_01",
+          "pass": true,
+          "detail": {}
+        },
+        {
+          "id": "control_normal_02",
+          "pass": true,
+          "detail": {}
+        }
+      ]
+    },
+    {
+      "suite": "guard",
+      "status": "ok",
+      "total": 7,
+      "passed": 7,
+      "failed": 0,
+      "metrics": {},
+      "cases": [
+        {
+          "id": "guard_injection_en",
+          "pass": true,
+          "detail": {
+            "verdict": [
+              "injection",
+              "injection"
+            ],
+            "understand_blocked": [
+              true,
+              true
+            ]
+          }
+        },
+        {
+          "id": "guard_injection_ko",
+          "pass": true,
+          "detail": {
+            "verdict": [
+              "injection",
+              "injection"
+            ],
+            "understand_blocked": [
+              true,
+              true
+            ]
+          }
+        },
+        {
+          "id": "guard_suspicious_persona",
+          "pass": true,
+          "detail": {
+            "verdict": [
+              "suspicious",
+              "suspicious"
+            ],
+            "understand_blocked": [
+              false,
+              false
+            ]
+          }
+        },
+        {
+          "id": "guard_suspicious_hidden",
+          "pass": true,
+          "detail": {
+            "verdict": [
+              "suspicious",
+              "suspicious"
+            ],
+            "understand_blocked": [
+              false,
+              false
+            ]
+          }
+        },
+        {
+          "id": "guard_clean",
+          "pass": true,
+          "detail": {
+            "verdict": [
+              "clean",
+              "clean"
+            ],
+            "understand_blocked": [
+              false,
+              false
+            ]
+          }
+        },
+        {
+          "id": "sch_inj_ko_01",
+          "pass": true,
+          "detail": {
+            "understand_blocked": [
+              true,
+              true
+            ]
+          }
+        },
+        {
+          "id": "sch_inj_en_01",
+          "pass": true,
+          "detail": {
+            "understand_blocked": [
+              true,
+              true
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

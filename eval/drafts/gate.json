@@ -1,0 +1,258 @@
+{
+ "schema": "kc-eval/v1",
+ "suite": "gate",
+ "created_at": "2026-10-09",
+ "reviewed": false,
+ "synthetic": true,
+ "provenance": "합성 문장 — 기대값은 '여행 일정 글인가'의 의도 기준(현재 규칙 동작에 맞추지 않음). known_miss·known_false_positive 태그는 현 규칙이 틀리는 케이스(미검수)",
+ "cases": [
+  {
+   "id": "gate_t_demo",
+   "text": "10/15에 창덕궁 10시, 익선동 2시, 숙소는 종로3가야",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "basic"
+   ]
+  },
+  {
+   "id": "gate_t_nodate_places",
+   "text": "경복궁 갔다가 익선동 갈 거야",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "known_miss",
+    "no_when"
+   ]
+  },
+  {
+   "id": "gate_t_pm_vocab",
+   "text": "내일 오후 3시에 광화문 갈 계획이야",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "vocab"
+   ]
+  },
+  {
+   "id": "gate_t_hotel_ko",
+   "text": "10월 16일 호텔 체크인 3시",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "hotel"
+   ]
+  },
+  {
+   "id": "gate_t_en_visit",
+   "text": "I'll visit Gyeongbokgung at 10am on 10/16",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "en"
+   ]
+  },
+  {
+   "id": "gate_t_day_n",
+   "text": "1일차 창덕궁 10시 2일차 광화문 11시",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "multi_day"
+   ]
+  },
+  {
+   "id": "gate_t_en_checkin",
+   "text": "Check-in at 3pm, then Changdeokgung at 5pm",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "en",
+    "hotel"
+   ]
+  },
+  {
+   "id": "gate_t_morning",
+   "text": "10/17 아침 9시에 경복궁 가려고",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "vocab"
+   ]
+  },
+  {
+   "id": "gate_t_clock",
+   "text": "오전 10시 광화문, 12:30 익선동 점심 일정 부탁해",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "vocab"
+   ]
+  },
+  {
+   "id": "gate_t_itinerary_en",
+   "text": "Itinerary: 10/15 Ikseon-dong 2pm, Jongno 3-ga hotel",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "en"
+   ]
+  },
+  {
+   "id": "gate_t_24h",
+   "text": "여행 일정: 10/16 14:00 창덕궁, 16:00 경복궁",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "vocab"
+   ]
+  },
+  {
+   "id": "gate_t_outdict",
+   "text": "다음 토요일 을지로 가볼 생각인데 11시쯤 어때",
+   "expect": {
+    "schedule": true
+   },
+   "tags": [
+    "out_of_dict",
+    "vocab"
+   ]
+  },
+  {
+   "id": "gate_f_what_is",
+   "text": "경복궁은 어떤 곳이야?",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "place_only"
+   ]
+  },
+  {
+   "id": "gate_f_time_only",
+   "text": "오후 3시",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "time_only"
+   ]
+  },
+  {
+   "id": "gate_f_place_only",
+   "text": "창덕궁",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "place_only"
+   ]
+  },
+  {
+   "id": "gate_f_date_place_q",
+   "text": "10/15 경복궁은 어때?",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "known_false_positive",
+    "date_place"
+   ]
+  },
+  {
+   "id": "gate_f_en_about",
+   "text": "Tell me about the history of Gyeongbokgung",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "en",
+    "place_only"
+   ]
+  },
+  {
+   "id": "gate_f_hours_q",
+   "text": "창덕궁은 몇 시에 입장 마감이야?",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "question"
+   ]
+  },
+  {
+   "id": "gate_f_architecture",
+   "text": "조선시대 궁궐 건축의 특징을 알려줘",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "no_signal"
+   ]
+  },
+  {
+   "id": "gate_f_duration",
+   "text": "경복궁 관람은 3시간 정도 걸려?",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "duration",
+    "place_only"
+   ]
+  },
+  {
+   "id": "gate_f_date_only",
+   "text": "10/15 날씨 어때?",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "date_only"
+   ]
+  },
+  {
+   "id": "gate_f_en_dessert",
+   "text": "Hello, can you recommend a Korean dessert?",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "en",
+    "no_signal"
+   ]
+  },
+  {
+   "id": "gate_f_cafe_history",
+   "text": "익선동 한옥 카페의 역사가 궁금해",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "place_only"
+   ]
+  },
+  {
+   "id": "gate_f_outdict_q",
+   "text": "을지로 인쇄 골목은 언제부터 생겼어?",
+   "expect": {
+    "schedule": false
+   },
+   "tags": [
+    "out_of_dict",
+    "place_only"
+   ]
+  }
+ ]
+}

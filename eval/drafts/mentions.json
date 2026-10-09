@@ -1,0 +1,351 @@
+{
+  "schema": "kc-eval/v1",
+  "suite": "mentions",
+  "created_at": "2026-10-09",
+  "reviewed": false,
+  "synthetic": false,
+  "provenance": "로컬 색인 실측(build_mentions 결과). 기대 정답·relevant 는 사람 확인 전(H10)",
+  "index": {
+    "db": "var/index/kcontext.db",
+    "measured_at": "2026-10-09",
+    "total_chunks": 7713,
+    "fts_enabled": true,
+    "alias_rows": 28
+  },
+  "cases": [
+    {
+      "id": "men_001",
+      "anchor": "강남",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "강남"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "region_keyword",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_002",
+      "anchor": "강남구",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "강남구"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "region_keyword",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_003",
+      "anchor": "경복궁",
+      "limit": 3,
+      "expect": {
+        "reason": null,
+        "terms": [
+          "경복궁"
+        ],
+        "found_articles": 191,
+        "found_truncated": true,
+        "top": [
+          {
+            "article_id": "wca_10608015_003",
+            "title_summary": "경복궁을 수리하다",
+            "matched_in": "title",
+            "king": "태종",
+            "date_label": "태종 6년 8월 15일(음력)",
+            "relevant": null
+          },
+          {
+            "article_id": "wia_11402015_006",
+            "title_summary": "경복궁에 머무르다",
+            "matched_in": "title",
+            "king": "성종",
+            "date_label": "성종 14년 2월 15일(음력)",
+            "relevant": null
+          },
+          {
+            "article_id": "wda_13201016_002",
+            "title_summary": "경복궁으로 환어하다",
+            "matched_in": "title",
+            "king": "세종",
+            "date_label": "세종 32년 1월 16일(음력)",
+            "relevant": null
+          }
+        ]
+      },
+      "tags": [
+        "verified_coord",
+        "has_match"
+      ]
+    },
+    {
+      "id": "men_004",
+      "anchor": "광화문",
+      "limit": 3,
+      "expect": {
+        "reason": null,
+        "terms": [
+          "광화문"
+        ],
+        "found_articles": 43,
+        "found_truncated": false,
+        "top": [
+          {
+            "article_id": "wda_11304018_001",
+            "title_summary": "광화문이 이룩되다",
+            "matched_in": "title",
+            "king": "세종",
+            "date_label": "세종 13년 4월 18일(음력)",
+            "relevant": null
+          },
+          {
+            "article_id": "wla_10107006_002",
+            "title_summary": "유생이 광화문 밖에서 곡림하다",
+            "matched_in": "title",
+            "king": "인종",
+            "date_label": "인종 1년 7월 6일(음력)",
+            "relevant": null
+          },
+          {
+            "article_id": "wga_10804006_001",
+            "title_summary": "광화문에 나가 활쏘는 것을 구경하다",
+            "matched_in": "title",
+            "king": "세조",
+            "date_label": "세조 8년 4월 6일(음력)",
+            "relevant": null
+          }
+        ]
+      },
+      "tags": [
+        "verified_coord",
+        "has_match"
+      ]
+    },
+    {
+      "id": "men_005",
+      "anchor": "마포",
+      "limit": 3,
+      "expect": {
+        "reason": null,
+        "terms": [
+          "마포"
+        ],
+        "found_articles": 13,
+        "found_truncated": false,
+        "top": [
+          {
+            "article_id": "wfa_10009019_001",
+            "title_summary": "안평 대군이 마포강 정자에서 생일 잔치를 베풀다",
+            "matched_in": "title",
+            "king": "단종",
+            "date_label": "단종 즉위년 9월 19일(음력)",
+            "relevant": null
+          },
+          {
+            "article_id": "wga_10404015_001",
+            "title_summary": "병조로 하여금 마포에서 화포를 쏘게 하고 선온을 하사하다",
+            "matched_in": "title",
+            "king": "세조",
+            "date_label": "세조 4년 4월 15일(음력)",
+            "relevant": null
+          },
+          {
+            "article_id": "wja_10703027_001",
+            "title_summary": "서강 마포 등지의 화재를 입은 집에 쌀을 내리다",
+            "matched_in": "title",
+            "king": "연산",
+            "date_label": "연산 7년 3월 27일(음력)",
+            "relevant": null
+          }
+        ]
+      },
+      "tags": [
+        "region_keyword",
+        "has_match"
+      ]
+    },
+    {
+      "id": "men_006",
+      "anchor": "마포구",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "마포구"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "region_keyword",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_007",
+      "anchor": "을지로",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "을지로"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "region_keyword",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_008",
+      "anchor": "익선동",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "익선동"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "verified_coord",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_009",
+      "anchor": "종로",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "종로"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "region_keyword",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_010",
+      "anchor": "종로3가",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "종로3가"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "verified_coord",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_011",
+      "anchor": "종로구",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "종로구"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "region_keyword",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_012",
+      "anchor": "중구",
+      "limit": 3,
+      "expect": {
+        "reason": "no_match",
+        "terms": [
+          "중구"
+        ],
+        "found_articles": 0,
+        "found_truncated": false,
+        "top": []
+      },
+      "tags": [
+        "region_keyword",
+        "no_match"
+      ]
+    },
+    {
+      "id": "men_013",
+      "anchor": "창덕궁",
+      "limit": 3,
+      "expect": {
+        "reason": null,
+        "terms": [
+          "창덕궁"
+        ],
+        "found_articles": 199,
+        "found_truncated": true,
+        "top": [
+          {
+            "article_id": "wia_11401002_003",
+            "title_summary": "창덕궁으로 돌아오다",
+            "matched_in": "title",
+            "king": "성종",
+            "date_label": "성종 14년 1월 2일(음력)",
+            "relevant": null
+          },
+          {
+            "article_id": "woa_10310004_002",
+            "title_summary": "창덕궁에 이어하다",
+            "matched_in": "title",
+            "king": "광해",
+            "date_label": "광해 3년 10월 4일(음력)",
+            "relevant": null
+          },
+          {
+            "article_id": "wma_11108018_001",
+            "title_summary": "창덕궁에 머물다",
+            "matched_in": "title",
+            "king": "명종",
+            "date_label": "명종 11년 8월 18일(음력)",
+            "relevant": null
+          }
+        ]
+      },
+      "tags": [
+        "verified_coord",
+        "has_match"
+      ]
+    }
+  ]
+}
