@@ -837,6 +837,12 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 - 카카오 렌더러의 이동 구간 점선 → T318.
 - T314 ④ 범위 변경: `schedule.source` 표시(캐시·규칙)는 **타임라인에만** 둔다(채팅 reply 에는 backend 가 붙임). 카드 쪽은 같은 문구 3중 표시를 피하려고 뺐다(2026-10-10 코디네이터 판단).
 - `rationale/index.js` 가 실제 v2 근거 옆에 MOCK 딱지를 함께 띄울 수 있음 → T318 에서 확인.
+- 실제 화면 확인(2026-10-10, 헤드리스 Chromium, auto 모드)에서 나온 것 → T318:
+  - 카카오 지도(키 있음)에는 이동 구간 점선이 없다(SVG 지도만 있음 — 위 항목과 같음).
+  - 실제 모드 근거 패널에 fixture 카드 "○○ 야장"이 선택된 채 보인다(기본 선택이 예시 카드).
+  - 타임라인 문제 목록에 내부 문구가 그대로 보인다: "1회차 QUOTE_NOT_FOUND 후 재시도", "anchor#1: … (anchor#1.from 14:00)". `LLM_RETRY`·`RETRY_SKIPPED_BUDGET` 은 사용자 목록에서 빼고, 나머지는 사람이 읽는 문구로.
+  - "이전 결과 재사용 (2026-10-09T15:51:48Z)" — UTC ISO 그대로. 현지 시각으로 표시.
+  - `?api=chat` 를 명시하면 base 기본값이 같은 출처 `/api` 라 8766 정적 서버로 가서 501. auto 모드는 `http://localhost:8000/api`. 명시 모드 기본값을 auto 와 맞춘다.
 
 ## 완료 기록
 (스테이지마다 `/stage` 가 기록한다)
