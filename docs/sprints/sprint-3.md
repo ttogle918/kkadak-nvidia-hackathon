@@ -877,3 +877,15 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 - reviewer: FAIL(B3 옛 캐시 적중) → PASS. 이월 유지(W5·W9 → T313, W7, key_wait 명시 인자 → T312)
 - 주의: Stage 2 측정값(`eval/BASELINE.md`)은 이 보완 이전 코드 기준이다. T323 최종 측정에서 함께 반영한다.
 
+
+### Stage 3 — MOCK 제거 ① (2026-10-10, 커밋 `940fff5`, 결정 D16·D17·D18 `7660057`)
+- 머지 순서: 받는 쪽(T313·T314·T317) → 회귀 + 실서버 v1 묶음 확인(일정 3개, 프론트 검증 ok) → 생산(T312) → 실서버 v2 확인.
+- 태스크별 파일
+  - T313 `backend/{chat_story,story_runner,chat,catalog_runner(timeout_s — 범위 밖, W5)}.py` · `tests/backend/test_kc3_chat_bundle_v2.py`·`test_kc3_tier_parity.py`
+  - T314 `frontend/k-context/src/{api/bundle.js, lib/chat-bundle{,-view}.js, components/map/{route-list,chat-layer,index}.js, components/rationale/{index,logic}.js, components/timeline/bundle-view.js, i18n/{ko,en}.js}` · `tests/chatbundle.v2.test.js`
+  - T317 `docs/chat-bundle.contract.md`
+  - T312 `domains/kcontext/pipeline/{run,legs(신규),rationale(신규),__main__}.py` · `domains/kcontext/story/mention.py`(excluded_count) · `domains/kcontext/geo/{chain,osm}.py`(에이전트 경로 공급자 루프백 한정) · `domains/kcontext/schedule/{understand,__main__}.py`(key_wait 명시 인자) · `tests/domains/kcontext/pipeline/test_kc3_pipeline_{legs,rationale,v2}.py`
+  - T315·T316 하지 않음(H7·H8 데이터 없음)
+- 회귀: pytest 1,871 · node 329 · ruff · eval check 0
+- reviewer: FAIL(B1 skipped.to 빈 문자열로 routes 전체 소실, B2 주입 제외 수 중복) + 권장 11 → PASS(R1·R2 반영)
+- 실서버 관찰(범위 밖, 다음 처리 후보): "광화문 1시" → 01:00 해석(모델 선택, AMPM_ASSUMED), "익선동도 들를 거야" → 이름에 조사 포함(COORD_UNKNOWN).
