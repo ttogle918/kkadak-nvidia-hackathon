@@ -140,3 +140,21 @@ def test_estimated_values_do_not_make_no_fit():
     # 뒤 일정이 행사 직후라 시간 부족처럼 보여도 추정값만으로는 no_fit 이 아니다
     (s,) = fit_event(_event(), [_plan("밤", "20:31", "22:00", B)], prov)
     assert s["status"] == "check_needed"
+
+
+@pytest.mark.parametrize("url,ok", [("http://localhost:5000", True), ("http://127.0.0.1:5000", True),
+                                    ("http://[::1]:5000", True), ("https://router.example.invalid", False),
+                                    ("http://10.0.0.5", False), ("not a url", False)])
+def test_agent_provider_allows_only_loopback_osm(url, ok):
+    from domains.kcontext.geo.chain import ROUTE_REMOTE_REFUSED, make_agent_route_provider
+
+    p, codes = make_agent_route_provider({"KC_ROUTE_PROVIDER": "osm", "KC_OSM_ROUTER_URL": url})
+    if ok:
+        assert codes == [] and isinstance(p, ChainRouteProvider)
+    else:
+        assert isinstance(p, NullRouteProvider) and (codes == [ROUTE_REMOTE_REFUSED] or url == "not a url")
+
+
+def test_osrm_budget_is_capped_by_argument():
+    p = OsrmWalkProvider("http://127.0.0.1:1", budget_s=0)
+    assert p.minutes((37.5, 127.0), (37.51, 127.01)) is None  # 예산 0 → 부르지 않고 모름

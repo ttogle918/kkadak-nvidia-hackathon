@@ -6,8 +6,9 @@ reply 문구는 서버 고정 문구에 숫자만 채운다(LLM 이 쓴 문장 �
 
 from __future__ import annotations
 
+import math
 import re
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from datetime import date
 from typing import Any
 
@@ -17,7 +18,27 @@ MAX_ANCHORS = 20
 MAX_MENTIONS = 5
 MAX_CARDS = 100
 MAX_PROBLEMS = 100
+# kc-chat-bundle/v2 상한(sprint-3 §5.2)
+MAX_ROUTES = 7
+MAX_LEGS = 20
+MAX_SKIPPED = 20
+MAX_RATIONALE = 100
+MAX_CHIPS = 8
+MAX_ROWS = 12
+MAX_ITEMS = 20
+CAP_TEXT = 300  # 프론트 CAP.text 와 같은 문자열 상한
+CAP_KEY = 120
+SCHEDULE_KEYS = frozenset({"source", "attempts", "model", "prompt_sha", "cache_created_at"})
+SCHEDULE_SOURCES = ("llm", "cache", "rules")
+SKIP_REASONS = ("좌표 없음", "시각 없음")
+MENTION_PREFIX = "mention:"
+EVENT_PREFIX = "event:"
+# 시간이 모자라 행사 검색을 건너뛸 때 coverage_note 에 덧붙이는 고정 문구(W5)
+EVENTS_SKIPPED_NOTE = "시간이 모자라 행사 검색을 건너뜀"
+MIN_EVENT_SEARCH_S = 3.0  # 남은 시간이 이보다 적으면 행사 검색을 건너뛴다
+EVENT_SEARCH_MAX_S = 60.0  # 행사 검색 한도 상한(catalog_runner 기본값과 같다)
 _ISO = re.compile(r"^\d{4}-\d{2}-\d{2}$")
+_UTC = re.compile(r"^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$")
 
 
 class BadContext(ValueError):
@@ -63,6 +84,201 @@ def _problem(code: str, message: str) -> dict[str, str]:
     return {"code": code, "message": message}
 
 
+# ---- v2 필드 검사 (모두 신뢰하지 않는 입력: 새 객체로 다시 만들고, 틀리면 그 필드만 버린다) --------------
+class _Drop(ValueError):
+    """이 v2 필드는 모양이 틀렸다 — 필드 전체를 버린다."""
+
+
+def _int(v: Any) -> int:
+    if isinstance(v, bool) or not isinstance(v, int):
+        raise _Drop
+    return v
+
+
+def _str(v: Any, cap: int = CAP_TEXT) -> str:
+    if not isinstance(v, str):
+        raise _Drop
+    return v[:cap]
+
+
+def _bi(v: Any) -> dict[str, str]:
+    if not isinstance(v, dict) or not isinstance(v.get("ko"), str) or not isinstance(v.get("en"), str):
+        raise _Drop
+    return {"ko": v["ko"][:CAP_TEXT], "en": v["en"][:CAP_TEXT]}
+
+
+def _num(v: Any) -> float:
+    if isinstance(v, bool) or not isinstance(v, (int, float)) or not math.isfinite(v):
+        raise _Drop
+    return v
+
+
+def _ll(v: Any) -> list[float]:
+    if not isinstance(v, list) or len(v) != 2:
+        raise _Drop
+    lat, lng = _num(v[0]), _num(v[1])
+    if not (-90 <= lat <= 90 and -180 <= lng <= 180):
+        raise _Drop
+    return [lat, lng]
+
+
+def clean_schedule(v: Any) -> dict[str, Any]:
+    """허용 키(source·attempts·model·prompt_sha·cache_created_at)만, 타입 확인. 틀리면 _Drop."""
+    if not isinstance(v, dict) or not set(v) <= SCHEDULE_KEYS or v.get("source") not in SCHEDULE_SOURCES:
+        raise _Drop
+    out: dict[str, Any] = {"source": v["source"]}
+    if "attempts" in v:
+        a = _int(v["attempts"])
+        if a < 0:
+            raise _Drop
+        out["attempts"] = a
+    if v.get("model") is not None:
+        out["model"] = _str(v["model"], 100)
+    elif "model" in v:
+        out["model"] = None
+    if "prompt_sha" in v:
+        out["prompt_sha"] = _str(v["prompt_sha"], 64)
+    if v.get("cache_created_at") is not None:
+        c = _str(v["cache_created_at"], 20)
+        if not _UTC.match(c):
+            raise _Drop
+        out["cache_created_at"] = c
+    elif "cache_created_at" in v:
+        out["cache_created_at"] = None
+    return out
+
+
+def _leg(v: Any) -> dict[str, Any]:
+    if not isinstance(v, dict):
+        raise _Drop
+    wm = v.get("walk_min")
+    if not isinstance(v.get("estimated"), bool):
+        raise _Drop
+    straight = _int(v.get("straight_m"))
+    walk = None if wm is None else _int(wm)
+    if straight < 0 or (walk is not None and walk < 0):
+        raise _Drop
+    return {"from": _str(v.get("from"), 80), "to": _str(v.get("to"), 80),
+            "from_ll": _ll(v.get("from_ll")), "to_ll": _ll(v.get("to_ll")),
+            "straight_m": straight, "walk_min": walk,
+            "provider": _str(v.get("provider"), 60), "estimated": v["estimated"]}
+
+
+def _skipped(v: Any) -> dict[str, str]:
+    if not isinstance(v, dict) or v.get("reason") not in SKIP_REASONS:
+        raise _Drop
+    return {"from": _str(v.get("from"), 80), "to": _str(v.get("to"), 80), "reason": v["reason"]}
+
+
+def clean_routes(v: Any, cut: list[str]) -> list[dict[str, Any]]:
+    if not isinstance(v, list):
+        raise _Drop
+    if len(v) > MAX_ROUTES:
+        v, cut[:] = v[:MAX_ROUTES], [*cut, "routes"]
+    out = []
+    for r in v:
+        if not isinstance(r, dict) or not isinstance(r.get("legs"), list) \
+                or not isinstance(r.get("skipped"), list):
+            raise _Drop
+        d = r.get("date")
+        if not isinstance(d, str) or not _ISO.match(d):
+            raise _Drop
+        legs, skipped = r["legs"], r["skipped"]
+        if len(legs) > MAX_LEGS:
+            legs, cut[:] = legs[:MAX_LEGS], [*cut, "legs"]
+        if len(skipped) > MAX_SKIPPED:
+            skipped, cut[:] = skipped[:MAX_SKIPPED], [*cut, "skipped"]
+        day = r.get("day")
+        out.append({"id": _str(r.get("id"), CAP_KEY), "day": None if day is None else _int(day), "date": d,
+                    "legs": [_leg(x) for x in legs], "skipped": [_skipped(x) for x in skipped]})
+    return out
+
+
+def _rationale(key: str, v: Any, cut: list[str]) -> dict[str, Any]:
+    """Rationale 한 건. card_id 는 키와 같아야 한다."""
+    if not isinstance(v, dict) or v.get("card_id") != key or not isinstance(v.get("chips"), list) \
+            or not isinstance(v.get("items"), dict):
+        raise _Drop
+    chips = v["chips"]
+    if len(chips) > MAX_CHIPS:
+        chips, cut[:] = chips[:MAX_CHIPS], [*cut, "chips"]
+    out_chips = []
+    for c in chips:
+        if not isinstance(c, dict) or c.get("tone") not in ("old", "now"):
+            raise _Drop
+        out_chips.append({"key": _str(c.get("key"), 60), "tone": c["tone"], "label": _bi(c.get("label"))})
+    items_raw = list(v["items"].items())
+    if len(items_raw) > MAX_ITEMS:
+        items_raw, cut[:] = items_raw[:MAX_ITEMS], [*cut, "items"]
+    items: dict[str, Any] = {}
+    for k, it in items_raw:
+        if not isinstance(k, str) or not isinstance(it, dict) or not isinstance(it.get("rows"), list):
+            raise _Drop
+        rows = it["rows"]
+        if len(rows) > MAX_ROWS:
+            rows, cut[:] = rows[:MAX_ROWS], [*cut, "rows"]
+        items[k[:60]] = {"title": _bi(it.get("title")), "text": _bi(it.get("text")),
+                         "rows": [{"k": _bi(r.get("k") if isinstance(r, dict) else None),
+                                   "v": _bi(r.get("v") if isinstance(r, dict) else None)} for r in rows]}
+    return {"card_id": key, "chips": out_chips, "items": items}
+
+
+def clean_rationale(v: Any, cut: list[str]) -> tuple[dict[str, Any], bool]:
+    """키가 ``mention:`` 로 시작하는 것만 남긴다. (결과, 일부 항목을 버렸는가). dict 가 아니면 _Drop."""
+    if not isinstance(v, dict):
+        raise _Drop
+    out: dict[str, Any] = {}
+    dropped = False
+    for key, val in v.items():
+        if not isinstance(key, str) or not key.startswith(MENTION_PREFIX) or len(key) > CAP_KEY:
+            dropped = True
+            continue
+        if len(out) >= MAX_RATIONALE:
+            cut.append("rationale")
+            break
+        try:
+            out[key] = _rationale(key, val, cut)
+        except _Drop:
+            dropped = True
+    return out, dropped
+
+
+def _clean_v2(raw: dict[str, Any], b: dict[str, Any], problems: list[dict[str, str]], cut: list[str]) -> None:
+    """v2 가산 필드를 b 에 다시 쓴다. 틀린 필드는 지우고 FIELD_DROPPED. events_rationale 은 서버가 만든다 — 입력은 버린다."""
+    b.pop("events_rationale", None)
+
+    def drop(name: str) -> None:
+        b.pop(name, None)
+        problems.append(_problem("FIELD_DROPPED", f"모양이 틀려 버린 필드: {name}"))
+
+    if "schedule" in raw:
+        try:
+            b["schedule"] = clean_schedule(raw["schedule"])
+        except _Drop:
+            drop("schedule")
+    if "routes" in raw:
+        c: list[str] = []
+        try:
+            b["routes"] = clean_routes(raw["routes"], c)
+            cut.extend(c)
+        except _Drop:
+            drop("routes")
+    if "rationale" in raw:
+        c = []
+        try:
+            b["rationale"], partial = clean_rationale(raw["rationale"], c)
+            cut.extend(c)
+            if partial:
+                problems.append(_problem("FIELD_DROPPED", "모양이 틀려 버린 항목: rationale"))
+        except _Drop:
+            drop("rationale")
+    if "story_routes_note" in raw:
+        try:
+            b["story_routes_note"] = _bi(raw["story_routes_note"])
+        except _Drop:
+            drop("story_routes_note")
+
+
 def clean_bundle(raw: dict[str, Any]) -> dict[str, Any]:
     """모양을 확인하고 상한(앵커 20·앵커당 언급 5·카드·problems)을 넘으면 자른다(+TRUNCATED). 모양이 틀리면 BadBundle."""
     itin, ments = raw.get("itinerary"), raw.get("mentions")
@@ -95,6 +311,7 @@ def clean_bundle(raw: dict[str, Any]) -> dict[str, Any]:
     b["itinerary"] = {**itin, "anchors": anchors}
     b["mentions"] = {**ments, "anchors": rows}
     b["cards"] = cards
+    _clean_v2(raw, b, problems, cut)
     if cut:
         problems.append(_problem("TRUNCATED", "상한을 넘어 일부를 잘랐음: " + ",".join(sorted(set(cut)))))
     b["problems"] = problems
@@ -184,9 +401,14 @@ def build_search_args(bundle: dict[str, Any], trip: tuple[str, str] | None) -> d
 
 
 def attach_events(bundle: dict[str, Any], trip: tuple[str, str] | None,
-                  search: Callable[[dict[str, Any]], dict[str, Any]]) -> None:
-    """검색을 호출해 bundle["events"] 를 채운다. 못 하면 events=None + EVENTS_UNAVAILABLE(사실만)."""
-    args = build_search_args(bundle, trip)
+                  search: Callable[[dict[str, Any]], dict[str, Any]], *, skip: bool = False) -> None:
+    """검색을 호출해 bundle["events"]·["events_rationale"] 을 채운다.
+
+    못 하면 events=None + EVENTS_UNAVAILABLE(사실만). ``skip`` 이면 검색을 부르지 않고(시간 예산 부족, W5)
+    ``coverage_note`` 에 고정 문구를 덧붙인다.
+    """
+    bundle.pop("events_rationale", None)
+    args = None if skip else build_search_args(bundle, trip)
     res: Any = None
     if args is not None:
         try:
@@ -195,9 +417,130 @@ def attach_events(bundle: dict[str, Any], trip: tuple[str, str] | None,
             res = None
     if not isinstance(res, dict) or "error" in res or not isinstance(res.get("events"), list):
         bundle["events"] = None
-        bundle["problems"].append(_problem("EVENTS_UNAVAILABLE", "주변 행사를 지금 확인하지 못함"))
+        msg = EVENTS_SKIPPED_NOTE if skip else "주변 행사를 지금 확인하지 못함"
+        bundle["problems"].append(_problem("EVENTS_UNAVAILABLE", msg))
+        if skip:
+            note = bundle.get("coverage_note")
+            bundle["coverage_note"] = f"{note} {EVENTS_SKIPPED_NOTE}."[:CAP_TEXT] \
+                if isinstance(note, str) and note else f"{EVENTS_SKIPPED_NOTE}."
     else:
         bundle["events"] = res
+        er = event_rationale(res)
+        if er:
+            bundle["events_rationale"] = er
+
+
+def search_budget_s(elapsed_s: float, *, front_limit_s: float, margin_s: float) -> float | None:
+    """행사 검색 한도 = 프론트 상한 - 여유 - 파이프라인 경과(최대 60초). 3초 미만이면 None(건너뜀)."""
+    left = min(EVENT_SEARCH_MAX_S, front_limit_s - margin_s - elapsed_s)
+    return None if left < MIN_EVENT_SEARCH_S else left
+
+
+# ---- 행사 판단 근거 (고정 템플릿 + 검색 결과 값만; LLM·새 문장 없음) -----------------------------------
+_TIER = {"official_site": "A", "official_api": "B", "press": "B", "sns": "C", "ai_extracted": "C",
+         "report": "D", "manual": "D", "demo": "D"}
+_AVAIL = {
+    "session_match": ({"ko": "회차 확인됨", "en": "Session confirmed"}, "now"),
+    "date_range_unconfirmed": ({"ko": "기간 안 — 회차 확인 필요", "en": "Within the run — sessions unconfirmed"}, "now"),
+    "postponed": ({"ko": "연기됨", "en": "Postponed"}, "old"),
+}
+_TIER_LABEL = {
+    "A": {"ko": "주최 공식 출처", "en": "Official organizer source"},
+    "B": {"ko": "공식 API·보도자료", "en": "Official API or press release"},
+    "C": {"ko": "검색 수집 · 미확인", "en": "Search-collected · unverified"},
+    "D": {"ko": "제보·수기 · 미확인", "en": "Tip or manual entry · unverified"},
+}
+_NO_SOURCE = {"ko": "출처 링크 없음", "en": "No source link"}
+_STATE = {"yes": {"ko": "열림", "en": "Open"}, "no": {"ko": "휴무", "en": "Closed"},
+          "unknown": {"ko": "확인 필요", "en": "Needs checking"}}
+
+
+def _b(ko: str, en: str) -> dict[str, str]:
+    return {"ko": ko[:CAP_TEXT], "en": en[:CAP_TEXT]}
+
+
+def _tier(ev: dict[str, Any]) -> str | None:
+    links = ev.get("links")
+    tiers = sorted(_TIER.get(lk.get("kind"), "D") for lk in links if isinstance(lk, dict)) \
+        if isinstance(links, list) else []
+    return tiers[0] if tiers else None
+
+
+def _one_event_rationale(key: str, ev: dict[str, Any], res: dict[str, Any]) -> dict[str, Any]:
+    chips: list[dict[str, Any]] = []
+    items: dict[str, Any] = {}
+    # avail — 가용성 고정 라벨 + 맞는 날짜 행
+    label, tone = _AVAIL.get(ev.get("availability"), ({"ko": "확인 필요", "en": "Needs checking"}, "now"))
+    chips.append({"key": "avail", "tone": tone, "label": {"ko": f"● {label['ko']}", "en": f"● {label['en']}"}})
+    rows = []
+    for d in (ev.get("matching_dates") if isinstance(ev.get("matching_dates"), list) else [])[:MAX_ROWS]:
+        if isinstance(d, dict) and isinstance(d.get("date"), str):
+            st = _STATE.get(d.get("state"), _STATE["unknown"])
+            rows.append({"k": _b(d["date"], d["date"]), "v": _b(st["ko"], st["en"])})
+    items["avail"] = {"title": label, "text": _b("날짜·회차·휴무는 코드가 계산했습니다(AI 가 계산하지 않음).",
+                                                 "Dates, sessions and closures were computed by code, not by AI."),
+                      "rows": rows}
+    # src — 출처 등급
+    t = _tier(ev)
+    tl = _TIER_LABEL[t] if t else _NO_SOURCE
+    n_links = len(ev["links"]) if isinstance(ev.get("links"), list) else 0
+    chips.append({"key": "src", "tone": "now", "label": {"ko": f"● {tl['ko']}", "en": f"● {tl['en']}"}})
+    srows = []
+    for lk in (ev.get("links") if isinstance(ev.get("links"), list) else [])[:MAX_ROWS]:
+        if isinstance(lk, dict):
+            tier = _TIER.get(lk.get("kind"), "D")
+            nm = lk.get("source_name") if isinstance(lk.get("source_name"), str) else ""
+            when = str(lk.get("published_at") or ev.get("collected_at") or "—")
+            srows.append({"k": _b(f"[{tier}] {nm}", f"[{tier}] {nm}"), "v": _b(when, when)})
+    items["src"] = {"title": tl, "text": _b(f"출처 링크 {n_links}건. 같은 원천에서 재배포된 자료는 독립 출처로 세지 않습니다.",
+                                            f"{n_links} source link(s). Re-published copies of one origin do not count as independent."),
+                    "rows": srows}
+    # funnel — 걸러진 개수
+    n_ev = len(res["events"])
+    excl = res.get("excluded") if isinstance(res.get("excluded"), list) else []
+    total = n_ev + len(excl)
+    chips.append({"key": "funnel", "tone": "now",
+                  "label": _b(f"● 수집 {total}건 중 {n_ev}건 남김", f"● {n_ev} of {total} collected kept")})
+    reasons: dict[str, int] = {}
+    for x in excl:
+        if isinstance(x, dict) and isinstance(x.get("reason"), str):
+            reasons[x["reason"][:80]] = reasons.get(x["reason"][:80], 0) + 1
+    items["funnel"] = {"title": _b(f"수집 {total}건 중 {n_ev}건 남김", f"{n_ev} of {total} collected kept"),
+                       "text": _b("걸러 낸 이유는 아래와 같습니다.", "Reasons for dropping the rest are below."),
+                       "rows": [{"k": _b(k, k), "v": _b(str(v), str(v))}
+                                for k, v in sorted(reasons.items())[:MAX_ROWS]]}
+    # interest — 일치가 있을 때만
+    hits = [h[:40] for h in ev["interest_match"] if isinstance(h, str)] \
+        if isinstance(ev.get("interest_match"), list) else []
+    if hits:
+        chips.append({"key": "interest", "tone": "now", "label": _b("● 관심사 일치", "● Matches interests")})
+        items["interest"] = {"title": _b("관심사 일치", "Matches interests"),
+                             "text": _b(", ".join(hits[:5]), ", ".join(hits[:5])), "rows": []}
+    # coverage — 검색 범위 문구(카탈로그가 준 값)
+    cov = res.get("coverage")
+    note = cov.get("note") if isinstance(cov, dict) and isinstance(cov.get("note"), str) else None
+    if note:
+        chips.append({"key": "coverage", "tone": "now", "label": _b("● 검색 범위", "● Search coverage")})
+        items["coverage"] = {"title": _b("검색 범위", "Search coverage"), "text": _b(note, note), "rows": []}
+    return {"card_id": key, "chips": chips[:MAX_CHIPS], "items": items}
+
+
+def event_rationale(search: Mapping[str, Any]) -> dict[str, dict[str, Any]]:
+    """검색 결과 JSON 값으로만 만든 행사별 근거. 키는 ``event:<id>``(card_id 도 같은 키). 문자열 아닌 id 는 건너뛴다."""
+    events = search.get("events") if isinstance(search, Mapping) else None
+    if not isinstance(events, list):
+        return {}
+    out: dict[str, dict[str, Any]] = {}
+    for ev in events:
+        if not isinstance(ev, dict) or not isinstance(ev.get("id"), str) or not ev["id"]:
+            continue
+        key = EVENT_PREFIX + ev["id"]
+        if len(key) > CAP_KEY:
+            continue
+        out[key] = _one_event_rationale(key, ev, dict(search))
+        if len(out) >= MAX_RATIONALE:
+            break
+    return out
 
 
 # ---- 고정 문구 -----------------------------------------------------------------------------

@@ -1,7 +1,7 @@
 // 챗봇이 정리한 일정의 SVG 지도: 기본 지도 위에 좌표가 있는 앵커만 핀으로 그린다(옛길 선·고정 샘플 지점 없음).
 // 좌표 변환은 위경도 bbox 를 viewBox 안쪽에 맞추되 경도는 cos(위도)로 보정한다. 정보창은 지도 아래에 붙는 HTML 패널(textContent).
 import { h } from '../../lib/dom.js';
-import { bundlePins, pinInfo } from '../../lib/chat-bundle.js';
+import { bundlePins, pinInfo, pinLinks } from '../../lib/chat-bundle.js';
 import { pinInfoNode } from '../../lib/chat-bundle-view.js';
 import { VIEW_BOX, buildBaseMap } from './base-map.js';
 
@@ -28,8 +28,18 @@ export function projectPins(pins) {
 export function buildBundleSvg(bundle, t, selectedKey) {
   const pins = bundlePins(bundle);
   const at = projectPins(pins);
+  const links = pinLinks(bundle);
   return h('svg', { class: 'map-svg map-svg--bundle', viewBox: VIEW_BOX, preserveAspectRatio: 'xMidYMid meet', role: 'group', 'aria-label': t('map.bundle.aria') },
     buildBaseMap(t),
+    // 같은 날 이웃 핀의 점선(D16: 직선 연결일 뿐 실제 길이 아니다). 모양(점선)과 글자 라벨로 구분하고 색에만 의존하지 않는다.
+    links.length ? [
+      links.map((l) => {
+        const [x1, y1] = at.get(l.from);
+        const [x2, y2] = at.get(l.to);
+        return h('path', { class: 'map-straight', d: `M${x1} ${y1} L${x2} ${y2}`, fill: 'none', stroke: 'currentColor', 'stroke-width': 2, 'stroke-dasharray': '3 7', 'stroke-linecap': 'round', opacity: 0.6, dataset: { day: l.day } });
+      }),
+      h('text', { class: 'map-name map-name--sub map-straight__label', x: 16, y: 684 }, `┈ ${t('map.bundle.straight_note')}`),
+    ] : null,
     pins.map((p) => {
       const [x, y] = at.get(p.key);
       const on = p.key === selectedKey;

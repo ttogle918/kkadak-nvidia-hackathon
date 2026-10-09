@@ -16,7 +16,7 @@ import tempfile
 from pathlib import Path
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
-BUNDLE_SCHEMA = "kc-chat-bundle/v1"
+BUNDLE_SCHEMAS = ("kc-chat-bundle/v1", "kc-chat-bundle/v2")  # 둘 다 받는다(sprint-3 §5.2)
 TIMEOUT_S = 90  # sprint-3 §6.4 R = 프론트 상한 100초 - 10초
 LLM_BUDGET_S = 75  # §6.4 B = R - 15초. 자식 파이프라인에 --llm-budget-s 로 넘긴다
 MAX_BUNDLE_BYTES = 1024 * 1024
@@ -28,6 +28,7 @@ _ENV_ALLOW = (
     "KC_TARGET_REGION", "KC_DATA_DIR",
     "KC_VAR_DIR", "KC_SCHEDULE_CACHE", "KC_SCHEDULE_RETRY_UNVERIFIED",
     "KC_SCHEDULE_RETRY_PARTIAL",
+    "KC_ROUTE_PROVIDER", "KC_OSM_ROUTER_URL", "KC_ROUTE_ESTIMATE_APPROVED",  # 이동 구간 공급자 설정(비밀 아님)
 )
 
 
@@ -85,7 +86,7 @@ def run_story(text: str, trip: tuple[str, str] | None, db: Path, *, timeout: int
             bundle = json.loads(raw)
         except ValueError:
             raise StoryRunnerError("bad_json") from None
-        if not isinstance(bundle, dict) or bundle.get("schema") != BUNDLE_SCHEMA:
+        if not isinstance(bundle, dict) or bundle.get("schema") not in BUNDLE_SCHEMAS:
             raise StoryRunnerError("bad_schema")
         return bundle
     finally:

@@ -3,11 +3,19 @@
 // url 은 http/https 만 남긴다(그 외 스킴은 링크 없이 null — 기록 자체는 보인다). 이 파일은 DOM 을 만지지 않는다.
 
 export const BUNDLE_SCHEMA = 'kc-chat-bundle/v1';
+export const BUNDLE_SCHEMA_V2 = 'kc-chat-bundle/v2';
+export const BUNDLE_SCHEMAS = [BUNDLE_SCHEMA, BUNDLE_SCHEMA_V2];
 export const CONTEXT_SCHEMA = 'chat-context/v1';
 
 /** 문자열 상한(글자 수). 넘으면 잘라 '…' 를 붙인다. */
 export const CAP = { name: 80, short: 60, text: 300, quote: 500, url: 500, id: 120, note: 300 };
-export const MAX = { anchors: 20, mentionsPerAnchor: 5, events: 30, problems: 30, freeSlots: 40 };
+export const MAX = {
+  anchors: 20, mentionsPerAnchor: 5, events: 30, problems: 30, freeSlots: 40,
+  routes: 7, legs: 20, skipped: 20, rationale: 100, chips: 8, rows: 12, items: 20,
+};
+export const RATIONALE_PREFIX = { mention: 'mention:', event: 'event:' };
+const SCHEDULE_SOURCES = ['llm', 'cache', 'rules'];
+const UNSAFE_KEYS = ['__proto__', 'constructor', 'prototype'];
 const TIERS = ['S', 'A', 'B', 'C', 'D'];
 
 class Bad extends Error {}
@@ -160,6 +168,126 @@ function problem(p) {
   return { code: optStr(p.code, CAP.short) ?? 'UNKNOWN', message: optStr(p.message, CAP.text) ?? '' };
 }
 
+// --- v2 필드 --- 틀리면 Bad 를 던지고, 호출부(v2Field)가 그 필드만 비운다.
+function strictStr(v, cap) {
+  if (typeof v !== 'string' || !v) bad('문자열이 아님');
+  return clip(v, cap);
+}
+// skipped.to 는 "시각 없음" 이면 빈 문자열(계약 §5.2)이라 빈 값도 허용한다.
+function skipTo(v) {
+  if (typeof v !== 'string') bad('문자열이 아님');
+  return clip(v, CAP.name);
+}
+const latlng = (v) => {
+  if (!Array.isArray(v) || v.length !== 2) bad('좌표 쌍이 아님');
+  const [a, b] = v;
+  if (typeof a !== 'number' || typeof b !== 'number' || !Number.isFinite(a) || !Number.isFinite(b) || Math.abs(a) > 90 || Math.abs(b) > 180) bad('좌표 범위');
+  return [a, b];
+};
+const nonNegInt = (v) => {
+  if (!Number.isInteger(v) || v < 0) bad('0 이상 정수가 아님');
+  return v;
+};
+
+function scheduleInfo(d) {
+  if (!isObj(d)) bad('schedule 이 객체가 아님');
+  if (!SCHEDULE_SOURCES.includes(d.source)) bad('schedule.source');
+  const stampZ = typeof d.cache_created_at === 'string' && /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z$/.test(d.cache_created_at) ? d.cache_created_at : null;
+  return {
+    source: d.source,
+    attempts: Number.isInteger(d.attempts) && d.attempts >= 0 ? d.attempts : null,
+    model: optStr(d.model, CAP.name),
+    cache_created_at: stampZ,
+  };
+}
+
+function leg(l) {
+  if (!isObj(l)) bad('leg 형식');
+  if (l.walk_min != null && (!Number.isInteger(l.walk_min) || l.walk_min < 0)) bad('walk_min');
+  if (typeof l.estimated !== 'boolean') bad('estimated');
+  return {
+    from: strictStr(l.from, CAP.name),
+    to: strictStr(l.to, CAP.name),
+    from_ll: l.from_ll == null ? null : latlng(l.from_ll),
+    to_ll: l.to_ll == null ? null : latlng(l.to_ll),
+    straight_m: nonNegInt(l.straight_m),
+    walk_min: l.walk_min ?? null,
+    provider: optStr(l.provider, CAP.short),
+    estimated: l.estimated,
+  };
+}
+
+function routesDoc(d) {
+  if (!Array.isArray(d)) bad('routes 가 배열이 아님');
+  return d.slice(0, MAX.routes).map((r) => {
+    if (!isObj(r)) bad('route 형식');
+    return {
+      id: strictStr(r.id, CAP.short),
+      day: r.day == null ? null : int(r.day),
+      date: date(r.date),
+      legs: arr(r.legs, MAX.legs).map(leg),
+      skipped: arr(r.skipped, MAX.skipped).map((x) => {
+        if (!isObj(x)) bad('skipped 형식');
+        return { from: strictStr(x.from, CAP.name), to: skipTo(x.to), reason: optStr(x.reason, CAP.short) };
+      }),
+    };
+  });
+}
+
+function rationaleEntry(key, r) {
+  if (!isObj(r)) bad('Rationale 형식');
+  const chips = [];
+  for (const c of arr(r.chips, MAX.chips)) {
+    if (!isObj(c)) bad('chip 형식');
+    if (c.tone !== 'old' && c.tone !== 'now') bad('chip.tone');
+    const label = bi(c.label, CAP.name);
+    if (!label) bad('chip.label');
+    const key = strictStr(c.key, CAP.short);
+    if (UNSAFE_KEYS.includes(key)) continue; // 위험한 키의 칩은 그 칩만 버린다
+    chips.push({ key, tone: c.tone, label });
+  }
+  if (r.items != null && !isObj(r.items)) bad('items 형식');
+  const items = {};
+  for (const [k, v] of Object.entries(r.items ?? {}).slice(0, MAX.items)) {
+    if (UNSAFE_KEYS.includes(k)) bad('items 키');
+    if (!isObj(v)) bad('item 형식');
+    items[k] = {
+      title: bi(v.title, CAP.name) ?? { ko: '', en: '' },
+      text: bi(v.text, CAP.text) ?? { ko: '', en: '' },
+      rows: arr(v.rows, MAX.rows).map((row) => {
+        if (!isObj(row)) bad('row 형식');
+        return { k: bi(row.k, CAP.name) ?? { ko: '', en: '' }, v: bi(row.v, CAP.text) ?? { ko: '', en: '' } };
+      }),
+    };
+  }
+  return { card_id: key, chips, items };
+}
+
+/** 근거 맵: 키 접두어가 맞는 것만 남기고(나머지는 조용히 버림) 상한까지. 값의 모양이 틀리면 필드 전체를 비운다. */
+function rationaleMap(d, prefix) {
+  if (!isObj(d)) bad('근거 맵이 객체가 아님');
+  const out = {};
+  let n = 0;
+  for (const [k, v] of Object.entries(d)) {
+    if (!k.startsWith(prefix) || k.length === prefix.length || k.length > CAP.id || UNSAFE_KEYS.includes(k)) continue;
+    if (n >= MAX.rationale) break;
+    out[k] = rationaleEntry(k, v);
+    n += 1;
+  }
+  return out;
+}
+
+/** v2 필드 하나를 정리한다. 틀리면 empty 로 — 다른 필드·v1 필드는 영향 없다. */
+function v2Field(raw, fn, empty) {
+  if (raw == null) return empty;
+  try {
+    return fn(raw);
+  } catch (e) {
+    if (e instanceof Bad) return empty;
+    throw e;
+  }
+}
+
 /**
  * 응답의 bundle 을 검증한다.
  * @returns {{ok:true, bundle:object}|{ok:false, reason:string}} 정리된 복사본(상한으로 자른 문자열, http/https 만 남긴 url)
@@ -167,13 +295,14 @@ function problem(p) {
 export function validateChatBundle(raw) {
   try {
     if (!isObj(raw)) bad('객체가 아님');
-    if (raw.schema !== BUNDLE_SCHEMA) bad('schema 불일치');
+    if (!BUNDLE_SCHEMAS.includes(raw.schema)) bad('schema 불일치');
+    const v2 = raw.schema === BUNDLE_SCHEMA_V2;
     if (!isObj(raw.itinerary) || !Array.isArray(raw.itinerary.anchors)) bad('itinerary.anchors 가 배열이 아님');
     const trip = isObj(raw.trip) && date(raw.trip.from) && date(raw.trip.to) ? { from: raw.trip.from, to: raw.trip.to } : null;
     return {
       ok: true,
       bundle: {
-        schema: BUNDLE_SCHEMA,
+        schema: raw.schema,
         generated_at: optStr(raw.generated_at, CAP.short),
         status: raw.status === 'no_anchors' ? 'no_anchors' : 'ok',
         sample: raw.sample === true, // 화면 예시(mock fixture) 표시용 — 서버 계약 필드가 아니다
@@ -186,6 +315,12 @@ export function validateChatBundle(raw) {
         events: eventsDoc(raw.events),
         problems: arr(raw.problems, MAX.problems).map(problem),
         coverage_note: optStr(raw.coverage_note, CAP.text),
+        // schedule 은 v1 에도 가산 필드로 온다. 나머지 v2 필드는 v2 일 때만 읽고, v1 이면 비운다.
+        schedule: v2Field(raw.schedule, scheduleInfo, null),
+        routes: v2 ? v2Field(raw.routes, routesDoc, []) : [],
+        rationale: v2 ? v2Field(raw.rationale, (d) => rationaleMap(d, RATIONALE_PREFIX.mention), {}) : {},
+        events_rationale: v2 ? v2Field(raw.events_rationale, (d) => rationaleMap(d, RATIONALE_PREFIX.event), {}) : {},
+        story_routes_note: v2 ? v2Field(raw.story_routes_note, (d) => { const b = bi(d, CAP.text); if (!b) bad('note'); return b; }, null) : null,
       },
     };
   } catch (e) {

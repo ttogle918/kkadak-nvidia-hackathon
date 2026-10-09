@@ -31,7 +31,9 @@ class CatalogRunnerError(RuntimeError):
     """자식 프로세스가 죽었거나 JSON 이 아닌 응답을 줬다. 메시지에 출력 본문을 싣지 않는다."""
 
 
-def run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None = None) -> dict:
+def run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None = None,
+                *, timeout_s: float | None = None) -> dict:
+    """``timeout_s`` 가 있으면 기본 한도보다 짧게만 줄인다(채팅 시간 예산용)."""
     env = {k: os.environ[k] for k in _BASE_ENV if k in os.environ}
     env["APP_PROCESS_ROLE"] = "agent"
     if catalog_dir is not None:
@@ -51,7 +53,7 @@ def run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None
             [sys.executable, "-m", "domains.kcontext.catalog.api"],
             input=json.dumps({"op": op, "args": args, "actor": actor}, ensure_ascii=False),
             text=True, capture_output=True, cwd=REPO_ROOT, env=env, check=False,
-            timeout=TIMEOUTS.get(op, DEFAULT_TIMEOUT),
+            timeout=min(TIMEOUTS.get(op, DEFAULT_TIMEOUT), timeout_s) if timeout_s else TIMEOUTS.get(op, DEFAULT_TIMEOUT),
         )
     except subprocess.TimeoutExpired:
         raise CatalogRunnerError("카탈로그 처리 시간이 초과됐다") from None

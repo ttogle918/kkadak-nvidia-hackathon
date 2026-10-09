@@ -87,8 +87,7 @@ def test_partial_retry_skipped_when_budget_short():
 
 def test_partial_retry_counts_key_wait():
     s = Seq([ONE, TWO])
-    s.key_wait_s = lambda: 40.0
-    r, _ = run(s, budget_s=75, attempt_timeout_s=40)
+    r, _ = run(s, budget_s=75, attempt_timeout_s=40, key_wait=lambda: 40.0)
     assert s.n == 1 and "RETRY_SKIPPED_BUDGET" in codes(r)
 
 
@@ -146,8 +145,8 @@ def test_cache_skipped_when_quote_not_found_remains(env):
 def test_cache_skipped_when_budget_skips_retry(env):
     go, cache, key = env
     s = Seq([ONE, TWO])
-    s.key_wait_s = lambda: 100.0  # 파이프라인은 실제 시계를 쓰므로 키 대기로 예산을 넘긴다
-    b = go(s, budget_s=75, attempt_timeout_s=40)
+    # 파이프라인은 실제 시계를 쓰므로 키 대기로 예산을 넘긴다
+    b = go(s, budget_s=75, attempt_timeout_s=40, key_wait=lambda: 100.0)
     assert s.n == 1 and "RETRY_SKIPPED_BUDGET" in codes(b) and cache.get(key) is None
 
 

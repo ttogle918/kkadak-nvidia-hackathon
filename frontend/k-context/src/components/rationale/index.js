@@ -5,6 +5,7 @@ import { mockBadge } from '../../lib/mock-badge.js';
 import { mockRegions } from '../../state/selectors.js';
 import { renderChips } from './chips.js';
 import { renderEvidencePanel, renderRejected } from './evidence-panel.js';
+import { isV2Bundle, mergeBundleRationale, rationaleFor } from '../../lib/chat-bundle.js';
 import { activeCardIds, createLatestGuard, mergeRationale, openItem, rejectedFor } from './logic.js';
 
 /**
@@ -30,18 +31,22 @@ export function mount(root, ctx) {
 
     let content = null;
     const mr = mockRegions(s, api);
-    if (mr.hideRationale) { // 챗봇이 정리한 일정이 있으면 mock 판단 근거는 숨긴다(실제 결과와 섞이지 않게)
+    const bundle = s.chatBundle;
+    const v2 = !!bundle && isV2Bundle(bundle);
+    if (mr.hideRationale && !v2) { // 챗봇이 정리한 일정이 있으면 mock 판단 근거는 숨긴다(실제 결과와 섞이지 않게)
       render(root, h('div', { class: 'rationale', dataset: { status: 'hidden' } }, h('div', { class: 'rationale-note', role: 'status' }, t('mock.rationale.hidden'))));
       return;
     }
-    if (model.status === 'loading') content = h('div', { class: 'rationale-note' }, t('app.loading'));
+    if (v2 && !model.merged.chips.length) { // 묶음 근거: 고른 항목이 없으면 안내, 있는데 근거가 없으면 사실대로 밝힌다
+      content = h('div', { class: 'rationale-note', role: 'status', dataset: { empty: ids.length ? 'no-rationale' : 'no-card' } }, t(ids.length ? 'rationale.none_for_card' : 'rationale.no_card'));
+    } else if (model.status === 'loading') content = h('div', { class: 'rationale-note' }, t('app.loading'));
     else if (model.status === 'error') content = h('div', { class: 'rationale-note is-error', role: 'alert' }, t('rationale.error'));
     else if (model.merged.chips.length) {
       content = [
         mr.rationale ? h('div', { class: 'mock-row', dataset: { module: 'rationale-mock' } }, mockBadge(t, { kind: mr.rationale, note: true })) : null,
         renderChips(model.merged.chips, { t, openKey: item ? item.key : null }),
         // 깔때기 팝오버에는 걸러낸 주장과 이유를 함께 둔다
-        item ? renderEvidencePanel(item, { t, extra: item.key === 'funnel' ? renderRejected(rejectedFor(s.data?.cards, ids), { t }) : null }) : null,
+        item ? renderEvidencePanel(item, { t, extra: item.key === 'funnel' && !v2 ? renderRejected(rejectedFor(s.data?.cards, ids), { t }) : null }) : null,
       ];
     }
     render(root, h('div', { class: 'rationale', dataset: { status: model.status } }, content));
@@ -64,7 +69,14 @@ export function mount(root, ctx) {
     const ids = activeCardIds(store.getState());
     const key = ids.join(',');
     const token = guard.next();
-    if (!ids.length || store.getState().chatBundle) { // 묶음이 있으면 근거를 받지 않는다(숨김)
+    const bundle = store.getState().chatBundle;
+    if (bundle && isV2Bundle(bundle)) { // v2 묶음: 서버를 부르지 않고 묶음 안 근거를 찾는다(언급 카드 mention:, 행사 event:)
+      const found = ids.map((id) => rationaleFor(bundle, id)).filter(Boolean);
+      model = { status: found.length ? 'ready' : 'idle', ids: key, merged: mergeBundleRationale(found) };
+      draw();
+      return;
+    }
+    if (!ids.length || bundle) { // v1 묶음이 있으면 근거를 받지 않는다(숨김)
       model = { status: 'idle', ids: key, merged: { chips: [], items: {} } };
       draw();
       return;

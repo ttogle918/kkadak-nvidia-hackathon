@@ -18,7 +18,7 @@ import httpx
 
 from domains.kcontext.catalog.routes import LatLng
 
-__all__ = ["OsrmWalkProvider"]
+__all__ = ["OsrmWalkProvider", "is_loopback_url"]
 
 MAX_CALLS = 200  # 한 인스턴스(= 한 요청)에서 부르는 횟수 상한
 MAX_BODY = 64 * 1024  # 응답 본문 상한(바이트)
@@ -34,13 +34,23 @@ def _loopback(host: str) -> bool:
         return False
 
 
+def is_loopback_url(url: str) -> bool:
+    """주소의 호스트가 루프백(localhost·127.x·::1)인가. 파싱이 안 되면 False."""
+    try:
+        host = urlsplit(url).hostname
+    except ValueError:
+        return False
+    return bool(host) and _loopback(host)
+
+
 class OsrmWalkProvider:
     name = "osm_route_engine"
     mode = "walk"
     estimated = False  # 경로 엔진의 계산값이다(직선 추정이 아니다)
 
     def __init__(self, base_url: str, *, profile: str = "foot", client: httpx.Client | None = None,
-                 timeout: float = 5.0, max_calls: int = MAX_CALLS) -> None:
+                 timeout: float = 5.0, max_calls: int = MAX_CALLS,
+                 budget_s: float = BUDGET_S) -> None:
         u = urlsplit(base_url)
         if u.scheme not in ("http", "https") or not u.hostname or u.username or u.password:
             raise ValueError("base_url 은 사용자 정보가 없는 http(s) 주소여야 한다")
@@ -49,7 +59,7 @@ class OsrmWalkProvider:
         self._base = base_url.rstrip("/")
         self._profile = profile
         self._client = client or httpx.Client(timeout=timeout, follow_redirects=False)
-        self._deadline = time.monotonic() + BUDGET_S
+        self._deadline = time.monotonic() + max(0.0, min(BUDGET_S, float(budget_s)))
         self._max = max_calls
         self._calls = 0
         self._cache: dict[tuple, int | None] = {}

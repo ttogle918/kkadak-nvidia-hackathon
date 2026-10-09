@@ -59,3 +59,12 @@ export function pinInfoNode(info, t) {
       h('div', { class: 'cb-mention__foot' }, sourceTagNode(top.tier, top.sourceName), externalLink(top.url, t('bundle.open_sillok'))),
     ] : null);
 }
+
+/** 일정 이해 출처 한 줄: 캐시 재사용·규칙 정리일 때만. llm(새로 계산)이나 정보 없음이면 null. */
+export function scheduleNoteNode(schedule, t) {
+  if (!schedule) return null;
+  let text = null;
+  if (schedule.source === 'cache') text = schedule.cache_created_at ? t('bundle.schedule.cache', { at: schedule.cache_created_at }) : t('bundle.schedule.cache_plain');
+  else if (schedule.source === 'rules') text = t('bundle.schedule.rules');
+  return text ? h('p', { class: 'cb-empty cb-schedule', role: 'status', dataset: { schedule: schedule.source } }, text) : null;
+}

@@ -1,6 +1,7 @@
 // 경로 A·B·C 카드와 구간 목록(길찾기 안내처럼 순서대로). 목록 항목 클릭은 지도 구간 클릭과 같은 selectSeg 로 간다.
 import { h } from '../../lib/dom.js';
 import { BADGE_KEY, circled } from '../../lib/format.js';
+import { routeDays, isV2Bundle } from '../../lib/chat-bundle.js';
 
 /** 구간의 한 줄 요약: 사실 층 첫 문장 -> 본문 -> 빈 문자열. 값은 string 또는 {ko,en}. */
 export function stepLine(card, t) {
@@ -62,4 +63,35 @@ export function buildStepList({ route, selectedSeg, cardOf, t, open }) {
       dataset: { act: 'toggle-steps', fk: 'toggle-steps' },
     }, `${open ? '▾' : '▸'} ${t('map.steps.title')} · ${route.id}`),
     open ? h('ol', { class: 'map-steps__list' }, items) : null);
+}
+
+/** 한 구간의 이동시간 문구: walk_min 이 없으면 "이동시간 확인 필요", 직선 추정이면 "예상"을 붙인다(D16 — 표시에만 쓴다). */
+export function legTimeText(leg, t) {
+  if (leg.walk_min == null) return t('map.leg.unknown');
+  return leg.estimated ? t('map.leg.walk_est', { n: leg.walk_min }) : t('map.leg.walk', { n: leg.walk_min });
+}
+
+const SKIP_KEYS = { '좌표 없음': 'map.leg.skip.coord', '시각 없음': 'map.leg.skip.time' };
+
+/**
+ * 채팅 묶음의 "이동 구간" 영역(날짜별). v1 이거나 구간이 없으면 "이동 구간 정보 없음".
+ * 장소 이름·이유는 서버 문자열이므로 사전 조회(t) 없이 텍스트 노드로만 넣는다. 이야기 길은 지어내지 않고 story_routes_note 만 밝힌다(D18).
+ */
+export function buildLegList(bundle, t, lang = 'ko') {
+  const days = routeDays(bundle);
+  const note = isV2Bundle(bundle) ? bundle.story_routes_note : null;
+  const noteText = note ? (note[lang] ?? note.ko ?? note.en) : null;
+  const hasAny = days.some((d) => d.legs.length || d.skipped.length);
+  return h('section', { class: 'map-legs', 'aria-label': t('map.legs.title'), dataset: { module: 'legs' } },
+    h('h3', { class: 'map-legs__title' }, t('map.legs.title')),
+    hasAny ? days.filter((d) => d.legs.length || d.skipped.length).map((d) => h('div', { class: 'map-legs__day', dataset: { route: d.id } },
+      h('div', { class: 'map-legs__dayhead' }, d.day ? `DAY ${d.day}` : d.id, d.date ? ` · ${d.date}` : ''),
+      h('ul', { class: 'map-legs__list' },
+        d.legs.map((l) => h('li', { class: 'map-leg', dataset: { estimated: String(l.estimated), walk: l.walk_min == null ? 'none' : 'some' } },
+          h('span', { class: 'map-leg__path' }, `${l.from} → ${l.to}`),
+          h('span', { class: 'map-leg__meta' }, ` · ${t('map.leg.straight', { m: l.straight_m })} · `, legTimeText(l, t)))),
+        d.skipped.map((x) => h('li', { class: 'map-leg is-skipped', dataset: { skipped: 'true' } },
+          h('span', { class: 'map-leg__path' }, x.to ? `${x.from} → ${x.to}` : x.from),
+          h('span', { class: 'map-leg__meta' }, ` · ${SKIP_KEYS[x.reason] ? t(SKIP_KEYS[x.reason]) : (x.reason ?? '')}`)))))) : h('p', { class: 'cb-empty', role: 'status', dataset: { empty: 'legs' } }, t('map.legs.none')),
+    noteText ? h('p', { class: 'cb-empty', dataset: { note: 'story-routes' } }, noteText) : null);
 }

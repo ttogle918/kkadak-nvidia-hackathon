@@ -113,13 +113,47 @@ def test_max_attempts_validated_and_codes_constant():
 def test_no_retry_when_key_cooldown_wait_exceeds_budget():
     """첫 시도 10초 + T_llm 40 = 50 <= 75 이지만 키 쿨다운 대기 30초가 더해지면 90 > 75 → 건너뜀."""
     s = Seq([RuntimeError("x"), OK], step=10)
-    s.key_wait_s = lambda: 30.0
-    r, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, budget_s=75,
+    r, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, budget_s=75, key_wait=lambda: 30.0,
                                    attempt_timeout_s=40, clock=s.clock, **TRIP)  # fmt: skip
     assert meta["attempts"] == 1 and s.n == 1
     assert codes(r) == ["RETRY_SKIPPED_BUDGET", "LLM_FAILED"]
     s2 = Seq([RuntimeError("x"), OK], step=10)
-    s2.key_wait_s = lambda: 0.0  # 대기 없으면 재시도한다
-    _, meta2 = understand_with_meta(TEXT, complete=s2, max_attempts=2, budget_s=75,
+    _, meta2 = understand_with_meta(TEXT, complete=s2, max_attempts=2, budget_s=75, key_wait=lambda: 0.0,  # 대기 없으면 재시도
                                     attempt_timeout_s=40, clock=s2.clock, **TRIP)  # fmt: skip
     assert meta2["attempts"] == 2
+
+
+def _boom():
+    raise RuntimeError("x")
+
+
+def test_key_wait_error_is_conservative_not_zero():
+    """key_wait 가 예외를 던지면 보수값(attempt_timeout_s)을 더해 재시도하지 않는다."""
+    s = Seq([RuntimeError("x"), OK], step=10)
+    r, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, budget_s=75, key_wait=_boom,
+                                   attempt_timeout_s=40, clock=s.clock, **TRIP)  # fmt: skip
+    assert meta["attempts"] == 1 and "RETRY_SKIPPED_BUDGET" in codes(r)
+
+
+def test_key_wait_error_without_timeout_uses_budget():
+    s = Seq([RuntimeError("x"), OK], step=10)
+    r, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, budget_s=75, key_wait=_boom,
+                                   clock=s.clock, **TRIP)  # fmt: skip
+    assert meta["attempts"] == 1 and "RETRY_SKIPPED_BUDGET" in codes(r)
+
+
+def test_function_attribute_key_wait_is_ignored():
+    """예전 duck typing(complete.key_wait_s)은 더 읽지 않는다 — 명시 인자만 쓴다."""
+    s = Seq([RuntimeError("x"), OK], step=10)
+    s.key_wait_s = lambda: 999.0
+    _, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, budget_s=75,
+                                   attempt_timeout_s=40, clock=s.clock, **TRIP)  # fmt: skip
+    assert meta["attempts"] == 2
+
+
+@pytest.mark.parametrize("bad", [float("nan"), float("inf"), -5.0])
+def test_key_wait_non_finite_or_negative_is_conservative(bad):
+    s = Seq([RuntimeError("x"), OK], step=10)
+    r, meta = understand_with_meta(TEXT, complete=s, max_attempts=2, budget_s=75, key_wait=lambda: bad,
+                                   attempt_timeout_s=40, clock=s.clock, **TRIP)  # fmt: skip
+    assert meta["attempts"] == 1 and "RETRY_SKIPPED_BUDGET" in codes(r)

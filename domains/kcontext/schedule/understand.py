@@ -12,6 +12,7 @@ from __future__ import annotations
 
 import hashlib
 import json
+import math
 import re
 import time
 from collections.abc import Callable, Mapping
@@ -460,6 +461,7 @@ def understand_with_meta(
     attempt_timeout_s: float | None = None,
     retry_unverified: bool = False,
     retry_partial: bool = True,
+    key_wait: Callable[[], float] | None = None,
     clock: Callable[[], float] = time.monotonic,
     **kw: Any,
 ) -> tuple[dict[str, Any], dict[str, Any]]:
@@ -469,7 +471,8 @@ def understand_with_meta(
     ``budget_s is None or 경과 + attempt_timeout_s + 키 대기 <= budget_s`` (timeout 을 모르면 남은 시간 > 0).
     ``retry_partial`` 이면 QUOTE_NOT_FOUND 가 남은 결과도 같은 조건으로 1회 더 부르고, 검증된 앵커가 더 많은 쪽을 쓴다
     (같거나 2회차가 LLM 실패면 1회차). 최종 problems = 선택된 시도의 문제 + 재시도 기록.
-    키 대기 = ``complete.key_wait_s()``(있으면) — 직전 실패로 키가 쿨다운 중일 때 acquire 가 기다릴 초.
+    키 대기 = 명시 인자 ``key_wait()``(없으면 0) — 직전 실패로 키가 쿨다운 중일 때 acquire 가 기다릴 초.
+    ``key_wait`` 가 예외를 던지면 0 이 아니라 보수값(``attempt_timeout_s``, 없으면 ``budget_s``)을 쓴다(fail-closed).
     같은 ``complete`` 만 부른다(다른 백엔드로 넘어가지 않는다, D6).
     """
     if max_attempts < 1:
@@ -502,17 +505,18 @@ def understand_with_meta(
         if not (failed or partial) or "LLM_UNAVAILABLE" in codes or n == max_attempts:
             break
         elapsed = clock() - t0
-        key_wait = 0.0
-        waiter = getattr(complete, "key_wait_s", None)
-        if callable(waiter):
+        wait = 0.0
+        if key_wait is not None:
             try:
-                key_wait = max(float(waiter()), 0.0)
-            except Exception:  # noqa: BLE001 - 대기 시간을 못 구하면 0 으로 본다
-                key_wait = 0.0
+                wait = float(key_wait())
+                if not math.isfinite(wait) or wait < 0:
+                    raise ValueError("key_wait")
+            except Exception:  # noqa: BLE001 - 대기 시간을 못 구하면 보수값(사실상 재시도 안 함)
+                wait = float(attempt_timeout_s if attempt_timeout_s is not None else (budget_s or 0.0))
         if budget_s is not None and (
-            elapsed + attempt_timeout_s + key_wait > budget_s
+            elapsed + attempt_timeout_s + wait > budget_s
             if attempt_timeout_s is not None
-            else elapsed + key_wait >= budget_s
+            else elapsed + wait >= budget_s
         ):
             notes.append(_problem("RETRY_SKIPPED_BUDGET", "예산이 모자라 다시 부르지 않음"))
             break

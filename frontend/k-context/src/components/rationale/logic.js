@@ -50,7 +50,7 @@ export function conflictMarks(rows, valueText) {
 
 /** 현재 열린 항목. key 가 없거나 항목이 없으면 null. */
 export function openItem(merged, key) {
-  return key && merged.items[key] ? { key, ...merged.items[key] } : null;
+  return key && Object.hasOwn(merged.items, key) ? { key, ...merged.items[key] } : null;
 }
 
 /** 걸러낸 주장 목록(지금 카드의 rejected): 화면에 올라온 카드 id 순. */

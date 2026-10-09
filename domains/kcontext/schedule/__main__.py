@@ -81,11 +81,15 @@ def make_lazy_complete(factory=None):
                 state["err"] = type(e).__name__
                 raise CompleteUnavailable(state["err"]) from e
             complete.model = getattr(state["fn"], "model", None)  # type: ignore[attr-defined]
-            complete.key_wait_s = getattr(state["fn"], "key_wait_s", None)  # type: ignore[attr-defined]
         return state["fn"](system, user)
 
+    def key_wait_s() -> float:
+        """클라이언트가 아직 없으면 쿨다운도 없다(0). 있으면 그 클라이언트의 값."""
+        fn = getattr(state.get("fn"), "key_wait_s", None)
+        return float(fn()) if callable(fn) else 0.0
+
     complete.model = None  # type: ignore[attr-defined]
-    complete.key_wait_s = None  # type: ignore[attr-defined]
+    complete.key_wait_s = key_wait_s  # type: ignore[attr-defined]
     return complete
 
 

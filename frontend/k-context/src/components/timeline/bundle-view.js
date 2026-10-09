@@ -3,6 +3,7 @@
 import { h } from '../../lib/dom.js';
 import { mockBadge } from '../../lib/mock-badge.js';
 import { bundleDayDate, bundleDays, bundleTimelineFor, problemLines } from '../../lib/chat-bundle.js';
+import { scheduleNoteNode } from '../../lib/chat-bundle-view.js';
 import { STATUS_META } from './logic.js';
 import { timelineRowNode } from './timeline-row.js';
 
@@ -28,6 +29,7 @@ export function bundleTimelineNode(bundle, day, t, { mock = bundle.sample ? 'moc
       bundle.sample ? h('span', { class: 'cb-flag', dataset: { flag: 'sample' } }, t('bundle.sample')) : null,
       mock ? mockBadge(t, { kind: mock }) : null,
       h('button', { type: 'button', class: 'timeline-min', dataset: { act: 'clear-bundle' } }, t('timeline.bundle.back'))),
+    scheduleNoteNode(bundle.schedule, t),
     days.length ? h('div', { class: 'timeline-days', role: 'tablist', 'aria-label': t('timeline.days') },
       days.map((d) => h('button', {
         type: 'button', role: 'tab', class: ['timeline-days__btn', d === cur && 'is-on'], 'aria-selected': String(d === cur),

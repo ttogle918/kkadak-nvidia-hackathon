@@ -79,7 +79,7 @@ def codes(b):
 
 def test_full_round(idx, book):
     b = run_story_pipeline(TEXT, complete=fake(reply()), db=idx, trip=TRIP, places=book, now=NOW)
-    assert b["schema"] == "kc-chat-bundle/v1" and b["generated_at"] == "2026-10-07T01:02:03Z"
+    assert b["schema"] == "kc-chat-bundle/v2" and b["generated_at"] == "2026-10-07T01:02:03Z"
     assert b["trip"] == {"from": "2026-10-15", "to": "2026-10-16"}
     a = {x["name"]: x for x in b["itinerary"]["anchors"]}
     assert (a["○○궁"]["lat"], a["○○궁"]["lng"]) == (37.5, 127.0)
@@ -136,7 +136,7 @@ def test_write_refuses_overwrite(tmp_path, idx, book):
     b = run_story_pipeline(TEXT, complete=fake(reply()), db=idx, trip=TRIP, places=book)
     out = tmp_path / "o"
     p = write_bundle(b, out)
-    assert json.loads(p.read_text(encoding="utf-8"))["schema"] == "kc-chat-bundle/v1"
+    assert json.loads(p.read_text(encoding="utf-8"))["schema"] == "kc-chat-bundle/v2"
     with pytest.raises(BundleExistsError):
         write_bundle(b, out)
     assert [f.name for f in out.iterdir()] == ["bundle.json"]  # 임시 파일이 남지 않는다

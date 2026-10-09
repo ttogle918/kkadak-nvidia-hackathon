@@ -26,6 +26,7 @@ from backend.chat_story import (
     clean_bundle,
     counts,
     reply_text,
+    search_budget_s,
 )
 from backend.schedule_gate import looks_like_schedule
 from backend.security_log import entries_from_events
@@ -184,6 +185,7 @@ class ChatService:
         self._env = env  # None 이면 호출 시점에 셸 env → .env 허용 목록 순으로 해석
         self._config_path = config_path or CONFIG_PATH
         self._t_llm: float | None = None
+        self._search_timeout_s: float | None = None  # 행사 검색 한도(W5) — _story 가 호출 직전에 정한다
         self._dotenv = dotenv_path or DOTENV_PATH
         self._client: LlmClient | None = None
         self._run_id = f"backend-chat-{uuid.uuid4().hex[:8]}"  # 파일 stem = run_id, 재시작 충돌 방지
@@ -259,7 +261,8 @@ class ChatService:
         from backend.routers.events import SearchBody
 
         body = SearchBody.model_validate(args)
-        return run_catalog(self._settings.catalog_dir, "search", body.model_dump(by_alias=True, exclude_none=False))
+        return run_catalog(self._settings.catalog_dir, "search", body.model_dump(by_alias=True, exclude_none=False),
+                           timeout_s=self._search_timeout_s)
 
     def _llm_timeout_s(self) -> float:
         """T_llm — chat 기능 provider 의 timeout_s(설정). 한 번만 읽어 저장한다. 못 읽으면 기본 예산 값."""
@@ -325,7 +328,11 @@ class ChatService:
             bt = bundle.get("trip")
             if isinstance(bt, dict) and isinstance(bt.get("from"), str) and isinstance(bt.get("to"), str):
                 trip = (bt["from"], bt["to"])
-            await asyncio.to_thread(attach_events, bundle, trip, self._search_events)
+            # W5 — 행사 검색 한도 = 프론트 상한 - 여유 - 파이프라인 경과(최대 60초). 3초 미만이면 건너뛴다.
+            budget = search_budget_s(self._clock() - t0, front_limit_s=FRONT_LIMIT_S,
+                                     margin_s=FALLBACK_MARGIN_S)
+            self._search_timeout_s = budget  # _story_lock 안에서만 쓴다(한 번에 한 흐름)
+            await asyncio.to_thread(attach_events, bundle, trip, self._search_events, skip=budget is None)
             n, m, k = counts(bundle)
             self._audit.result(cid, {"anchors": n, "mentions": m, "events": k, "problems": len(bundle["problems"])})
             user = self._new("user", text)

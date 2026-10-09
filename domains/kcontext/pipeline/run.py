@@ -1,25 +1,32 @@
-"""일정 글 → 앵커(좌표 부착) → 앵커별 실록 언급 → 출력 묶음(``kc-chat-bundle/v1``) 한 파일.
+"""일정 글 → 앵커(좌표 부착) → 앵커별 실록 언급 → 출력 묶음(``kc-chat-bundle/v2``) 한 파일.
 
 호스트 에이전트 프로세스 전용(D10): backend 는 이 모듈을 import 하지 않는다. LLM 은 주입한다(``complete``).
 좌표는 장소 사전(places.py)에 있는 이름만 붙이고, 없으면 null + COORD_UNKNOWN 이다(추측 없음).
 언급 기록은 방문(visit) 앵커에만 붙인다 — 숙소는 근사 좌표만 받는다.
+v2: 이동 구간(``routes``, legs.py)과 카드별 근거(``rationale``, rationale.py)를 더한다. 이야기 길은 만들지 않는다(D18).
 """
 
 from __future__ import annotations
 
 import json
 import os
+import time
 import uuid
 from collections.abc import Callable
 from datetime import UTC, datetime
 from pathlib import Path
 from typing import Any
 
+from domains.kcontext.catalog.routes import RouteProvider
+from domains.kcontext.geo.chain import make_agent_route_provider
 from domains.kcontext.index import LocalIndex
 from domains.kcontext.places import PlaceBook, load_places
 from domains.kcontext.schedule import RETRY_CODES, ScheduleCache, understand_with_meta
 from domains.kcontext.story import COVERAGE_NOTE, build_mentions, to_card
 from domains.kcontext.story.finder import DEFAULT_LIMIT
+
+from .legs import build_routes
+from .rationale import mention_rationale
 
 __all__ = [
     "BUNDLE_FILE",
@@ -29,7 +36,13 @@ __all__ = [
     "write_bundle",
 ]
 
-BUNDLE_SCHEMA = "kc-chat-bundle/v1"
+BUNDLE_SCHEMA = "kc-chat-bundle/v2"
+MAX_RATIONALE = 100  # backend clean_bundle 상한
+ROUTE_SLACK_S = 10.0  # R−B 여유(90−75=15)에서 남기는 경로 계산 상한. LLM 예산을 넘겨 쓴 만큼 줄인다
+STORY_ROUTES_NOTE = {
+    "ko": "이야기 길 없음 — 근거 좌표가 있는 이야기가 없어요",
+    "en": "No story route — no stories with grounded coordinates",
+}
 BUNDLE_FILE = "bundle.json"
 MENTION_SCHEMA = "kc-mention/v1"
 
@@ -92,11 +105,16 @@ def run_story_pipeline(
     retry_partial: bool = True,
     cache: ScheduleCache | None = None,
     cache_key: str | None = None,
+    route_provider: RouteProvider | None = None,
+    key_wait: Callable[[], float] | None = None,
 ) -> dict[str, Any]:
     """묶음(dict)을 돌려준다. 묶음 디스크 쓰기는 없다(캐시 쓰기는 cache 가 있을 때만).
 
     db 가 LocalIndex 면 닫지 않는다. ``bundle["schedule"]`` 에 이해 결과의 출처를 남긴다(§6.5).
+    route_provider 가 None 이면 ``make_agent_route_provider(os.environ)``(루프백 아닌 경로 엔진 주소는 거부 — D7·D20 ⑥) (기본 none, 직선 추정은 운영자 env 가 있을 때만 — D16).
+    key_wait 는 일정 이해 재시도 판단에 쓰는 키 쿨다운 대기(초) 함수다(명시 인자).
     """
+    t_start = time.monotonic()
     book = places if places is not None else load_places()
     t_from, t_to = trip if trip else (None, None)
     use_cache = cache is not None and cache_key is not None
@@ -116,6 +134,7 @@ def run_story_pipeline(
             text, complete=complete, trip_from=t_from, trip_to=t_to, max_attempts=max_attempts,
             budget_s=budget_s, attempt_timeout_s=attempt_timeout_s,
             retry_unverified=retry_unverified, retry_partial=retry_partial,
+            key_wait=key_wait,
         )  # fmt: skip
         meta["model"] = getattr(complete, "model", None)
         schedule = {**meta, "cache_created_at": None}
@@ -140,13 +159,26 @@ def run_story_pipeline(
         who = p.get("anchor") or "-"
         problems.append(_problem(f"MENTION_{str(p.get('kind', 'unknown')).upper()}", f"{who}: {p.get('article_id', '')}".rstrip(": ")))  # fmt: skip
 
-    cards = [
-        to_card(r["anchor"], m)
+    pairs = [
+        (r, m, to_card(r["anchor"], m))
         for r in mention_out["anchors"]
         if r["anchor"]
         for m in r["mentions"]
     ]
+    cards = [c for _, _, c in pairs]
     _unique_card_ids(cards)
+    rationale: dict[str, Any] = {}
+    for r, m, c in pairs[:MAX_RATIONALE]:
+        excluded = int(r.get("excluded_count") or 0)  # 행(카드)별 실제 제외 수 — 앵커 이름으로 세지 않는다
+        key = f"mention:{c['card']['id']}"
+        rationale[key] = mention_rationale(key, r, m, excluded)
+    if route_provider is not None:
+        provider = route_provider
+    else:
+        over = max(0.0, time.monotonic() - t_start - budget_s) if budget_s is not None else 0.0
+        provider, refused = make_agent_route_provider(os.environ, osm_budget_s=max(0.0, ROUTE_SLACK_S - over))
+        problems += [_problem(c, "원격 경로 엔진은 에이전트 프로세스에서 쓰지 않음 — 이동시간 없음") for c in refused]
+    routes = build_routes(anchors, provider=provider, trip_from=t_from)
     stamp = (now or datetime.now(UTC)).astimezone(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
     return {
         "schema": BUNDLE_SCHEMA,
@@ -156,6 +188,9 @@ def run_story_pipeline(
         "itinerary": {"anchors": anchors, "free_slots": sched["free_slots"]},
         "mentions": {**mention_out, "schema": MENTION_SCHEMA},
         "cards": cards,
+        "routes": routes,
+        "rationale": rationale,
+        "story_routes_note": dict(STORY_ROUTES_NOTE),
         "problems": problems,
         "coverage_note": COVERAGE_NOTE,
     }

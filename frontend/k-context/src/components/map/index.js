@@ -9,7 +9,7 @@ import { buildLabel, nowLabelSpec, segLabelSpec, stripGlyph } from './labels.js'
 import {
   approxRadius, buildNowPin, buildSegment, centroid, dayOpacity, layeredSegments, makeProjector, modeOpacity, pathD, segStyle,
 } from './route-layer.js';
-import { buildRouteCards, buildStepList } from './route-list.js';
+import { buildLegList, buildRouteCards, buildStepList } from './route-list.js';
 import { createKakaoView } from './kakao-view.js';
 import { sharedRenderer } from './renderer.js';
 import { buildBundleSvg, buildPinPanel, bundleHasPins } from './chat-layer.js';
@@ -178,7 +178,8 @@ export function mount(root, ctx) {
           b.sample ? h('span', { class: 'cb-flag', dataset: { flag: 'sample' } }, t('bundle.sample')) : null,
           mockRegions(s, api).map ? mockBadge(t, { kind: mockRegions(s, api).map }) : null,
           bundleHasPins(b) ? null : h('span', { role: 'status' }, t('map.bundle.no_pins'))),
-        h('div', { class: 'map-stage' }, kview ? [kakaoHost, kview.status] : [buildBundleSvg(b, t, pinKey), buildPinPanel(b, pinKey, t)])));
+        h('div', { class: 'map-stage' }, kview ? [kakaoHost, kview.status] : [buildBundleSvg(b, t, pinKey), buildPinPanel(b, pinKey, t)]),
+        buildLegList(b, t, s.lang)));
       if (kview) { try { kview.update(s); } catch { console.warn('[map] 카카오 지도 갱신 실패'); } }
       const fk = focusKey && root.querySelectorAll ? [...root.querySelectorAll('[data-fk]')].find((e) => e.dataset.fk === focusKey) : null;
       fk?.focus?.({ preventScroll: true });

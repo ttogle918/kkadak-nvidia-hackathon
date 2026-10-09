@@ -832,6 +832,12 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 - **key_wait 명시 인자화**: `understand_with_meta` 가 `complete.key_wait_s` 를 duck typing 으로 읽음(래퍼가 끼면 조용히 0 — fail-open). T312 에서 `run.py` 를 고칠 때 `key_wait: Callable[[], float] | None` 명시 인자로 바꾸고 예외 시 보수값.
 - T326(규칙 대체): 착수 조건(폴백 대부분 `fallback_llm`) 불성립 — 폴백 0. 착수하지 않음.
 
+### Stage 3 에서 이월 (2026-10-09)
+- **근거 선택 연결 → T318**: v2 근거 모듈은 `selectedSeg`·`selectedNow` id 로 `mention:`/`event:` 근거를 찾지만, 묶음 카드·행사를 눌러 선택 상태를 채우는 연결이 없다(`state/*`·`cards/index.js`). 연결 전에는 항상 "이 카드의 판단 근거 없음". 호출 쪽 id 는 접두어 없는 id(`story_<article_id>`, 행사 id) 가정.
+- 카카오 렌더러의 이동 구간 점선 → T318.
+- T314 ④ 범위 변경: `schedule.source` 표시(캐시·규칙)는 **타임라인에만** 둔다(채팅 reply 에는 backend 가 붙임). 카드 쪽은 같은 문구 3중 표시를 피하려고 뺐다(2026-10-10 코디네이터 판단).
+- `rationale/index.js` 가 실제 v2 근거 옆에 MOCK 딱지를 함께 띄울 수 있음 → T318 에서 확인.
+
 ## 완료 기록
 (스테이지마다 `/stage` 가 기록한다)
 

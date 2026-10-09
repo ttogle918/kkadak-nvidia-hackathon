@@ -8,11 +8,12 @@ from collections.abc import Mapping, Sequence
 from domains.kcontext.catalog.routes import LatLng, NullRouteProvider, RouteProvider
 
 from .estimate import StraightLineEstimator
-from .osm import OsrmWalkProvider
+from .osm import OsrmWalkProvider, is_loopback_url
 
-__all__ = ["ChainRouteProvider", "make_route_provider"]
+__all__ = ["ROUTE_REMOTE_REFUSED", "ChainRouteProvider", "make_agent_route_provider", "make_route_provider"]
 
 MODES = ("none", "estimate", "osm", "chain")
+ROUTE_REMOTE_REFUSED = "ROUTE_PROVIDER_REMOTE_REFUSED"
 
 
 class ChainRouteProvider:
@@ -46,7 +47,7 @@ class ChainRouteProvider:
         return None
 
 
-def make_route_provider(env: Mapping[str, str] | None = None) -> RouteProvider:
+def make_route_provider(env: Mapping[str, str] | None = None, *, osm_budget_s: float | None = None) -> RouteProvider:
     """``KC_ROUTE_PROVIDER``: none(기본) | estimate | osm | chain. 모르는 값은 none.
 
     ``osm``·``chain`` 은 ``KC_OSM_ROUTER_URL`` 이 있을 때만 OSM 공급자를 넣는다. 카카오맵 MCP 는 연결하지 않았다.
@@ -59,10 +60,26 @@ def make_route_provider(env: Mapping[str, str] | None = None) -> RouteProvider:
     url = e.get("KC_OSM_ROUTER_URL", "").strip()
     if mode in ("osm", "chain") and url:
         try:
-            chain.append(OsrmWalkProvider(url))
+            chain.append(OsrmWalkProvider(url) if osm_budget_s is None else OsrmWalkProvider(url, budget_s=osm_budget_s))
         except ValueError:
             pass  # 잘못된 주소는 쓰지 않는다
     # D13 ⑥ 은 직선 추정을 금지한다. 결정이 바뀌기 전(docs/geo-walk.proposal.md)에는 운영자가 명시해야만 켠다.
     if mode in ("estimate", "chain") and e.get("KC_ROUTE_ESTIMATE_APPROVED") == "1":
         chain.append(StraightLineEstimator())
     return ChainRouteProvider(chain) if chain else NullRouteProvider()
+
+
+def make_agent_route_provider(
+    env: Mapping[str, str] | None = None, *, osm_budget_s: float | None = None
+) -> tuple[RouteProvider, list[str]]:
+    """에이전트 프로세스용(D7·D20 ⑥: 외부 자료는 호스트 수집기만). ``(공급자, 문제 코드들)``.
+
+    ``KC_OSM_ROUTER_URL`` 이 루프백이 아니면 경로 공급자를 쓰지 않고(none) ``ROUTE_PROVIDER_REMOTE_REFUSED`` 를 돌려준다.
+    URL 값은 어디에도 싣지 않는다. 호스트 수집기(catalog)는 ``make_route_provider`` 를 그대로 쓴다.
+    """
+    e = os.environ if env is None else env
+    mode = e.get("KC_ROUTE_PROVIDER", "none")
+    url = e.get("KC_OSM_ROUTER_URL", "").strip()
+    if mode in ("osm", "chain") and url and not is_loopback_url(url):
+        return NullRouteProvider(), [ROUTE_REMOTE_REFUSED]
+    return make_route_provider(e, osm_budget_s=osm_budget_s), []

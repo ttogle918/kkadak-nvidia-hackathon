@@ -138,7 +138,8 @@ def build_mentions(
         if name is None:
             problems.append({"kind": "invalid_name", "anchor": None})
             results.append({"anchor": None, "mentions": [], "reason": "invalid_name", "terms": [],
-                            "found_articles": 0, "found_truncated": False, "coverage_note": COVERAGE_NOTE})  # fmt: skip
+                            "found_articles": 0, "found_truncated": False, "excluded_count": 0,
+                            "coverage_note": COVERAGE_NOTE})  # fmt: skip
             continue
         terms, cands, truncated = find_candidates(index, name)
         # 주입 판정을 통과한 기록만 후보로 남긴 뒤 고른다(제외된 기록 때문에 자리가 비지 않게)
@@ -164,6 +165,7 @@ def build_mentions(
             "terms": list(res.terms),
             "found_articles": res.found_articles,
             "found_truncated": res.truncated,  # True 면 found_articles 는 '최소'다(검색 상한)
+            "excluded_count": excluded,  # 이 행(앵커)에서 주입 검사로 뺀 후보 수 — 같은 이름 앵커가 둘이어도 행마다 따로
             "coverage_note": COVERAGE_NOTE,
         })  # fmt: skip
     return {"schema": SCHEMA, "anchors": results, "problems": problems}

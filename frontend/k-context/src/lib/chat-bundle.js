@@ -168,3 +168,51 @@ export function problemLines(bundle) {
   }
   return out;
 }
+
+/** v2 묶음인가(근거 표시·이동 구간 목록의 기준). v1 이면 근거는 숨기고 이동 구간은 "정보 없음". */
+export const isV2Bundle = (bundle) => bundle?.schema === 'kc-chat-bundle/v2';
+
+/**
+ * 선택한 항목 id 의 근거. 언급 카드면 "mention:"+id, 행사면 "event:"+id 로 찾는다(서버 호출 없음).
+ * 이미 접두어가 붙은 id 도 받는다. 없으면 null.
+ */
+export function rationaleFor(bundle, id) {
+  if (!isV2Bundle(bundle) || typeof id !== 'string' || !id) return null;
+  const own = (map, key) => (map && Object.hasOwn(map, key) ? map[key] : null);
+  return own(bundle.rationale, id.startsWith('mention:') ? id : `mention:${id}`)
+    ?? own(bundle.events_rationale, id.startsWith('event:') ? id : `event:${id}`);
+}
+
+/** 근거 목록 -> {chips, items} (rationale/logic.js 의 mergeRationale 과 같은 규칙: 같은 key 는 먼저 온 것). */
+export function mergeBundleRationale(list) {
+  const chips = [];
+  const items = {};
+  for (const r of list) {
+    for (const c of r?.chips ?? []) if (!chips.some((x) => x.key === c.key)) chips.push(c);
+    for (const [k, v] of Object.entries(r?.items ?? {})) if (!Object.hasOwn(items, k)) items[k] = v;
+  }
+  return { chips, items };
+}
+
+/** 이동 구간 목록용 값: v1·routes 없음 -> []. 날짜별 {id, day, date, legs, skipped}. */
+export const routeDays = (bundle) => (isV2Bundle(bundle) ? bundle.routes ?? [] : []);
+
+/**
+ * 지도 점선 쌍: routes[].legs 의 from_ll·to_ll 로 만든다(목록과 같은 출처 — 정확히 일치).
+ * 좌표가 같은 숙소 아닌 핀에 대응시키고, 좌표가 없거나 핀을 못 찾는 구간·skipped 쌍은 잇지 않는다.
+ * "직선 연결(실제 길 아님)" 용 — v2 에 routes 가 있을 때만.
+ */
+export function pinLinks(bundle) {
+  if (!routeDays(bundle).length) return [];
+  const pins = bundlePins(bundle).filter((p) => p.type !== 'hotel');
+  const find = (ll) => (Array.isArray(ll) ? pins.find((p) => p.lat === ll[0] && p.lng === ll[1]) : null);
+  const out = [];
+  for (const r of routeDays(bundle)) {
+    for (const l of r.legs) {
+      const a = find(l.from_ll);
+      const b = find(l.to_ll);
+      if (a && b && a.key !== b.key) out.push({ from: a.key, to: b.key, day: r.day });
+    }
+  }
+  return out;
+}

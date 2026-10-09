@@ -53,6 +53,12 @@ def _attempt_timeout_s() -> float:
         return DEFAULT_ATTEMPT_TIMEOUT_S
 
 
+def _key_wait_of(complete):
+    """complete 가 노출한 키 쿨다운 대기 함수(없으면 None = 대기 없음으로 본다). 파이프라인에는 명시 인자로 넘긴다."""
+    fn = getattr(complete, "key_wait_s", None)
+    return fn if callable(fn) else None
+
+
 def _on(name: str) -> bool:
     return os.environ.get(name, "").strip().lower() in ("on", "1", "true", "yes")
 
@@ -104,6 +110,7 @@ def main(argv: Sequence[str] | None = None) -> int:
             places=book,
             budget_s=a.llm_budget_s,
             attempt_timeout_s=_attempt_timeout_s(),
+            key_wait=_key_wait_of(complete),
             retry_unverified=_on("KC_SCHEDULE_RETRY_UNVERIFIED"),
             retry_partial=not _env_off("KC_SCHEDULE_RETRY_PARTIAL"),
             cache=cache,
