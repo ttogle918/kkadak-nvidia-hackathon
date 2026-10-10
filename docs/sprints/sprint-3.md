@@ -945,3 +945,23 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 - D22 연도 추정은 **날짜별 독립 추정 그대로**(한 여행이 두 해로 갈릴 수 있음 — `YEAR_ASSUMED` 로 드러나고 화면 여행 기간 입력으로 고칠 수 있다). 행사 검색의 앵커 범위 31일 상한은 그 경우 여행 기간·오늘 기준으로 넘어가는 안전장치로 유지.
 - 수집 보고서 무작위 5건: 서울 API 3건 제목·구·기간이 `var/catalog` 와 일치, 링크 5개 HTTP 200. 검색 수집 7건은 기간·구가 비어(원문 근거 없음) 날짜 검색에 안 잡히는 것이 정상.
 
+
+### Stage 6 — 문서·재현 (2026-10-10, 커밋 `71f14e4`)
+- 태스크별 파일
+  - T324 `scripts/kc_demo.sh`(신규) · `tests/test_kc3_e2e_chat.py`(8) · `scripts/preflight.sh`(D20 후속: 샌드박스 WARN, 필수 = uv·python3·색인·키 있음/없음)
+  - T325 `README.md` · `docs/status/2026-10-10_구현상태.md` · `docs/diagram/system-state.html` · `docs/guides/{EVENTS_CATALOG,SETUP}.md` · `deploy/README.md`
+  - H12(위임) `docs/demo/s3-0{1..5}-*.png` · `docs/diagram/system-state.png` — `kc_demo.sh` 로 띄운 실제 서버를 헤드리스 Chromium 으로 캡처
+  - H11(위임) `CLAUDE.md` 회귀 절: node · eval validate/check · kc_demo --check
+- 회귀: pytest 1,937 · node 360 · ruff · eval validate 0 · check 0 · `kc_demo.sh --check`/`--smoke` 0
+- reviewer: FAIL(E2E module 픽스처가 .env 격리보다 먼저 실행, 문서의 "캡처 대기" 오기) + 권장 8 → PASS
+
+### Stage 6 에서 이월 (2026-10-10)
+- 보안 로그가 날짜 없이 시각만, 오래된 기록이 위 — 최신 우선·날짜 표시.
+- 새로고침하면 대화는 남고 일정·지도는 비워짐(D17 — 묶음을 서버에 두지 않음). 필요하면 브라우저 보관 검토.
+- 움직이는 데모 GIF 는 새로 만들지 않음(PNG 5장).
+
+## Sprint 3 마감 요약 (2026-10-10)
+- SCOPE "반드시 만들 것" ① 안정성+평가셋 ② MOCK 제거 ③ 행사 실데이터 ④ README·상태 문서·이미지 — 모두 완료. 변동 목표 2줄만 미충족(이월, H10 검수 뒤 재판정).
+- 결정 추가: D15(보충 1·2·3) · D16 · D17 · D18 · D19 · D20 · D21 · D22(보충) · D23. D14 는 여전히 초안.
+- 테스트: pytest 1,644 → 1,937 · node 312 → 360. 평가셋 4종(검수 전).
+- 남은 사람 작업: H7 좌표·H8 별칭·H9 관련성 라벨·H10 평가셋 검수·D14 확인.
