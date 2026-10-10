@@ -13,7 +13,7 @@
 | `brev/` | 미사용 | GPU 인스턴스 안내 자리 | 영향 없음 |
 
 ## 필수 — 데모 실행에 필요한 것
-- Python 3.12 + uv, (프론트 테스트용) Node 18+
+- Python 3.12 + uv (Node 18+ 는 개발·테스트용 — 데모 실행에는 필요 없다)
 - `.env` 에 `NVIDIA_API_KEY` (`.env.example` 복사. `.env` 는 gitignore)
 - 실록 색인 `var/index/kcontext.db` (README "실록 색인 만들기")
 - `deploy/llm.chat.yaml`

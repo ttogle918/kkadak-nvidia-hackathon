@@ -1,7 +1,7 @@
-# 중구 행사 카탈로그 — 실행·설정·현황 (2026-10-07)
+# 행사 카탈로그 — 실행·설정·현황 (2026-10-07 작성, 2026-10-10 갱신: 4개 구 · 출처별 검색 수집 · 스냅샷)
 
-사용자 흐름: 여행 날짜·숙소·기존 일정을 입력 → 중구에서 열리는 행사와 참여 방법 확인 → 기존 일정에 추가·취소.
-결정 근거: `docs/DECISIONS.md` D13(카탈로그), D12(검색 수집), D7·D10(호스트 수집·프로세스 분리).
+사용자 흐름: 여행 날짜·숙소·기존 일정을 입력(또는 챗봇에 일정 문장) → 대상 구(중구·종로구·마포구·강남구)에서 열리는 행사와 참여 방법 확인 → 기존 일정에 추가·취소.
+결정 근거: `docs/DECISIONS.md` D13(카탈로그), D12(검색 수집), D7·D10(호스트 수집·프로세스 분리), D19(스냅샷), D23(오래된 무기한 행사 제외). 실행 결과와 건수: `docs/status/events_data_2026-10-10.md`.
 
 ## 구성
 ```
@@ -32,6 +32,41 @@ cd frontend/k-context && python3 -m http.server 8766
 #   http://127.0.0.1:8766/admin.html             (관리자 토큰 입력)
 ```
 
+## 대상 지역 — `KC_TARGET_REGION` 쉼표 목록
+대상 구는 `KC_TARGET_REGION` 에 지역 id 를 **쉼표로** 적는다(기본 `jung`). id 는 `domains/kcontext/data/regions/*.json` 의 `jung`·`jongno`·`mapo`·`gangnam`.
+```bash
+export KC_TARGET_REGION=jung,jongno,mapo,gangnam
+# 한 번만 지정하려면 --region (catalog 명령 공통 옵션)
+uv run python -m domains.kcontext.catalog --region jung,jongno,mapo,gangnam update --source seoul_openapi
+```
+- 여럿이면 합친 지역으로 판정한다(`domains/kcontext/catalog/target.py` 에서만 쪼갠다). 모르는 id·빈 값은 오류.
+- **백엔드도 같은 값으로 띄워야** 화면 검색이 4개 구를 본다: `KC_TARGET_REGION=jung,jongno,mapo,gangnam uv run uvicorn backend.app:app --port 8000`.
+- 서울 API 는 출처의 `GUNAME` 으로 구를 정한다. 구가 비어 있는 항목은 대상 지역 미확인이라 검색 목록이 아닌 관리자 검토 대기다.
+
+## 검색 수집(Tavily) — 출처별 JSONL, 2단계 (D12)
+구청 사이트 행사는 두 단계다. 1단계만 검색·LLM 을 부르고 2단계는 파일을 읽을 뿐이다. 키는 `TAVILY_SEARCH_KEY`(호스트 env, 없으면 `.env`).
+```bash
+# 1단계 — 검색 + LLM 추출. 출처(web_sources 의 id)마다, 달마다 실행. 호출 수 상한 --max-calls (기본 30)
+uv run python -m domains.kcontext.ingest.events.web_run --source junggu  --month 2026-10 \
+  --out var/data/events/web.junggu.jsonl  --collected-at YYYY-MM-DD --max-calls 10 --max-candidates 10
+uv run python -m domains.kcontext.ingest.events.web_run --source gangnam --month 2026-10 \
+  --out var/data/events/web.gangnam.jsonl --collected-at YYYY-MM-DD --max-calls 10 --max-candidates 10
+# 2단계 — 카탈로그 반영(검색·LLM 호출 없음). 파일 이름은 출처별: web.<id>.jsonl
+uv run python -m domains.kcontext.catalog update --source junggu_site
+uv run python -m domains.kcontext.catalog update --source gangnam_site
+```
+- 출력은 출처별 `var/data/events/web.<id>.jsonl` 이다(예전 단일 `web.jsonl` 은 `web.<id>.jsonl` 이 없을 때만 읽는다). `junggu_site` ↔ `web_sources/junggu.json`, `gangnam_site` ↔ `gangnam.json`. 수집기는 레코드의 지역을 하나만 쓰므로 4개 구는 구마다 따로 실행한다. 마포는 후보가 없어 서울 API 로 덮는다.
+- 검색 결과만 먼저 보려면 `--candidates-only`, 결과를 레포 밖 임시 파일에 저장하려면 `--save-candidates <파일>`, 저장한 후보로 검색 없이 추출만 하려면 `--candidates-file <파일>`. 저장 파일은 레포에 두거나 커밋하지 않는다(D12 ⑦).
+- 결과는 `fetched_from="web"`, 출처 등급 C, "검색 수집 · 미확인" 표시이고, 기간이 비면 날짜 검색에 잡히지 않는다. 2026-10-10 실행에서는 7건 모두 기간·구가 비었다.
+
+## 스냅샷 복원 — 키 없이 행사 보기 (D19)
+`domains/kcontext/data/snapshots/catalog/` 에 서울 열린데이터광장(공공누리 1유형, 출처 표시) 유래 행사 162건(수집 2026-10-10)이 있다. 건수·범위·이용 조건은 그 폴더의 `SNAPSHOT.md`. Tavily 유래·제보·원응답·키는 담지 않는다.
+```bash
+uv run python scripts/snapshot_catalog.py --restore --from domains/kcontext/data/snapshots/catalog --to var/catalog   # 대상 폴더가 이미 있으면 --force 로 교체
+uv run python scripts/snapshot_catalog.py --from var/catalog --to domains/kcontext/data/snapshots/catalog              # 다시 만들기(서울 API 항목만 남김)
+```
+스냅샷은 시점 자료다. 스냅샷 날짜에 끝나지 않은 행사만 담으므로 시간이 지나면 오래된 자료가 되어 다시 만든다.
+
 ## 환경변수 (이름만. 값은 호스트 셸 env 또는 `.env` — 커밋 금지)
 | 이름 | 용도 | 없으면 |
 |---|---|---|
@@ -39,14 +74,15 @@ cd frontend/k-context && python3 -m http.server 8766
 | `DATA_GO_KR_SERVICE_KEY` | 공공데이터포털(TourAPI) | 사용하지 않음(활용가이드 확인 전) |
 | `TAVILY_SEARCH_KEY` | 구청 행사 검색 수집(D12) | 해당 경로 사용 불가 |
 | `KC_ADMIN_TOKEN` | 관리자 API·화면 | 관리자 API 닫힘 |
-| `KC_CATALOG_DIR` · `KC_TARGET_REGION` | 저장 폴더(기본 `var/catalog`) · 지역 id(기본 `jung`) | 기본값 |
+| `KC_CATALOG_DIR` · `KC_TARGET_REGION` | 저장 폴더(기본 `var/catalog`) · 지역 id **쉼표 목록**(기본 `jung`) | 기본값(중구 하나) |
 
 ## 실제 연동한 출처 / 하지 않은 출처
 | 출처 | 제공 방식(확인) | 상태 |
 |---|---|---|
-| 서울 열린데이터광장 문화행사 정보(OA-15486) | OpenAPI. 공식 가이드·sample 키 응답으로 호출 형식·필드 확인. 매일 1회 갱신 | **연동**(키 필요, 전체 수집은 키 발급 후) |
+| 서울 열린데이터광장 문화행사 정보(OA-15486) | OpenAPI. 공식 가이드·sample 키 응답으로 호출 형식·필드 확인. 매일 1회 갱신 | **연동** — 2026-10-10 전체 수집 8,712건(4개 구). 키 필요 |
 | 한국관광공사 TourAPI(data.go.kr 15101578) | 공공데이터포털 페이지에 작업·파라미터·응답 필드가 없음 | **미연동** — 키·활용가이드 확인 필요 |
-| 서울 중구청 홈페이지·보도자료 | HTML. D12 검색 수집(Tavily) | **일부** — LLM 추출기(T223) 연결 전엔 레코드를 만들지 못함 |
+| 서울 중구청 홈페이지·보도자료 (`junggu_site`) | HTML. D12 검색 수집(Tavily) | **일부** — 2단계 수집으로 4건 반영(기간 없음) |
+| 강남구청 홈페이지·강남페스티벌 (`gangnam_site`) | HTML. D12 검색 수집(Tavily) | **일부** — 3건 반영(기간 없음). 서울 API 가 강남도 덮으므로 보조 |
 | 중구 공식 SNS(cmsid=15920) | 안내 페이지만 있고 API·RSS 없음. 네이버 블로그는 AI·RAG 접근 금지 | **수동 확인 링크**로 등록(관리자 화면) |
 | 중구문화재단(caci.or.kr) | 클라이언트 렌더링, 호출 방식 미문서화 | **수동 확인 링크** |
 | 남산골한옥마을 | 서버 렌더링 HTML, robots 허용. 행사 목록 구조 미확인 | **후보(미구현)** |
@@ -54,8 +90,10 @@ cd frontend/k-context && python3 -m http.server 8766
 
 ## 아직 안 된 것 / 확인할 수 없는 것
 - **이동시간**: 경로·지도 서비스가 연결돼 있지 않아 모든 제안이 "이동시간 확인 필요"로 나온다(`catalog/routes.py` 의 `RouteProvider` 만 준비). 연결할 서비스(카카오맵 등)의 호출 방식·키·약관을 확인해야 한다.
-- **전체 수집**: 서울시 API 키가 없어 실제 중구 행사 전체를 받지 못했다. sample 키 5행에는 중구 행사가 없었다. 일일 호출 한도는 데이터셋 페이지에 없다(`[확인 필요]`).
-- **비정형 공지·이미지·PDF 추출**: AI 추출은 D12 의 `extract.py`(인용 검증) 구조만 있고 LLM 연결(T223)이 없다. 근거 필드(`ai_extracted`·`location`)와 검토 대상 표시는 준비됐다.
+- **전체 수집**: 2026-10-10 에 서울 API 키로 전체를 받았다(8,712건). 그중 약 98% 는 이미 끝난 행사다. 일일 호출 한도는 데이터셋 페이지에 없다(`[확인 필요]`). 서울 API 에도 없는 행사는 있을 수 있다 — 화면에 "모든 행사"라고 쓰지 않는다.
+- **검색 수집 7건은 기간이 없다**(날짜 검색에 안 잡힘). 종료일·회차 없이 시작한 지 1년 넘은 행사는 검색에서 뺀다(D23).
+- **검색 속도**: 행사 검색 1회 약 6초(8.7천 건을 매번 읽는다).
+- **비정형 공지·이미지·PDF 추출**: 구청 공지 텍스트는 D12 의 `extract.py`(인용 검증)로 추출한다(위 "검색 수집"). 이미지·PDF·포스터는 읽지 않는다. 추출 LLM 호출 실패 3건의 원인은 미확인이다.
 - **공간의 이야기**: 구조·검증 규칙(`stories.py`)은 있으나 `data/stories/` 에 검증된 이야기가 아직 없다. 지어내지 않았다.
 - 남산골한옥마을·TourAPI 파서, 포스터 이미지 읽기(비전), 실제 브라우저·모바일 화면 확인(테스트는 가짜 DOM).
 - 전체 행사 수를 입증할 수 없으므로 화면에 "모든 행사"라고 쓰지 않고 수집 출처와 마지막 확인 시각을 보여 준다.

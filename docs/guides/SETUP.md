@@ -10,12 +10,13 @@
 | 단계 | 구분 | 비고 |
 |---|---|---|
 | 0 WSL2 | 필수(Windows 일 때) | Docker Desktop 은 선택 |
-| 1 기본 패키지 · 2 Git · 4 Python·uv · 8 클론·의존성 | **필수** | |
-| 3 Node.js | 필수(프론트 테스트) | 화면만 띄울 때는 python http.server 로 충분 |
+| 1 기본 패키지 · 4 Python·uv · 8 클론·의존성 | **필수** | 데모 실행에 필요 |
+| 2 Git | 개발 필수 | 클론·커밋용. `preflight.sh` 는 데모 실행 기준이라 없으면 WARN |
+| 3 Node.js | 개발·테스트 필수 | 프론트 테스트(`node --test`)용. 화면만 띄울 때는 python http.server 로 충분 — `preflight.sh` 는 WARN |
 | 9 키 설정 | **필수** | `.env` 의 `NVIDIA_API_KEY` 만 있으면 된다. 셸 export 는 게이트웨이용(선택) |
 | 5 Docker · 7 OpenShell·NemoClaw · 10 게이트웨이 | 선택 | 샌드박스 시연 전용 |
 | 6 Claude Code · 11 Agent Skills · 13 | 개발 도구 | 제품 실행과 무관 |
-| 12 환경 점검 | pytest·ruff 는 필수, `preflight.sh` 는 선택 | `preflight.sh` 는 지금 openshell·게이트웨이 없음을 FAIL 로 센다(D20 후속으로 WARN 화 예정) |
+| 12 환경 점검 | pytest·ruff 는 필수, `preflight.sh` 로 점검 | 필수 FAIL 은 uv·python3·색인·`NVIDIA_API_KEY` 뿐이고, docker·openshell·nemoclaw·게이트웨이 등 샌드박스 쪽은 선택이라 WARN 이다(D20) |
 
 ## 0. Windows 에서 WSL2 + Ubuntu (PowerShell 관리자)
 
@@ -115,11 +116,11 @@ uv sync                      # .venv 생성 + 의존성(dev 그룹 포함)
 ## 9. 키 설정 (필수 — 값은 절대 커밋하지 않는다, 규칙 1)
 
 1. <https://build.nvidia.com> 에서 API 키 발급.
-2. 호스트 셸에 export (샌드박스 이미지·리포에 넣지 않는다):
+2. (선택) 호스트 셸에 export — 게이트웨이(샌드박스) 등록 때만. 샌드박스 이미지·리포에는 넣지 않는다:
 
 ```bash
 cp .env.example .env         # .env 는 gitignore. 필요하면 NVIDIA_API_KEY_A/_B, NGC_API_KEY 도 채운다
-export NVIDIA_API_KEY=nvapi-...     # (선택) 게이트웨이 등록에만 필요 — 제품은 .env 만 읽는다
+export NVIDIA_API_KEY=nvapi-...     # (선택) 게이트웨이 등록에만 필요 — 제품은 셸 env 를 먼저, 없으면 .env 를 읽는다
 ```
 
 ## 10. 게이트웨이 · 추론 provider 등록 (선택 — 샌드박스 시연)
@@ -142,7 +143,7 @@ npx skills add NVIDIA/skills --skill <name> --agent claude-code
 ## 12. 환경 점검 · 회귀 테스트
 
 ```bash
-scripts/preflight.sh            # (선택) 도구·Docker·GPU·게이트웨이·키 점검 (읽기 전용) — openshell 이 없으면 FAIL 이 나온다(D20 후속)
+scripts/preflight.sh            # (선택) 도구·Docker·GPU·게이트웨이·키 점검 (읽기 전용) — 샌드박스 쪽 도구가 없으면 WARN(선택, D20)
 scripts/preflight.sh --live     # 키 유효성까지(채팅 1토큰 호출)
 
 uv run python -m pytest -q      # 테스트

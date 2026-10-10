@@ -7,6 +7,8 @@
 #   /v1/models 는 인증 없이도 200 이라 키 검증에 쓸 수 없다(가짜 키로 200 이 나오는 것을 실측, 채팅 호출은 401).
 #   키는 원래 목적지인 NVIDIA 로만 간다. 응답 본문은 출력하지 않고 HTTP 코드만 본다. 모델은 PREFLIGHT_MODEL 로 바꾼다.
 # - 종료 코드: 필수(FAIL)가 하나라도 있으면 1. WARN 은 종료 코드에 영향이 없다.
+# - D20: 필수는 uv · python3 · 실록 색인 · NVIDIA_API_KEY(셸 env 또는 .env, 있음/없음만) 넷이다.
+#   openshell · nemoclaw · 게이트웨이 · Docker · git · node 는 선택(샌드박스 시연 등)이라 없어도 WARN 이다.
 # - 아무것도 만들거나 바꾸지 않는다(샌드박스·provider·파일 생성 없음).
 #   단 openshell·brev 하위 명령(gateway info·provider list·sandbox list·brev ls)이 상태를 바꾸지 않는다는 점은
 #   문서로 확인하지 못했다(규칙 4, nemoclaw-docs searchDocs 로 확인 필요). 조회용 명령만 쓰고 출력은 첫·마지막 열만 쓴다.
@@ -39,17 +41,26 @@ key_state() {
 }
 
 echo "== 도구"
-for t in git uv docker node npm; do
-  if have "$t"; then pass "$t" "$(ver "$t" --version)"; else fail "$t" "없음"; fi
+if have uv; then pass uv "$(ver uv --version)"; else fail uv "없음 (필수)"; fi
+if have python3; then pass python3 "$(ver python3 --version)"; else fail python3 "없음 (필수)"; fi
+for t in git node npm; do
+  if have "$t"; then pass "$t" "$(ver "$t" --version)"; else warn "$t" "없음 — 선택(레포 작업·프론트 테스트)"; fi
 done
-if have python3; then pass python3 "$(ver python3 --version)"; else fail python3 "없음"; fi
-if have openshell; then pass openshell "$(ver openshell --version)"; else fail openshell "없음 (게이트웨이·샌드박스 불가)"; fi
-if have nemoclaw; then pass nemoclaw "$(ver nemoclaw --version)"; else fail nemoclaw "없음"; fi
+if have docker; then pass docker "$(ver docker --version)"; else warn docker "없음 — 선택: 샌드박스 시연"; fi
+if have openshell; then pass openshell "$(ver openshell --version)"; else warn openshell "없음 — 선택: 샌드박스 시연"; fi
+if have nemoclaw; then pass nemoclaw "$(ver nemoclaw --version)"; else warn nemoclaw "없음 — 선택: 샌드박스 시연"; fi
 if have brev; then pass brev "$(ver brev --version)"; else warn brev "CLI 없음 — Brev 인스턴스를 쓰려면 설치·로그인 필요"; fi
 if have gh; then pass gh "$(ver gh --version)"; else warn gh "없음 — 레포 클론·푸시에 필요"; fi
 
+echo "== 실록 색인 (필수)"
+if [ -f "$ROOT/var/index/kcontext.db" ]; then
+  pass index "var/index/kcontext.db"
+else
+  fail index "var/index/kcontext.db 없음 — README \"환경 설치 방법\"의 ingest 로 만든다"
+fi
+
 echo "== Docker · GPU · 자원"
-if have docker && docker info >/dev/null 2>&1; then pass docker-daemon "응답함"; else fail docker-daemon "데몬 응답 없음"; fi
+if have docker && docker info >/dev/null 2>&1; then pass docker-daemon "응답함"; else warn docker-daemon "데몬 응답 없음 — 선택: 샌드박스 시연"; fi
 if have nvidia-smi && nvidia-smi >/dev/null 2>&1; then
   pass gpu "$(nvidia-smi --query-gpu=name,memory.total --format=csv,noheader | head -1)"
 else
@@ -65,7 +76,7 @@ if have openshell; then
   if timeout 20 openshell gateway info 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | grep -qi 'healthy'; then
     pass gateway "healthy"
   else
-    fail gateway "healthy 아님 (openshell gateway info 확인)"
+    warn gateway "healthy 아님 — 선택: 샌드박스 시연 (openshell gateway info 확인)"
   fi
   prov=$(timeout 20 openshell provider list 2>&1 | sed 's/\x1b\[[0-9;]*m//g' | awk 'NR>1 && NF {print $1}' | tr '\n' ' ')
   if [ -n "$prov" ]; then pass providers "$prov"; else warn providers "없음 — scripts/gateway_setup.sh 필요"; fi
@@ -76,8 +87,8 @@ fi
 echo "== 키 (값은 출력하지 않는다)"
 case "$(key_state NVIDIA_API_KEY)" in
   env) pass NVIDIA_API_KEY "셸 env 에 설정됨" ;;
-  dotenv) warn NVIDIA_API_KEY ".env 에만 있음 — 셸에 export 해야 게이트웨이 등록에 읽힌다" ;;
-  *) fail NVIDIA_API_KEY "없음 (build.nvidia.com 에서 발급)" ;;
+  dotenv) pass NVIDIA_API_KEY ".env 에 설정됨 (제품 실행은 충분. 샌드박스 게이트웨이 등록에는 셸 export 필요)" ;;
+  *) fail NVIDIA_API_KEY "없음 (필수, build.nvidia.com 에서 발급)" ;;
 esac
 for k in NVIDIA_API_KEY_A NVIDIA_API_KEY_B; do
   case "$(key_state $k)" in

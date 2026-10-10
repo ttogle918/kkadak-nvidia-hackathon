@@ -44,4 +44,7 @@ openshell 0.0.116 · nemoclaw v0.0.124 · 게이트웨이 `nemoclaw`(127.0.0.1:8
 `eval-runner` 와 `/stage` 가 이 절을 기준으로 삼는다. 명령은 레포 루트에서:
 - pytest: `uv run python -m pytest -q` (건수는 러너 출력이 기준 — 직전보다 줄었다면 테스트가 사라진 것)
 - 린트: `uv run ruff check .` (`.claude/skills/` 는 NVIDIA 카탈로그라 제외)
-- 계약 스파이크·평가셋: 생기면 여기에 추가
+- 프론트: `(cd frontend/k-context && node --test)`
+- 평가셋(결정적, LLM 없음): `uv run python eval/kc.py validate` · `uv run python eval/kc.py run --check --known-failures eval/BASELINE.md` (실행이 만든 `eval/results/*` 는 커밋하지 않는다 — 측정 결과만 라벨을 붙여 남긴다)
+- 데모 점검: `bash scripts/kc_demo.sh --check`
+- 실호출 측정(`eval/kc.py stability`)은 비용이 있어 회귀에 넣지 않는다 — `eval/BASELINE.md` 절차대로 사람 승인 후
