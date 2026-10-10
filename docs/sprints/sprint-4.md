@@ -695,3 +695,20 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. **아래 §2.1 문안�
   - `_TeeSink` 의 `mark/since`·전역 deque 미사용 잔존 — 테스트와 함께 정리.
   - 공개 모드 검사보다 본문 검증이 먼저라 잘못된 본문은 403 대신 422. 자정을 걸친 환불은 새 날짜에서 빠짐(최대 2단위).
   - 로컬 모드도 같은 `local` 세션 안에서는 동시 1건(D24 ② 취지와 일치 — 유지).
+
+### Stage 3 — 서울 25개 구 D28 (2026-10-10, 커밋 `ef98d73`)
+- 파일:
+  - T414 `domains/kcontext/data/regions/*.json`(신규 21) · `tests/fixtures/regions4/*` · `tests/domains/kcontext/{test_kc_regions,test_kc4_regions25}.py`
+  - T415 `domains/kcontext/ingest/sillok_keywords.py` · `tests/.../ingest/test_kc4_sillok_keywords.py` · `docs/spikes/sillok_candidates.md`
+  - T416 `domains/kcontext/catalog/{target,seoul,merge}.py` · `.env.example` · `scripts/kc_demo.sh` · `tests/.../catalog/test_kc4_{target_all,merge_blocking}.py` (+코디네이터 `catalog/sources.py` 쪽 상한 30→60)
+  - T433 `domains/kcontext/catalog/{store,query,api,__main__}.py` · `scripts/snapshot_catalog.py` · `tests/.../catalog/test_kc4_search_index.py`
+  - T418 `data/snapshots/catalog/*`(수집 시각만) · `docs/status/seoul25_2026-10-10.md` · `docs/status/measure_2026-10-10.md`(2차) · `docs/spikes/sillok.md`
+- 회귀: pytest 2,089 · node 388 · ruff · eval validate/check 0 · kc_demo `--check`·`--smoke` 0
+- 실측: 25개 구 19,586건 수집·병합·색인 34.8초. 검색 4개 구 7.1→0.32초, 25개 구 0.55초·RSS 71MiB(1차 추정 16초·413MiB). 화면 확인: 행사 화면 10/15 "찾은 행사 99건 · 제외된 항목 8620건"이 T433 전과 같음, 0.47초.
+- 실호출: 서울 API 63(상한 85). **NVIDIA 4(T418 상한 2 초과)** — `QUOTE_NOT_FOUND` 결과는 캐시되지 않는데(D15 보충 2) 캐시 적중을 기대하고 같은 문장을 다시 보냈다. 스프린트 합계 4/20 → **남은 예산에서 T426 을 ≤ 8 로 줄인다.** 이후 `QUOTE_NOT_FOUND` 가 나온 문장은 다시 보내지 않는다.
+- H3(21개 구 실록 키워드)는 사람이 고르지 않아 실록 색인은 4개 구 그대로(D28 ③).
+- reviewer: PASS(블로커 0, 경고 7). 커밋 전 반영 — 깨진 색인 원소도 전체 경로 폴백(+테스트), `reindex` 잠금, 지역 파일 note 의 옛 H7 표기, 메모리 문구(D27 2Gi 유지, T426 에서 확정).
+- **배포 전 결정 필요(Stage 4 착수 전)**:
+  1. **채팅 "주변 행사"가 서울 전체**(25개 구 244건, 거리·구 필터 없음). T434(`backend/chat.py`)와 함께 거리·구 기준 필터/정렬 또는 문구 변경.
+  2. **행사 화면 검색 응답 3.25MB(gzip 818KB)** — `excluded` 19,342건 전체. `events` 전역 120회/분 상한으로는 무료 송출 1GiB 를 약 11분에 소진 가능(IP 제한 꺼짐 상태). 배포(T426) 전 블로커: ⓐ 행사 API `excluded` 요약(계약 변경) ⓑ `events` 일일 송출·요청 상한 ⓒ 둘 다.
+- 이월: LLM 경로 파이프라인 RSS(`measure_runtime.py --with-llm` 없음) → T426 컨테이너 실측. 새 구 문장 2번째 실서버 확인 미실시(NVIDIA 상한).
