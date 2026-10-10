@@ -11,9 +11,20 @@ import os
 from collections.abc import Collection, Mapping
 from pathlib import Path
 
-__all__ = ["ALLOWED_KEY_NAMES", "load_allowed_keys", "resolve_env"]
+__all__ = ["ALLOWED_KEY_NAMES", "DOTENV_PATH_ENV", "default_dotenv_path", "load_allowed_keys", "resolve_env"]
+
+DOTENV_PATH_ENV = "APP_DOTENV_PATH"  # 기본 `.env` 경로를 바꾼다(경로라 비밀이 아니다). 테스트는 존재하지 않는 경로로 돌린다.
 
 ALLOWED_KEY_NAMES = ("NVIDIA_API_KEY", "NVIDIA_API_KEY_A", "NVIDIA_API_KEY_B")
+
+
+def default_dotenv_path(repo_root: str | Path, *, environ: Mapping[str, str] | None = None) -> Path:
+    """기본 `.env` 경로. env ``APP_DOTENV_PATH`` 가 있으면 그것, 없으면 ``<repo_root>/.env``.
+
+    ``environ`` 에 없으면 프로세스 env 도 본다 — 호출자가 일부만 담은 매핑을 넘겨도 덮어쓰기(테스트 격리)가 빠지지 않게.
+    """
+    override = ((environ or {}).get(DOTENV_PATH_ENV, "") or os.environ.get(DOTENV_PATH_ENV, "")).strip()
+    return Path(override) if override else Path(repo_root) / ".env"
 
 
 def _unquote(raw: str) -> str:

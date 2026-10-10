@@ -55,6 +55,7 @@ def test_key_origin_reports_location_not_value(tmp_path):
 def test_status_lists_key_locations_but_no_values(tmp_path, monkeypatch):
     monkeypatch.setattr("domains.kcontext.catalog.envkeys.repo_root", lambda: tmp_path)
     write(tmp_path)
+    monkeypatch.delenv("APP_DOTENV_PATH", raising=False)  # 이 테스트는 자기 tmp 의 .env 를 쓴다
     for n in CATALOG_KEY_NAMES:
         monkeypatch.delenv(n, raising=False)
     out = catalog_status(CatalogStore(tmp_path / "cat"), load_sources())

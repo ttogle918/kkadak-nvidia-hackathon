@@ -12,16 +12,17 @@ import subprocess
 import sys
 from pathlib import Path
 
-from core.llm.envfile import load_allowed_keys
+from core.llm.envfile import default_dotenv_path, load_allowed_keys
 
 REPO_ROOT = Path(__file__).resolve().parents[1]
 _BASE_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "KC_TARGET_REGION", "KC_DATA_DIR",
              "KC_ROUTE_PROVIDER", "KC_OSM_ROUTER_URL")  # 마지막 둘은 비밀이 아닌 경로 설정
-# 수동 재수집에는 그 출처가 쓰는 키 하나만 넘긴다(다른 출처의 키·추론 키는 넘기지 않는다).
+# 수동 재수집에는 그 출처가 쓰는 키 하나만 넘긴다(다른 출처의 키·추론 키는 넘기지 않는다, D13 ⑨).
+# web_source 출처(junggu_site·gangnam_site 등)의 카탈로그 반영은 로컬 JSONL 만 읽고 검색·LLM 을 부르지 않으므로
+# 키를 넘기지 않는다 — 검색 수집기(web_run)는 호스트에서 사람이 따로 돌린다.
 _SOURCE_KEYS = {
     "seoul_openapi": ("SEOUL_OPENAPI_KEY",),
     "tourapi_kto": ("DATA_GO_KR_SERVICE_KEY",),
-    "junggu_site": ("TAVILY_SEARCH_KEY",),
 }
 TIMEOUTS = {"admin_refresh": 180}
 DEFAULT_TIMEOUT = 60
@@ -43,7 +44,7 @@ def run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None
         # 자식(APP_PROCESS_ROLE=agent)은 `.env` 를 읽지 않는다. 허용 밖 이름은 읽지도 않는다.
         wanted = _SOURCE_KEYS.get(str(args.get("source_id")), ())
         missing = [k for k in wanted if not os.environ.get(k, "").strip()]
-        dotenv = load_allowed_keys(REPO_ROOT / ".env", allowed=missing) if missing else {}
+        dotenv = load_allowed_keys(default_dotenv_path(REPO_ROOT), allowed=missing) if missing else {}
         for k in wanted:
             v = os.environ.get(k, "").strip() and os.environ[k] or dotenv.get(k)
             if v:

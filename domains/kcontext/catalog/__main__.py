@@ -1,7 +1,7 @@
 """행사 카탈로그 CLI (호스트 전용 — 공공데이터 키는 호스트 env 에서만 읽는다).
 
     python -m domains.kcontext.catalog update --source seoul_openapi [--sample]   # 한 출처 수집
-    python -m domains.kcontext.catalog update --source junggu_site [--web-events F]  # 검색 수집 JSONL → 카탈로그(D12)
+    python -m domains.kcontext.catalog update --source <web_source 가 있는 출처 id> [--web-events F]  # 검색 수집 JSONL → 카탈로그(D12)
     python -m domains.kcontext.catalog due                                         # 주기가 된 출처만
     python -m domains.kcontext.catalog loop --interval-min 30                      # 주기적 수집(스케줄러)
     python -m domains.kcontext.catalog status                                      # 수집·검토 현황 JSON
@@ -75,7 +75,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     u.add_argument("--source", required=True)
     u.add_argument("--sample", action="store_true")
     u.add_argument("--web-events", type=Path,
-                   help="junggu_site 전용: 검색 수집 결과 JSONL(기본 var/data/events/web.jsonl)")
+                   help="web_source 가 있는 출처 전용: 검색 수집 결과 JSONL(기본 var/data/events/web.<web_source>.jsonl)")
     sub.add_parser("due")
     lp = sub.add_parser("loop")
     lp.add_argument("--interval-min", type=float, default=30.0)
@@ -97,9 +97,10 @@ def main(argv: Sequence[str] | None = None) -> int:
                   file=sys.stderr)
             return 2
         fetchers = _fetchers(sources, region, now, env, sample=a.sample, web_events=a.web_events)
-        if a.source not in fetchers and a.source == "junggu_site":
-            print("junggu_site: 검색 수집 결과 JSONL 이 없다 — `python -m domains.kcontext.ingest.events --provider web "
-                  "--source junggu --month YYYY-MM --out var/data/events/web.jsonl --collected-at YYYY-MM-DD` 로 먼저 만들거나 "
+        web_id = next((x.get("web_source") for x in sources if x["id"] == a.source), None)
+        if a.source not in fetchers and web_id:
+            print(f"{a.source}: 검색 수집 결과 JSONL 이 없다 — `python -m domains.kcontext.ingest.events --provider web "
+                  f"--source {web_id} --month YYYY-MM --out var/data/events/web.{web_id}.jsonl --collected-at YYYY-MM-DD` 로 먼저 만들거나 "
                   "--web-events 로 경로를 준다", file=sys.stderr)
             return 2
         if a.source not in fetchers:

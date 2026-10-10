@@ -12,7 +12,7 @@ from core.llm.config import (
     resolve_backend,
     resolve_keys,
 )
-from core.llm.envfile import ALLOWED_KEY_NAMES, load_allowed_keys, resolve_env
+from core.llm.envfile import ALLOWED_KEY_NAMES, default_dotenv_path, load_allowed_keys, resolve_env
 from core.llm.http_transport import HttpxTransport
 from core.llm.pool import KeyLease, KeyPool
 
@@ -33,6 +33,7 @@ __all__ = [
     "Transport",
     "TransportResponse",
     "UnknownFeature",
+    "default_dotenv_path",
     "load_allowed_keys",
     "load_config",
     "parse_config",

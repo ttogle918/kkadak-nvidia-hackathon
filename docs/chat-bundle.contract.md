@@ -38,7 +38,7 @@ backend 는 `domains`·`mcp_server` 를 import 하지 않는다(D3·D10). 파이
  "itinerary": {"anchors": [{type: visit|hotel, name, day, from, to, lat, lng, source_quote}],
                "free_slots": [{day, from, to, near, inferred, assumption:{ko,en}}]},
  "mentions": kc-mention/v1  // anchors[].mentions[]: {article_id, king, date_label, title_summary, quote(한문 원문), lang:"orig", locator, url, tier, source{...}}; 행마다 excluded_count(int, 주입 검사로 뺀 수 — 근거 pick 칩의 값); 언급마다 `card_id`(문자열, 카드를 만든 언급에만) = 그 언급의 `cards[].card.id`(같은 기사가 두 앵커에 걸리면 `story_A`, `story_A_2`). 근거 키 = `"mention:" + card_id`. 프론트는 이 필드가 정확히 일치할 때만 찾는다(id 를 추정하지 않는다)
- "events": /api/events/search 응답 본문 그대로 {events, excluded, problems, coverage} | null (검색 불가 시 null + problems 에 EVENTS_UNAVAILABLE)
+ "events": /api/events/search 응답 {events, excluded, problems, coverage} | null. 단 묶음에서는 `excluded` 를 앞 20건 표본으로 줄이고 `excluded_total`(int, 원본 전체 개수)·`excluded_by_reason`({사유: 개수}, 상위 20개 사유)를 더한다. 근거 수치(funnel)는 줄이기 전 원본으로 센다. 줄였으면 problems 에 내부용 `EXCLUDED_SUMMARIZED`(화면에서 숨김 — 행사 자체는 다 보이므로 "일부만 보여요"가 아니다). 공개 `/api/events/search` 응답은 그대로 둔다 (검색 불가 시 null + problems 에 EVENTS_UNAVAILABLE)
  "cards": [{card, card_ready, missing}],   // card_ready=false 인 것은 화면이 '언급 기록' 간이 카드로 그린다
  "problems": [{code, message}], "coverage_note": "..."
 }

@@ -26,6 +26,8 @@ MAX_RATIONALE = 100
 MAX_CHIPS = 8
 MAX_ROWS = 12
 MAX_ITEMS = 20
+MAX_EXCLUDED = 20  # 묶음 events.excluded 표본 상한 — 개수는 excluded_total·excluded_by_reason 이 갖는다
+MAX_EXCLUDED_REASONS = 20
 CAP_TEXT = 300  # 프론트 CAP.text 와 같은 문자열 상한
 CAP_KEY = 120
 SCHEDULE_KEYS = frozenset({"source", "attempts", "model", "prompt_sha", "cache_created_at"})
@@ -465,10 +467,26 @@ def attach_events(bundle: dict[str, Any], trip: tuple[str, str] | None,
         if skip:
             _add_note(bundle, EVENTS_SKIPPED_NOTE)
     else:
-        bundle["events"] = res
-        er = event_rationale(res)
+        er = event_rationale(res)  # 개수는 줄이기 전 원본 전체로 센다
         if er:
             bundle["events_rationale"] = er
+        bundle["events"] = _shrink_excluded(res, bundle["problems"])
+
+
+def _shrink_excluded(res: dict[str, Any], problems: list[dict[str, str]]) -> dict[str, Any]:
+    """묶음용 events: excluded 를 앞 20건 표본으로 줄이고 excluded_total·excluded_by_reason(상위 20) 을 더한다. 원본은 건드리지 않는다."""
+    excl = res.get("excluded") if isinstance(res.get("excluded"), list) else []
+    reasons: dict[str, int] = {}
+    for x in excl:
+        if isinstance(x, dict) and isinstance(x.get("reason"), str):
+            k = x["reason"][:80]
+            reasons[k] = reasons.get(k, 0) + 1
+    top = sorted(reasons.items(), key=lambda kv: (-kv[1], kv[0]))[:MAX_EXCLUDED_REASONS]
+    out = {**res, "excluded": excl[:MAX_EXCLUDED], "excluded_total": len(excl),
+           "excluded_by_reason": dict(top)}
+    if len(excl) > MAX_EXCLUDED:
+        problems.append(_problem("EXCLUDED_SUMMARIZED", "제외 목록을 사유별 개수와 앞 20건으로 줄임"))  # 내부용 — 화면에서 숨김(행사 자체는 다 보인다)
+    return out
 
 
 def search_budget_s(elapsed_s: float, *, front_limit_s: float, margin_s: float) -> float | None:

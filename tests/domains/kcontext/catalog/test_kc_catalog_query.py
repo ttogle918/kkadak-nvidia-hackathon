@@ -194,3 +194,22 @@ def test_age_only_conditions_are_shown_but_do_not_decide_eligibility():
     assert p["status"] == "unverified" and any("연령 조건" in x for x in p["reasons"])
     r = search(obs("s:2", eligibility=parse_eligibility("회원 누구나")))
     assert r["events"][0]["participation"]["status"] == "restricted"
+
+
+# ---- D23: 종료일·회차 없이 1년 넘게 지난 행사 -----------------------------------------------------
+STALE = "종료일 정보가 없고 시작한 지 1년이 넘음"
+
+
+def test_d23_open_ended_boundary_365_kept_366_excluded():
+    r = search(obs("s:1", title="○○ 365일", start="2025-10-15", end=None),
+               obs("s:2", title="○○ 366일", start="2025-10-14", end=None, venue_name="△△"))
+    assert ids(r) == ["○○ 365일"] and why(r) == {"○○ 366일": STALE}
+
+
+def test_d23_end_date_or_sessions_or_missing_start_are_not_excluded():
+    r = search(obs("s:1", title="○○ 종료일", start="2021-01-01", end="2026-12-31"),
+               obs("s:2", title="○○ 회차", start="2021-01-01", end=None, venue_name="△△",
+                   sessions=(session("2026-10-16"),)),
+               obs("s:3", title="○○ 시작일없음", start=None, end=None, venue_name="□□"))
+    assert STALE not in why(r).values()
+    assert {"○○ 종료일", "○○ 회차"} <= set(ids(r))

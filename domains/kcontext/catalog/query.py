@@ -105,6 +105,10 @@ def event_reservation(e: EventEntry, now: datetime) -> str:
     return reservation_status(e.reservation, now)
 
 
+STALE_OPEN_ENDED_DAYS = 365
+STALE_OPEN_ENDED_REASON = "종료일 정보가 없고 시작한 지 1년이 넘음"
+
+
 def _matching_dates(e: EventEntry, trip_days: list[date]) -> list[dict]:
     out = []
     event_days = set(date_range_days(e.schedule.start_date, e.schedule.end_date))
@@ -167,6 +171,11 @@ def search_events(
             continue
         if not trip_days:
             drop("여행 날짜가 올바르지 않음")
+            continue
+        sc = e.schedule
+        if (sc.start_date and is_date(sc.start_date) and not sc.end_date and not sc.sessions
+                and (trip_days[0] - date.fromisoformat(sc.start_date)).days > STALE_OPEN_ENDED_DAYS):
+            drop(STALE_OPEN_ENDED_REASON)  # D23: 종료일·회차 없이 1년 넘게 지난 행사
             continue
         dates = _matching_dates(e, trip_days)
         if not dates:

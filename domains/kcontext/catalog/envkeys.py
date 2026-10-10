@@ -10,7 +10,7 @@ import os
 from collections.abc import Collection, Mapping
 from pathlib import Path
 
-from core.llm.envfile import load_allowed_keys
+from core.llm.envfile import default_dotenv_path, load_allowed_keys
 from domains.kcontext.paths import repo_root
 
 __all__ = ["CATALOG_KEY_NAMES", "key_origin", "resolve_catalog_env"]
@@ -30,7 +30,7 @@ def resolve_catalog_env(
     out = {n: src[n] for n in names if src.get(n, "").strip()}
     missing = [n for n in names if n not in out]
     if missing and src.get("APP_PROCESS_ROLE") != "agent":  # 에이전트 역할 프로세스는 .env 를 읽지 않는다(D13⑨)
-        path = dotenv_path if dotenv_path is not None else repo_root() / ".env"
+        path = dotenv_path if dotenv_path is not None else default_dotenv_path(repo_root())
         out.update(load_allowed_keys(path, allowed=missing))
     return out
 
@@ -46,5 +46,5 @@ def key_origin(
         return "shell"
     if src.get("APP_PROCESS_ROLE") == "agent":
         return "missing"
-    path = dotenv_path if dotenv_path is not None else repo_root() / ".env"
+    path = dotenv_path if dotenv_path is not None else default_dotenv_path(repo_root())
     return "dotenv" if name in load_allowed_keys(path, allowed=(name,)) else "missing"

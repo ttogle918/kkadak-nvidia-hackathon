@@ -7,9 +7,9 @@
     "status": "implemented",
     "cadence_hours": 24,
     "env_keys": ["SEOUL_OPENAPI_KEY"],
-    "verified_at": "2026-10-07",
+    "verified_at": "2026-10-10",
     "license": "공공누리 1유형(출처표시)",
-    "notes": "공식 가이드 확인: http://openapi.seoul.go.kr:8088/{키}/json/culturalEventInfo/{시작}/{끝}/, 1회 최대 1000행, sample 키는 5행까지. 갱신주기 '매일1회'. 일일 호출 한도는 데이터셋 페이지에 적혀 있지 않다 [확인 필요]. 행 필드의 GUNAME 은 출처가 준 자치구이며 개최 장소 판정의 근거로 쓴다."
+    "notes": "공식 가이드 확인: http://openapi.seoul.go.kr:8088/{키}/json/culturalEventInfo/{시작}/{끝}/, 1회 최대 1000행, sample 키는 5행까지. 갱신주기 '매일1회'. 일일 호출 한도는 데이터셋 페이지에 적혀 있지 않다 [확인 필요]. 행 필드의 GUNAME 은 출처가 준 자치구이며 개최 장소 판정의 근거로 쓴다. 2026-10-10 실행 확인: 4개 구(중·종로·마포·강남) 1회 호출로 8712행 수집, 오류 없음."
   },
   {
     "id": "tourapi_kto",
@@ -31,9 +31,23 @@
     "status": "partial",
     "cadence_hours": 24,
     "env_keys": ["TAVILY_SEARCH_KEY", "TAVILY_API_KEY"],
-    "verified_at": "2026-10-07",
+    "web_source": "junggu",
+    "verified_at": "2026-10-10",
     "license": "확인 필요",
-    "notes": "D12: Tavily 검색으로 공식 도메인에서 후보를 찾고 LLM(core.llm chat 설정)이 추출한다. 2단계다 — ① 호스트 수집기(python -m domains.kcontext.ingest.events --provider web --source junggu ...)가 var/data/events/web.jsonl 을 쓰고(키는 TAVILY_SEARCH_KEY, 없으면 별칭 TAVILY_API_KEY), ② catalog update --source junggu_site 가 그 파일을 읽어 관찰값으로 넣는다(이 단계는 검색·LLM 을 부르지 않는다). 출처 등급 C(ai_extracted)·'검색 수집 · 미확인' 표시 — 예약·언어·참여조건을 채우지 않고 독립 출처로 세지 않으며, 장소가 서울 ○○구로 확인되지 않으면 대상 지역 미확인이라 검색 목록이 아닌 관리자 검토 대기로 간다. 주기 실행은 아니다(수집기를 사람이 돌린다, 호출 한도·약관 미확인) — 그래서 partial. 보도자료 게시판은 /content.do?cmsid=14390. robots.txt 는 /content.do?cmsid=14232 와 /search 만 차단한다."
+    "notes": "D12: Tavily 검색으로 공식 도메인에서 후보를 찾고 LLM(core.llm chat 설정)이 추출한다. 2단계다 — ① 호스트 수집기(python -m domains.kcontext.ingest.events --provider web --source junggu ...)가 var/data/events/web.junggu.jsonl 을 쓰고(예전 web.jsonl 도 읽음)(키는 TAVILY_SEARCH_KEY, 없으면 별칭 TAVILY_API_KEY), ② catalog update --source junggu_site 가 그 파일을 읽어 관찰값으로 넣는다(이 단계는 검색·LLM 을 부르지 않는다). 출처 등급 C(ai_extracted)·'검색 수집 · 미확인' 표시 — 예약·언어·참여조건을 채우지 않고 독립 출처로 세지 않으며, 장소가 서울 ○○구로 확인되지 않으면 대상 지역 미확인이라 검색 목록이 아닌 관리자 검토 대기로 간다. 주기 실행은 아니다(수집기를 사람이 돌린다, 호출 한도·약관 미확인) — 그래서 partial. 보도자료 게시판은 /content.do?cmsid=14390. robots.txt 는 /content.do?cmsid=14232 와 /search 만 차단한다. 2026-10-10 실행 확인: 2026-10 검색 수집 후보 10·레코드 4(검색 3회, LLM 호출 실패 3건)를 카탈로그에 4건 반영. 레코드에 기간이 없어 날짜 질의에 잡히지 않는다."
+  },
+  {
+    "id": "gangnam_site",
+    "name": "강남구청 홈페이지·강남페스티벌(검색 수집)",
+    "url": "https://www.gangnam.go.kr/",
+    "method": "search",
+    "status": "partial",
+    "cadence_hours": 24,
+    "env_keys": ["TAVILY_SEARCH_KEY", "TAVILY_API_KEY"],
+    "web_source": "gangnam",
+    "verified_at": "2026-10-10",
+    "license": "확인 필요",
+    "notes": "D12: junggu_site 와 같은 2단계다 — ① 호스트 수집기(python -m domains.kcontext.ingest.events.web_run --source gangnam --month YYYY-MM --out var/data/events/web.gangnam.jsonl ...)가 파일을 쓰고(키는 TAVILY_SEARCH_KEY, 없으면 별칭 TAVILY_API_KEY), ② catalog update --source gangnam_site 가 그 파일을 읽어 관찰값으로 넣는다(검색·LLM 을 부르지 않는다). 수집기는 레코드의 지역을 하나만 쓰므로 이 출처는 data/web_sources/gangnam.json 의 지역 레코드만 받는다. 출처 등급 C(ai_extracted)·'검색 수집 · 미확인' 표시, 장소가 대상 구로 확인되지 않으면 관리자 검토 대기. 주기 실행은 아니다(수집기를 사람이 돌린다) — 그래서 partial. 서울 열린데이터광장 API 는 GUNAME 으로 이 지역도 덮으므로 이 출처는 보조다. 2026-10-10 실행 확인: 2026-10 검색 수집 후보 10·레코드 3(검색 2회)을 카탈로그에 3건 반영. 레코드에 기간이 없다."
   },
   {
     "id": "junggu_sns",

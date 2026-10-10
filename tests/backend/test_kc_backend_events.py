@@ -230,11 +230,14 @@ def test_runner_passes_only_that_sources_key_and_only_for_manual_refresh(monkeyp
     run_catalog(tmp_path, "search", {})
     run_catalog(tmp_path, "admin_refresh", {"source_id": "seoul_openapi"}, "human:demo")
     run_catalog(tmp_path, "admin_refresh", {"source_id": "caci"}, "human:demo")
-    search_env, seoul_env, manual_env = seen
+    run_catalog(tmp_path, "admin_refresh", {"source_id": "junggu_site"}, "human:demo")
+    run_catalog(tmp_path, "admin_refresh", {"source_id": "gangnam_site"}, "human:demo")
+    search_env, seoul_env, manual_env, *web_envs = seen
     keys = {"SEOUL_OPENAPI_KEY", "TAVILY_SEARCH_KEY", "DATA_GO_KR_SERVICE_KEY", "NVIDIA_API_KEY"}
     assert not keys & set(search_env)  # 일반 요청에는 어떤 키도 넘기지 않는다
     assert keys & set(seoul_env) == {"SEOUL_OPENAPI_KEY"}  # 그 출처의 키 하나만
     assert not keys & set(manual_env)  # 자동 수집이 없는 출처에는 키가 없다
+    assert all(not keys & set(e) for e in web_envs)  # 검색 수집 출처의 반영은 로컬 파일만 — 검색 키를 넘기지 않는다(D13 ⑨)
     assert all(e["APP_PROCESS_ROLE"] == "agent" for e in seen)
 
 
@@ -298,6 +301,7 @@ def test_child_process_never_reads_dotenv(monkeypatch, tmp_path):
     (tmp_path / ".env").write_text("SEOUL_OPENAPI_KEY=from-dotenv-1234\nNVIDIA_API_KEY=nv-secret-9999\nTAVILY_SEARCH_KEY=tv-secret\n",
                                    encoding="utf-8")
     monkeypatch.setattr(catalog_runner, "REPO_ROOT", tmp_path)
+    monkeypatch.delenv("APP_DOTENV_PATH", raising=False)  # 이 테스트는 자기 tmp 의 .env 를 쓴다
     for k in ("SEOUL_OPENAPI_KEY", "NVIDIA_API_KEY", "TAVILY_SEARCH_KEY", "DATA_GO_KR_SERVICE_KEY"):
         monkeypatch.delenv(k, raising=False)
     seen = []

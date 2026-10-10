@@ -32,11 +32,18 @@ _LABEL = "(검색 수집)"
 _LABEL_UNCONFIRMED = "(검색 수집 · 미확인)"
 
 
-def default_events_file() -> Path:
-    return var_dir() / "data" / "events" / "web.jsonl"
+def default_events_file(web_source_id: str | None = None) -> Path:
+    """수집기 출력 위치. 출처 id 가 있으면 ``web.<id>.jsonl``, 그 파일이 없고 예전 ``web.jsonl`` 이 있으면 그것(호환)."""
+    base = var_dir() / "data" / "events"
+    if web_source_id is None:
+        return base / "web.jsonl"
+    own = base / f"web.{web_source_id}.jsonl"
+    legacy = base / "web.jsonl"
+    return legacy if (not own.is_file() and legacy.is_file()) else own
 
 
-def observation_from_record(r: EventRecord, *, region: Region, places=None) -> Observation | None:
+def observation_from_record(r: EventRecord, *, region: Region, places=None,
+                            source_id: str = SOURCE_ID) -> Observation | None:
     if r.fetched_from != "web" or r.synthetic:
         return None
     title = norm_text(pick(r.title, "ko") or "")
@@ -58,7 +65,7 @@ def observation_from_record(r: EventRecord, *, region: Region, places=None) -> O
         venue=venue,
         schedule=Schedule(start_date=r.start_date, end_date=r.end_date),
         evidence=Evidence(
-            source_id=SOURCE_ID, source_name=name, kind="ai_extracted", url=s.url, quote=s.quote,
+            source_id=source_id, source_name=name, kind="ai_extracted", url=s.url, quote=s.quote,
             origin=s.id, collected_at=s.collected_at, published_at=s.published, ai_extracted=True,
             location=s.locator,  # 게시일·수집일과 "날짜 게시일 기준 추정" 표시가 여기로 나간다
         ),
@@ -66,7 +73,10 @@ def observation_from_record(r: EventRecord, *, region: Region, places=None) -> O
     )
 
 
-def observations_from_records(records: Iterable[EventRecord], *, region: Region) -> list[Observation]:
+def observations_from_records(records: Iterable[EventRecord], *, region: Region,
+                              source_id: str = SOURCE_ID,
+                              only_region: str | None = None) -> list[Observation]:
+    """``only_region`` 이 있으면 그 지역 레코드만(출처 하나가 지역 하나를 맡을 때)."""
     try:
         places = load_places()
     except Exception:  # noqa: BLE001 - 좌표 사전이 없거나 깨져도 좌표만 비운다
@@ -75,17 +85,21 @@ def observations_from_records(records: Iterable[EventRecord], *, region: Region)
     for r in records:
         if r.region not in region_ids(region):
             continue
-        o = observation_from_record(r, region=region, places=places)
+        if only_region is not None and r.region != only_region:
+            continue
+        o = observation_from_record(r, region=region, places=places, source_id=source_id)
         if o is not None:
             out.append(o)
     return out
 
 
-def make_web_fetcher(path: Path | None, *, region: Region) -> Callable[[], list[Observation]]:
+def make_web_fetcher(path: Path | None, *, region: Region, source_id: str = SOURCE_ID,
+                     only_region: str | None = None) -> Callable[[], list[Observation]]:
     """수집기가 쓴 JSONL 을 읽는 수집 함수. 계약에 어긋나는 줄이 있으면 예외 → 실행 기록에 실패로 남고 기존 데이터는 그대로."""
     p = Path(path) if path is not None else default_events_file()
 
     def fetch() -> list[Observation]:
-        return observations_from_records(read_jsonl(p), region=region)
+        return observations_from_records(read_jsonl(p), region=region, source_id=source_id,
+                                         only_region=only_region)
 
     return fetch

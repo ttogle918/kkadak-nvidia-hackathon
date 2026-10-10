@@ -2095,6 +2095,178 @@
       ]
     },
     {
+      "id": "trap_stale_open_ended",
+      "trap": "종료일·회차 없이 시작한 지 1년이 넘음(D23)",
+      "synthetic": true,
+      "now": "2026-10-07T12:00:00+09:00",
+      "observations": [
+        {
+          "obs_id": "o_st_a",
+          "title": "○○ 오래된 행사",
+          "title_en": "",
+          "description": "○○ 합성 행사 설명",
+          "event_type": "○○ 공연",
+          "organizer": "○○ 문화재단",
+          "operator": "",
+          "venue": {
+            "name": "○○ 공연장",
+            "address": "○○구 ○○로 1",
+            "lat": null,
+            "lng": null,
+            "district": "○○구",
+            "district_basis": "source_gu",
+            "in_target": "yes"
+          },
+          "schedule": {
+            "start_date": "2024-03-01",
+            "end_date": null,
+            "sessions": [],
+            "weekly_closed_days": [],
+            "closed_dates": [],
+            "holiday_rule": "",
+            "entry_cutoff": "",
+            "hours_text": "",
+            "timezone": "Asia/Seoul"
+          },
+          "price": {
+            "kind": "unknown",
+            "text": ""
+          },
+          "reservation": {
+            "required": "unknown",
+            "link": "",
+            "deadline": null,
+            "status": "unknown",
+            "note": ""
+          },
+          "eligibility": {
+            "audience": "",
+            "restrictions": [],
+            "resident_only": "unknown",
+            "age_limit": "",
+            "foreigner": "unknown",
+            "stated_open": "unknown"
+          },
+          "language": {
+            "languages": [],
+            "english_guidance": "unknown",
+            "english_subtitles": "unknown",
+            "site_english_page": "unknown"
+          },
+          "lifecycle": "unknown",
+          "external_ids": [],
+          "evidence": {
+            "source_id": "synthetic_○○",
+            "source_name": "○○ 합성 출처",
+            "kind": "official_api",
+            "url": "",
+            "quote": "○○ 합성 근거(예시)",
+            "origin": "synthetic#o_st_a",
+            "collected_at": "2026-10-07",
+            "published_at": null,
+            "ai_extracted": false,
+            "location": null
+          },
+          "published_at": null,
+          "modified_at": null,
+          "demo": false
+        },
+        {
+          "obs_id": "o_st_b",
+          "title": "○○ 최근 시작 행사",
+          "title_en": "",
+          "description": "○○ 합성 행사 설명",
+          "event_type": "○○ 공연",
+          "organizer": "○○ 문화재단",
+          "operator": "",
+          "venue": {
+            "name": "○○ 다른 공연장",
+            "address": "○○구 ○○로 1",
+            "lat": null,
+            "lng": null,
+            "district": "○○구",
+            "district_basis": "source_gu",
+            "in_target": "yes"
+          },
+          "schedule": {
+            "start_date": "2026-06-01",
+            "end_date": null,
+            "sessions": [],
+            "weekly_closed_days": [],
+            "closed_dates": [],
+            "holiday_rule": "",
+            "entry_cutoff": "",
+            "hours_text": "",
+            "timezone": "Asia/Seoul"
+          },
+          "price": {
+            "kind": "unknown",
+            "text": ""
+          },
+          "reservation": {
+            "required": "unknown",
+            "link": "",
+            "deadline": null,
+            "status": "unknown",
+            "note": ""
+          },
+          "eligibility": {
+            "audience": "",
+            "restrictions": [],
+            "resident_only": "unknown",
+            "age_limit": "",
+            "foreigner": "unknown",
+            "stated_open": "unknown"
+          },
+          "language": {
+            "languages": [],
+            "english_guidance": "unknown",
+            "english_subtitles": "unknown",
+            "site_english_page": "unknown"
+          },
+          "lifecycle": "unknown",
+          "external_ids": [],
+          "evidence": {
+            "source_id": "synthetic_○○",
+            "source_name": "○○ 합성 출처",
+            "kind": "official_api",
+            "url": "",
+            "quote": "○○ 합성 근거(예시)",
+            "origin": "synthetic#o_st_b",
+            "collected_at": "2026-10-07",
+            "published_at": null,
+            "ai_extracted": false,
+            "location": null
+          },
+          "published_at": null,
+          "modified_at": null,
+          "demo": false
+        }
+      ],
+      "request": {
+        "trip": {
+          "from": "2026-10-10",
+          "to": "2026-10-12"
+        },
+        "interests": []
+      },
+      "expect": {
+        "listed": [
+          "○○ 최근 시작 행사"
+        ],
+        "excluded": {
+          "○○ 오래된 행사": "종료일 정보가 없고 시작한 지 1년이 넘음"
+        },
+        "unresolved_conflict_fields": {},
+        "entry_count": 2
+      },
+      "tags": [
+        "d13",
+        "dates",
+        "stale"
+      ]
+    },
+    {
       "id": "trap_interest_mismatch",
       "trap": "관심사 필수인데 맞지 않음",
       "synthetic": true,

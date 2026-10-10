@@ -41,6 +41,7 @@ from core.llm import (
     LlmConfig,
     LlmConfigError,
     Transport,
+    default_dotenv_path,
     load_config,
     resolve_env,
 )
@@ -50,7 +51,6 @@ MAX_TEXT_CHARS = 2000
 CONTEXT_TURNS = 10  # LLM 에 보내는 최근 대화 상한(사용자·답 한 쌍 = 1턴, 즉 최대 20개 메시지)
 MAX_STORED = 200  # 프로세스 메모리에 보관하는 메시지 상한
 CONFIG_PATH = REPO_ROOT / "deploy" / "llm.chat.yaml"
-DOTENV_PATH = REPO_ROOT / ".env"
 
 # 챗봇 최소판은 근거(색인) 없이 모델 기억만으로 답한다. 그래서 환각 억제는 프롬프트로 하고(B2 보수안),
 # 정상 답 끝에는 서버가 고정 문구를 붙여 '출처 없는 일반 안내'임을 사용자에게 알린다.
@@ -193,7 +193,7 @@ class ChatService:
         self._config_path = config_path or CONFIG_PATH
         self._t_llm: float | None = None
         self._search_timeout_s: float | None = None  # 행사 검색 한도(W5) — _story 가 호출 직전에 정한다
-        self._dotenv = dotenv_path or DOTENV_PATH
+        self._dotenv = dotenv_path or default_dotenv_path(REPO_ROOT)
         self._client: LlmClient | None = None
         self._run_id = f"backend-chat-{uuid.uuid4().hex[:8]}"  # 파일 stem = run_id, 재시작 충돌 방지
         self._sink = _TeeSink(JsonlSink(settings.audit_dir / f"{self._run_id}.jsonl"))

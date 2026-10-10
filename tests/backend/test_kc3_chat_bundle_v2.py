@@ -261,6 +261,30 @@ def test_attach_events_skip_does_not_search_and_notes_coverage():
     assert EVENTS_SKIPPED_NOTE in b["coverage_note"] and b["coverage_note"].startswith("n ")
 
 
+def test_attach_events_shrinks_excluded_but_keeps_counts():
+    excl = [{"id": f"x{i}", "title": "t", "reason": "이미 끝남" if i % 3 else "범위 밖"} for i in range(500)]
+    res = {**result(event()), "excluded": excl}
+    b = clean_bundle(base())
+    attach_events(b, None, lambda a: res)
+    ev = b["events"]
+    assert len(ev["excluded"]) == 20 and ev["excluded"] == excl[:20]
+    assert ev["excluded_total"] == 500
+    assert sum(ev["excluded_by_reason"].values()) == 500 and len(ev["excluded_by_reason"]) <= 20
+    assert len(res["excluded"]) == 500  # 원본 불변
+    assert "EXCLUDED_SUMMARIZED" in codes(b) and "TRUNCATED" not in codes(b)
+    funnel = b["events_rationale"]["event:e1"]["items"]["funnel"]
+    assert funnel["title"]["ko"] == "수집 501건 중 1건 남김"
+    assert {r["k"]["ko"]: r["v"]["ko"] for r in funnel["rows"]} == {
+        k: str(v) for k, v in ev["excluded_by_reason"].items()}
+
+
+def test_attach_events_few_excluded_no_truncated():
+    res = {**result(event()), "excluded": [{"id": "x", "title": "t", "reason": "r"}]}
+    b = clean_bundle(base())
+    attach_events(b, None, lambda a: res)
+    assert b["events"]["excluded_total"] == 1 and "TRUNCATED" not in codes(b) and "EXCLUDED_SUMMARIZED" not in codes(b)
+
+
 # ---- W5 예산 ----------------------------------------------------------------------------
 def test_search_budget_function():
     f = {"front_limit_s": 100, "margin_s": 5}

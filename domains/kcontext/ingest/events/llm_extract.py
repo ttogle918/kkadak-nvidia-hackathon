@@ -20,6 +20,7 @@ from core.llm import (
     HttpxTransport,
     LlmClient,
     LlmConfig,
+    default_dotenv_path,
     load_config,
     resolve_env,
 )
@@ -55,7 +56,7 @@ def make_extractor_factory(
     """``extractor_for(candidate)`` 를 만든다. 설정·키 문제는 여기서(첫 호출 전에) 예외로 드러난다."""
     if client is None:
         root = repo_root()
-        env = resolve_env(root / ".env", environ=environ)
+        env = resolve_env(default_dotenv_path(root, environ=environ), environ=environ)
         cfg = load_config(config_path or root / "deploy" / "llm.chat.yaml", env)
         model = ((environ if environ is not None else os.environ).get("CHAT_MODEL") or "").strip()
         if model:

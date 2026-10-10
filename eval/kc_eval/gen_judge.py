@@ -157,6 +157,11 @@ def build_cases() -> list[dict[str, Any]]:
         normal("o_dt_b", "○○ 가을 음악회", venue="○○ 다른 야외무대", address="○○구 ○○로 99",
                kind="press"),
     ], {"listed": ["○○ 가을 음악회", "○○ 가을 음악회"], "entry_count": 2}, ["dedup"]))
+    c.append(case("trap_stale_open_ended", "종료일·회차 없이 시작한 지 1년이 넘음(D23)", [
+        normal("o_st_a", "○○ 오래된 행사", start="2024-03-01", end=None),
+        normal("o_st_b", "○○ 최근 시작 행사", start="2026-06-01", end=None, venue="○○ 다른 공연장"),
+    ], {"listed": ["○○ 최근 시작 행사"], "excluded": {"○○ 오래된 행사": "종료일 정보가 없고 시작한 지 1년이 넘음"},
+        "entry_count": 2}, ["dates", "stale"]))
     c.append(case("trap_interest_mismatch", "관심사 필수인데 맞지 않음", [
         normal("o_in_a", "○○ 가을 음악회", description="○○ 클래식 연주"),
         normal("o_in_b", "○○ 사진 전시", description="○○ 사진 작품"),

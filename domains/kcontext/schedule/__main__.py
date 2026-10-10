@@ -25,6 +25,7 @@ from core.llm import (
     LlmClient,
     LlmConfig,
     LlmError,
+    default_dotenv_path,
     load_config,
     resolve_env,
 )
@@ -44,7 +45,7 @@ def _fail(msg: str) -> int:
 
 def _make_complete():
     root = repo_root()
-    env = resolve_env(root / ".env")
+    env = resolve_env(default_dotenv_path(root))
     cfg = load_config(root / "deploy" / "llm.chat.yaml", env)
     feature = FEATURE if FEATURE in cfg.features else FALLBACK_FEATURE
     model = (os.environ.get("SCHEDULE_MODEL") or os.environ.get("CHAT_MODEL") or "").strip()

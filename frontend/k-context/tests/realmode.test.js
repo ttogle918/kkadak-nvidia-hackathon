@@ -375,7 +375,7 @@ test('문제 코드: 코드별 고정 문구(ko), 내부 동작 코드는 목록
     assert.doesNotMatch(en(line.key, line.params), /[가-힣]/, `${code} en 문구에 한글 없음`);
   }
   const hidden = HIDDEN_PROBLEM_CODES.map((code) => ({ code, message: '1회차 QUOTE_NOT_FOUND 후 재시도' }));
-  assert.deepEqual(HIDDEN_PROBLEM_CODES.sort(), ['CACHE_UNAVAILABLE', 'LLM_RETRY', 'RETRY_SKIPPED_BUDGET']);
+  assert.deepEqual(HIDDEN_PROBLEM_CODES.sort(), ['CACHE_UNAVAILABLE', 'EXCLUDED_SUMMARIZED', 'LLM_RETRY', 'RETRY_SKIPPED_BUDGET']);
   assert.deepEqual(problemLines({ problems: hidden }), []);
   // 서버 message 원문(내부 문구)은 어떤 줄에도 들어가지 않는다
   const lines = problemLines({ problems: [

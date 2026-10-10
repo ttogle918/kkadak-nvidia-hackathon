@@ -264,7 +264,8 @@ def test_schedule_message_returns_bundle(make):
     assert r.status_code == 200
     body = r.json()
     assert body["bundle"]["schema"] == "kc-chat-bundle/v1" and body["bundle"]["status"] == "ok"
-    assert body["bundle"]["events"] == {"events": [], "excluded": [], "problems": [], "coverage": {}}
+    assert body["bundle"]["events"] == {"events": [], "excluded": [], "problems": [], "coverage": {},
+                                       "excluded_total": 0, "excluded_by_reason": {}}
     assert body["reply"]["text"]["ko"].startswith("일정 2개를 정리했어요.") and set(body["reply"]["text"]) == {"ko", "en"}
     assert t.calls == []  # LLM(일반 챗봇)은 부르지 않았다
     assert calls["story"][0][1] == ("2026-10-15", "2026-10-16")

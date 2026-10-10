@@ -169,7 +169,7 @@ const PROBLEM_KEYS = {
 const MENTION_KEY = `${K}mention`;
 const GENERIC_KEY = `${K}generic`;
 /** 사용자에게 보이지 않는 내부 동작 코드(재시도·캐시). */
-export const HIDDEN_PROBLEM_CODES = ['LLM_RETRY', 'RETRY_SKIPPED_BUDGET', 'CACHE_UNAVAILABLE'];
+export const HIDDEN_PROBLEM_CODES = ['LLM_RETRY', 'RETRY_SKIPPED_BUDGET', 'CACHE_UNAVAILABLE', 'EXCLUDED_SUMMARIZED'];
 /** 장소 이름을 붙일 수 있는 코드(이름 키는 `.named`). */
 const NAMED = new Set(['COORD_UNKNOWN', 'NAME_PARTICLE_STRIPPED', 'OVERLAP']);
 
