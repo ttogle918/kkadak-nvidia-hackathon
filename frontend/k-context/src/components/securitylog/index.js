@@ -2,7 +2,7 @@
 // 쓰기 규칙: actions.decide(id, decision) 는 아래 클릭 핸들러(사람이 누른 버튼)에서만 부른다. 신원 인자는 없다 — 서버가 채운다.
 import { h, on, render } from '../../lib/dom.js';
 import { logRowNode } from './log-row.js';
-import { DECISIONS, canDecide, countByKind } from './logic.js';
+import { DECISIONS, canDecide, countByKind, sortNewestFirst } from './logic.js';
 
 /**
  * @param {HTMLElement} root app-shell 이 준 슬롯 div
@@ -28,10 +28,10 @@ export function mount(root, ctx) {
         pending > 0 ? h('span', { class: 'securitylog__pending' }, t('securitylog.pending_count', { n: pending })) : null,
         h('span', { class: 'securitylog__live' }, h('i', { class: 'securitylog__dot', 'aria-hidden': 'true' }), t('securitylog.live'))),
       open ? h('ul', { class: 'securitylog__list', role: 'log', 'aria-live': 'polite', 'aria-label': t('securitylog.list_label') },
-        s.logs.map((entry) => logRowNode({ entry, t, busy: busy.has(entry.id), error: errors.get(entry.id) ?? null }))) : null,
+        sortNewestFirst(s.logs).map((entry) => logRowNode({ entry, t, busy: busy.has(entry.id), error: errors.get(entry.id) ?? null }))) : null,
       open ? h('p', { class: 'securitylog__note' }, t('securitylog.note')) : null));
-    // 새 로그가 오면 맨 아래로 — 스크롤하는 건 슬롯(root)이다
-    if (open && s.logs.length !== lastCount) root.scrollTop = root.scrollHeight;
+    // 새 로그가 오면 — 날짜(at) 있는 서버 기록은 최신이 위(맨 위로), 없는 예시 기록은 기존대로 맨 아래로. 스크롤하는 건 슬롯(root)이다
+    if (open && s.logs.length !== lastCount) root.scrollTop = s.logs.some((l) => l.at) ? 0 : root.scrollHeight;
     lastCount = s.logs.length;
   }
 

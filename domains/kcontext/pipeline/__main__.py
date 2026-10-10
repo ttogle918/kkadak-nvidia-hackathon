@@ -29,7 +29,7 @@ from domains.kcontext.schedule.__main__ import (
     make_lazy_complete,
 )
 from domains.kcontext.schedule.cache import cache_enabled, default_root
-from domains.kcontext.schedule.understand import MAX_TEXT_CHARS
+from domains.kcontext.schedule.understand import MAX_TEXT_CHARS, kst_today
 from domains.kcontext.story.finder import DEFAULT_LIMIT
 
 from .run import BundleExistsError, run_story_pipeline, summarize, write_bundle
@@ -100,6 +100,7 @@ def main(argv: Sequence[str] | None = None) -> int:
         return _fail(f"LLM 을 쓸 수 없다(키·설정 확인): {type(e).__name__}")
     trip = (a.trip_from, a.trip_to) if a.trip_from else None
     cache = ScheduleCache(default_root()) if cache_enabled() else None
+    today = kst_today()  # 캐시 키와 해석이 같은 날짜를 쓴다(자정 경계)
     try:
         bundle = run_story_pipeline(
             text,
@@ -114,7 +115,8 @@ def main(argv: Sequence[str] | None = None) -> int:
             retry_unverified=_on("KC_SCHEDULE_RETRY_UNVERIFIED"),
             retry_partial=not _env_off("KC_SCHEDULE_RETRY_PARTIAL"),
             cache=cache,
-            cache_key=key_for(text, trip) if cache is not None else None,
+            today=today,
+            cache_key=key_for(text, trip, today=today) if cache is not None else None,
         )
         write_bundle(bundle, a.out, force=a.force)
     except BundleExistsError as e:

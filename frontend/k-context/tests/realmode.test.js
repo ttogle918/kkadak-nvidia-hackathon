@@ -116,7 +116,7 @@ test('실제 모드 api: 예시 없음 — itinerary·routes·cards·sources 는
   assert.equal(calls.length, 0);
 });
 
-test('GET /audit: 서버 항목만 받고, 모양이 틀린 항목은 버리며, 서버 전용 필드(origin·at)는 화면 값에 남기지 않는다', async () => {
+test('GET /audit: 서버 항목만 받고, 모양이 틀린 항목은 버리며, 서버 전용 필드(origin)는 화면 값에 남기지 않고, at 은 검증 후 보존한다', async () => {
   const calls = fakeFetch({ 'GET /audit': [...AUDIT, { id: 5 }, { id: 'x', time: 't', kind: 'weird', text: 'a' }, null, { id: 'y', time: 't', kind: 'ok', text: { ko: 1, en: 2 } }] });
   const logs = await createHttpApi({ baseUrl: BASE }).getAuditLog();
   assert.deepEqual(calls.map((c) => `${c.method} ${c.url}`), [`GET ${BASE}/audit`]);
@@ -169,7 +169,7 @@ test('실제 모드 첫 화면(묶음 없음): MOCK 딱지 0, 빈 상태 문구,
   assert.equal(api.calls.includes('getCard') || api.calls.includes('getRationale'), false);
   // 보안 로그: 서버 기록(audit:, draft:)만, 예시 log_ 없음
   assert.deepEqual(store.getState().logs.map((l) => l.id), ['audit:run1:3', 'draft:abc']);
-  assert.deepEqual(rows(sl).map((e) => e.dataset.id), ['audit:run1:3', 'draft:abc']);
+  assert.deepEqual(rows(sl).map((e) => e.dataset.id), ['draft:abc', 'audit:run1:3']); // T406: 최신 우선(at 내림차순)
   assert.equal(innerHtmlWrites, 0);
 });
 

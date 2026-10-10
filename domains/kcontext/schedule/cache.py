@@ -2,7 +2,8 @@
 
 파일에는 이해 결과 dict 와 meta·생성 시각만 넣는다. 입력 전문은 넣지 않는다. 검증된 quote 조각(≤200자)·문제 메시지는
 이해 결과에 포함된다. LLM 원문 응답·키는 넣지 않는다(규칙 1).
-키는 해시 하나다: 정규화한 글·여행 기간·프롬프트 해시·LLM 설정 파일 바이트 해시·모델 덮어쓰기 env.
+키는 해시 하나다: 정규화한 글·여행 기간·(여행 기간이 없거나 유효하지 않으면) 오늘(KST)·`LLM_BACKEND*` 값·
+프롬프트 해시·LLM 설정 파일 바이트 해시·모델 덮어쓰기 env(`SCHEDULE_MODEL`·`CHAT_MODEL`).
 """
 
 from __future__ import annotations
@@ -19,14 +20,14 @@ from typing import Any
 
 from domains.kcontext.paths import repo_root, var_dir
 
-from .understand import PROMPT_SHA, kst_today
+from .understand import MAX_TRIP_DAYS, PROMPT_SHA, _iso_date, kst_today
 
 __all__ = ["CACHE_ENV", "ScheduleCache", "cache_enabled", "default_root", "key_for"]
 
 CACHE_ENV = "KC_SCHEDULE_CACHE"  # on(기본) | off
 LLM_CONFIG = Path("deploy") / "llm.chat.yaml"
 _KEY = re.compile(r"^[0-9a-f]{64}$")
-_VERSION = 4  # 4: D22 ② 연도 추정(YEAR_ASSUMED) · 3: D21 시각·조사 · 1: 부분 결과(QUOTE_NOT_FOUND)가 들어 있을 수 있었다 · 2: D21 이전 시각 해석 — 없음으로 본다
+_VERSION = 5  # 5: 키에 LLM_BACKEND*·잘못된 trip 의 today · 4: D22 ② 연도 추정(YEAR_ASSUMED) · 3: D21 시각·조사 · 1: 부분 결과(QUOTE_NOT_FOUND)가 들어 있을 수 있었다 · 2: D21 이전 시각 해석 — 없음으로 본다
 
 
 def cache_enabled(env: dict[str, str] | None = None) -> bool:
@@ -37,19 +38,34 @@ def default_root() -> Path:
     return var_dir() / "cache" / "schedule"
 
 
+def _trip_ok(trip: tuple[str, str] | None) -> bool:
+    """understand 가 trip 을 쓰는 조건과 같다(형식·from ≤ to·기간 상한). 아니면 trip 없이 해석한다."""
+    if not trip:
+        return False
+    f, t = _iso_date(trip[0] or ""), _iso_date(trip[1] or "")
+    return f is not None and t is not None and f <= t and (t - f).days < MAX_TRIP_DAYS
+
+
 def key_for(text: str, trip: tuple[str, str] | None, *, root: Path | None = None,
-            today: date | None = None) -> str:
-    """trip 이 없으면 오늘(KST)을 키에 넣는다 — 연도 추정(D22 ②)이 날짜에 따라 달라지기 때문."""
+            today: date | None = None, env: dict[str, str] | None = None) -> str:
+    """trip 이 없거나 쓸 수 없으면 오늘(KST)을 키에 넣는다 — 연도 추정(D22 ②)이 날짜에 따라 달라지기 때문.
+
+    ``env``(None 이면 os.environ)의 ``LLM_BACKEND*`` 이름=값도 키에 넣는다(백엔드가 다르면 결과가 다를 수 있다).
+    """
+    src = env if env is not None else os.environ
+    backend = sorted(f"{k}={v}" for k, v in src.items() if k.startswith("LLM_BACKEND"))
+    valid = _trip_ok(trip)
     base = root if root is not None else repo_root()
     try:
         cfg_sha = hashlib.sha256((base / LLM_CONFIG).read_bytes()).hexdigest()
     except OSError:
         cfg_sha = ""
-    model = (os.environ.get("SCHEDULE_MODEL") or os.environ.get("CHAT_MODEL") or "").strip()
+    model = (src.get("SCHEDULE_MODEL") or src.get("CHAT_MODEL") or "").strip()
     payload = {
         "text": unicodedata.normalize("NFKC", text),
         "trip": list(trip) if trip else None,
-        "today": None if trip else (today or kst_today()).isoformat(),
+        "today": None if valid else (today or kst_today()).isoformat(),
+        "llm_backend": backend,
         "prompt_sha": PROMPT_SHA,
         "llm_config_sha": cfg_sha,
         "model": model,

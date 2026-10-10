@@ -13,7 +13,7 @@ import os
 import time
 import uuid
 from collections.abc import Callable
-from datetime import UTC, datetime
+from datetime import UTC, date, datetime
 from pathlib import Path
 from typing import Any
 
@@ -133,6 +133,7 @@ def run_story_pipeline(
     cache_key: str | None = None,
     route_provider: RouteProvider | None = None,
     key_wait: Callable[[], float] | None = None,
+    today: date | None = None,
 ) -> dict[str, Any]:
     """묶음(dict)을 돌려준다. 묶음 디스크 쓰기는 없다(캐시 쓰기는 cache 가 있을 때만).
 
@@ -160,7 +161,7 @@ def run_story_pipeline(
             text, complete=complete, trip_from=t_from, trip_to=t_to, max_attempts=max_attempts,
             budget_s=budget_s, attempt_timeout_s=attempt_timeout_s,
             retry_unverified=retry_unverified, retry_partial=retry_partial,
-            key_wait=key_wait,
+            key_wait=key_wait, today=today,
         )  # fmt: skip
         meta["model"] = getattr(complete, "model", None)
         schedule = {**meta, "cache_created_at": None}

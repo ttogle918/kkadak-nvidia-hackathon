@@ -59,6 +59,7 @@ export function sanitizeAuditEntry(e) {
   return {
     id: e.id.slice(0, 200), time: e.time.slice(0, 32), kind: e.kind, text,
     decided_by: isStr(e.decided_by) ? e.decided_by.slice(0, 100) : null,
+    ...(isStr(e.at) && e.at.length <= 40 && Number.isFinite(Date.parse(e.at)) ? { at: e.at } : {}),
     ...(isStr(e.decided_at) ? { decided_at: e.decided_at.slice(0, 40) } : {}),
   };
 }

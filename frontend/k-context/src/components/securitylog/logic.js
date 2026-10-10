@@ -37,3 +37,29 @@ export function countByKind(logs) {
   for (const l of logs ?? []) if (l.kind in c) c[l.kind] += 1;
   return c;
 }
+
+const atMs = (e) => (typeof e?.at === 'string' ? Date.parse(e.at) : NaN);
+
+/** 최신 우선: at 내림차순, 같은 at 은 id 오름차순, at 없는(또는 잘못된) 항목은 원래 순서로 맨 뒤. 원본은 바꾸지 않는다. */
+export function sortNewestFirst(entries) {
+  const list = Array.isArray(entries) ? entries : [];
+  const withAt = [];
+  const without = [];
+  for (const e of list) (Number.isFinite(atMs(e)) ? withAt : without).push(e);
+  withAt.sort((a, b) => atMs(b) - atMs(a) || (String(a.id) < String(b.id) ? -1 : String(a.id) > String(b.id) ? 1 : 0));
+  return [...withAt, ...without];
+}
+
+let seoulFmt = null;
+/** ISO 시각 -> Asia/Seoul 'MM-DD HH:MM:SS'. 해석할 수 없으면 null. */
+export function formatWhen(at) {
+  if (typeof at !== 'string' || at.length > 40) return null;
+  const ms = Date.parse(at);
+  if (!Number.isFinite(ms)) return null;
+  seoulFmt ??= new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Asia/Seoul', hourCycle: 'h23',
+    month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', second: '2-digit',
+  });
+  const p = Object.fromEntries(seoulFmt.formatToParts(new Date(ms)).map((x) => [x.type, x.value]));
+  return `${p.month}-${p.day} ${p.hour}:${p.minute}:${p.second}`;
+}
