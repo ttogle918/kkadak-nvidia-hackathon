@@ -116,7 +116,7 @@ test('언어 전환: 영어 화면', async () => {
   await search(x);
   clickAct(x.root, 'lang', undefined);
   fire(x.root.find((e) => e.dataset?.act === 'lang' && e.dataset.value === 'en')[0], 'click');
-  assert.match(x.root.text, /Find events in Jung-gu/);
+  assert.match(x.root.text, /Find events in Seoul/);
   assert.match(x.root.text, /Only events confirmed from the sources we collect/);
   assert.match(x.root.text, /Eligibility needs checking/);
 });

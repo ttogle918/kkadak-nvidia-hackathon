@@ -1,7 +1,7 @@
 // 행사 찾기·관리 화면 문구(ko/en 키는 1:1 — tests/events.i18n.test.js 가 검사한다).
 // 서버가 준 문자열(행사명·장소·출처 문구)은 번역하지 않고 그대로 보여 준다. 값을 모를 때의 문구는 '확인 필요'.
 export const KO = {
-  'app.title': '중구 행사 찾기',
+  'app.title': '서울 행사 찾기',
   'app.subtitle': '여행 날짜와 일정에 맞는 행사와 참여 방법을 확인하고 일정에 더합니다',
   'demo.banner': '데모 데이터입니다 — 실제 행사가 아닙니다. 실제 데이터는 서버(?api=http)에 연결해 확인하세요.',
   'lang.ko': '한국어', 'lang.en': 'English',
@@ -99,7 +99,7 @@ export const KO = {
 };
 
 export const EN = {
-  'app.title': 'Find events in Jung-gu',
+  'app.title': 'Find events in Seoul',
   'app.subtitle': 'Check events and how to join them for your travel dates, and add them to your plans',
   'demo.banner': 'This is demo data — not real events. Connect to the server (?api=http) to see real data.',
   'lang.ko': '한국어', 'lang.en': 'English',

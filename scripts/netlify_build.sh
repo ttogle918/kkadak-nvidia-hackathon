@@ -34,5 +34,8 @@ printf "window.KC_KAKAO_JS_KEY = '%s';\nwindow.KC_API_BASE = '%s/api';\n" \
 EV="$OUT/events.html"
 grep -q "connect-src 'self'" "$EV" || fail "events.html 에서 connect-src 를 찾지 못했다"
 sed -i "s|connect-src 'self'|connect-src 'self' $ORIGIN|" "$EV"
+# 개발용 로컬 원점(localhost·127.0.0.1)은 배포물에서 뺀다 — 운영 화면이 로컬로 요청할 이유가 없다
+sed -i "s| http://localhost:\*||g; s| http://127\.0\.0\.1:\*||g" "$EV"
+! grep -q "http://localhost\|http://127\.0\.0\.1" "$EV" || fail "events.html 에 로컬 원점이 남았다"
 
 echo "netlify_build: ok (key ${#KEY}자, origin ${#ORIGIN}자) -> 출력 폴더 생성"

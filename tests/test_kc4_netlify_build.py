@@ -51,7 +51,8 @@ def test_events_csp_has_origin_and_index_has_none(tmp_path):
     out = tmp_path / "dist"
     assert _run(out).returncode == 0
     ev = (out / "events.html").read_text()
-    assert f"connect-src 'self' {ORIGIN}" in ev
+    assert f"connect-src 'self' {ORIGIN};" in ev  # 운영 원점만 — 개발용 로컬 원점은 빠진다
+    assert "localhost" not in ev and "127.0.0.1" not in ev
     assert "Content-Security-Policy" in ev
     assert "Content-Security-Policy" not in (out / "index.html").read_text()
 
