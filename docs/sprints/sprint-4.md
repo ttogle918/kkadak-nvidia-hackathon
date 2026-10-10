@@ -807,3 +807,13 @@ Sprint 3 의 사람 작업(평가셋 검수·좌표 H7·별칭 H8·라벨 H9·D1
 | 17 | T430~T432 | 권장 | 본문에서 빼고 §9 이월(Sprint 5 후보)로만 |
 | 18 | H4·H2 상태 | 권장 | H4 "지금 착수 가능"(결제 계정 카드 등록 시간), H2 "신청 중" |
 | 19 | 초안 T423 표에 `.gitignore` 누락 | 정리 | T423 범위에 `.gitignore`(`image-data/`·`dist/`) 명시, T424 는 고치지 않음 |
+
+### Stage 1 — 스파이크·이월·측정 (2026-10-10, 커밋 `d4f8a4f`)
+- 파일: `docs/spikes/{tourapi,cloud_run,netlify,kakao_domain}.md` · `domains/kcontext/{pipeline/__main__,pipeline/run,schedule/cache}.py` · `tests/.../test_kc4_cache_today.py` · `frontend/k-context/src/api/http.js` · `src/components/securitylog/{index,log-row,logic}.js` · `tests/securitylog.kc4.test.js` · `scripts/{profile_catalog_search,measure_seoul_rows,measure_runtime}.py` · `docs/status/{catalog_search_profile,measure}_2026-10-10.md`
+- 회귀: pytest 1,943 · node 365 · ruff · eval validate/check 0 · kc_demo --check 0
+- 실호출: TourAPI 10(키 `.env` — H2 이미 충족) · 서울 API 1 · NVIDIA 0
+- reviewer: PASS(블로커 0, 권장 9 — 문서·주입 경로 정정 반영)
+- **범위 이탈(정당, 기록)**: T406 이 `securitylog/index.js`(목록 렌더·스크롤이 여기 있음)와 `tests/realmode.test.js:172`(최신 우선 — 의도된 변화) 를 고쳤다.
+- **명세와 다른 점(코디네이터 상한)**: T408 은 서울 API 3회·NVIDIA 0회 상한 때문에 `--full`(구별·끝나지 않은 행·좌표 행)과 LLM 경로 RSS 를 재지 않았다 → **T418 2차 측정 항목에 추가**.
+- 결론: Netlify 는 직접 CORS(프록시 26초). TourAPI 표본 전부 공공누리 3유형. 검색 병목은 `entry_from_dict`(D29 불필요, T433 은 변환 건수 축소). 서울 총 19,586행. 메모리 2Gi 권고(추정, 카탈로그 동시 2 기준).
+- G1 에 올릴 충돌 목록(reviewer): D26·D25 의 TourAPI 병합·좌표는 3유형과 충돌 / 실시간 원문 표시는 D7(런타임 외부 호출 금지)과 충돌 / XFF 미확인 시 IP 제한 폴백 / 리전·송출비 / 카탈로그 동시성 3 과 메모리 2Gi 불일치 / max-instances 잠깐 초과 / 비밀 버전 고정.
