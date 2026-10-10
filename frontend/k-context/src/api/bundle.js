@@ -152,6 +152,7 @@ function eventEntry(e) {
     tier: tier(e.tier) ?? links.find((l) => l.tier)?.tier ?? null,
     links,
     demo: e.demo === true,
+    distance_m: Number.isInteger(e.distance_m) && e.distance_m >= 0 ? e.distance_m : null, // D30: 직선거리(m). 없으면 모른다
   };
 }
 
@@ -162,6 +163,8 @@ function eventsDoc(d) {
     events: arr(d.events, MAX.events).map(eventEntry).filter(Boolean),
     problems: arr(d.problems, MAX.problems).map(problem),
     coverage_note: isObj(d.coverage) ? optStr(d.coverage.note, CAP.text) : null,
+    events_far_total: Number.isInteger(d.events_far_total) && d.events_far_total >= 0 ? d.events_far_total : 0,
+    events_scope: d.events_scope === 'nearby' || d.events_scope === 'seoul' ? d.events_scope : null,
   };
 }
 
@@ -279,6 +282,28 @@ function rationaleMap(d, prefix) {
   return out;
 }
 
+/** kto_live(§5.2): 계약 키만 새 객체로 복사. 문자열 아닌 값·모르는 키는 버린다. 값은 자르거나 고치지 않는다(D29 ② 변경금지) — 상한을 넘는 값이 있으면 그 항목·문구를 버린다. */
+const KTO_ITEM_KEYS = ['contentid', 'title', 'addr1', 'addr2', 'eventstartdate', 'eventenddate', 'tel', 'progresstype', 'lDongSignguCd', 'cpyrhtDivCd'];
+function ktoLive(d) {
+  if (!isObj(d)) bad('kto_live 형식');
+  if (d.status !== 'ok' && d.status !== 'unavailable') bad('kto_live.status');
+  const out = { status: d.status, fetched_at: optStrSoft(d.fetched_at, CAP.short), total: Number.isInteger(d.total) && d.total >= 0 ? d.total : null, items: [], attribution: {}, source_url: safeUrl(d.source_url) ? clip(safeUrl(d.source_url), CAP.url) : null };
+  if (isObj(d.attribution)) {
+    for (const k of ['Type1', 'Type3']) if (typeof d.attribution[k] === 'string' && d.attribution[k] && d.attribution[k].length <= CAP.text) out.attribution[k] = d.attribution[k];
+  }
+  if (d.status === 'ok') {
+    out.items = arr(d.items, MAX.items).filter(isObj)
+      .filter((it) => KTO_ITEM_KEYS.every((k) => typeof it[k] !== 'string' || it[k].length <= CAP.text))
+      .map((it) => {
+        const o = {};
+        for (const k of KTO_ITEM_KEYS) if (typeof it[k] === 'string' && it[k]) o[k] = it[k];
+        return o;
+      });
+  }
+  return out;
+}
+const optStrSoft = (v, cap) => (typeof v === 'string' && v ? clip(v, cap) : null);
+
 /** v2 필드 하나를 정리한다. 틀리면 empty 로 — 다른 필드·v1 필드는 영향 없다. */
 function v2Field(raw, fn, empty) {
   if (raw == null) return empty;
@@ -322,6 +347,7 @@ export function validateChatBundle(raw) {
         routes: v2 ? v2Field(raw.routes, routesDoc, []) : [],
         rationale: v2 ? v2Field(raw.rationale, (d) => rationaleMap(d, RATIONALE_PREFIX.mention), {}) : {},
         events_rationale: v2 ? v2Field(raw.events_rationale, (d) => rationaleMap(d, RATIONALE_PREFIX.event), {}) : {},
+        kto_live: v2Field(raw.kto_live, ktoLive, null),
         story_routes_note: v2 ? v2Field(raw.story_routes_note, (d) => { const b = bi(d, CAP.text); if (!b) bad('note'); return b; }, null) : null,
       },
     };

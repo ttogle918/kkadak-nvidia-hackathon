@@ -18,6 +18,8 @@ export function bundleCardNodes(bundle, t, { mock = bundle.sample ? 'mock' : nul
       bundle.coverage_note ? h('p', { class: 'cb-empty', dataset: { note: 'coverage' } }, bundle.coverage_note) : null),
     h('section', { class: 'cb-section', dataset: { section: 'events' } },
       h('div', { class: 'cb-section__head' }, t('bundle.events.title')),
+      ev.scope === 'seoul' && !ev.unavailable ? h('p', { class: 'cb-empty', dataset: { note: 'events-scope' } }, t('bundle.events.scope_seoul')) : null,
+      ev.scope === 'nearby' && ev.farTotal > 0 ? h('p', { class: 'cb-empty', dataset: { note: 'events-far' } }, t('bundle.events.far', { n: ev.farTotal })) : null,
       ev.empty ? h('p', { class: 'cb-empty', dataset: { empty: 'events' } }, t('bundle.events.none'))
         : h('ul', { class: 'cb-list' }, ev.items.map((e) => eventNode(e, t, selectable ? { selectable: true, selected: !!e.id && e.id === selectedNow } : {})))),
   ];

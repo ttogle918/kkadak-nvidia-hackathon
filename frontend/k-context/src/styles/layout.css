@@ -17,7 +17,7 @@
 .cards-zone[data-level="collapsed"] { height: var(--panel-collapsed-h); }
 .cards-zone[data-level="expanded"] { height: var(--panel-h-expanded); }
 .cards-zone[data-dragging="true"] { transition: none; } /* 드래그 중 높이는 인라인 style */
-.cards-zone[data-level="collapsed"] .slot-rationale, .cards-zone[data-level="collapsed"] .slot-cards { display: none; }
+.cards-zone[data-level="collapsed"] .slot-rationale, .cards-zone[data-level="collapsed"] .slot-cards, .cards-zone[data-level="collapsed"] .slot-ktolive { display: none; }
 
 /* 하단 패널 핸들 바: 막대+제목(separator) 와 ^ / v 버튼. 터치 영역은 투명 패딩으로 40px 이상 */
 .panel-handle { flex: none; display: flex; align-items: stretch; min-height: 44px; border-bottom: 1px solid var(--c-line); background: var(--c-bg-app); }
@@ -31,6 +31,8 @@
 .panel-handle__btn:hover:not(:disabled) { background: var(--c-surface-2); }
 .slot-rationale { flex: none; overflow: visible; z-index: 4; }
 .slot-cards { flex: 1 1 0; min-height: 0; overflow: auto; }
+.slot-ktolive { flex: 0 1 auto; max-height: 40%; overflow: auto; } /* 한국관광공사 원문 절: 카드 아래, 묶음에 kto_live 가 없으면 hidden */
+.slot-ktolive[hidden] { display: none; }
 
 /* 상단 바 */
 .topbar { min-height: var(--topbar-h); display: flex; align-items: center; flex-wrap: wrap; gap: var(--sp-3); padding: var(--sp-2) var(--sp-4); }

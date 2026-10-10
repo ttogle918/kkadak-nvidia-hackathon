@@ -7,6 +7,7 @@ run·validate 는 여기서 실행한다. 나머지는 해당 모듈을 지연 i
 from __future__ import annotations
 
 import importlib
+import os
 import sys
 from pathlib import Path
 
@@ -39,6 +40,8 @@ def main(argv: list[str]) -> int:
         print(_USAGE)
         return 0 if argv else 2
     command, rest = argv[0], argv[1:]
+    # 평가는 사람 장소 사전만 쓴다 — 자동 좌표 파일(var/places, D25)은 PC 마다 달라 결과가 흔들린다. 명시하면 그 값을 쓴다
+    os.environ.setdefault("KC_AUTO_PLACES", str(_EVAL / ".no-auto-places.json"))
     if command == "run":
         from kc_eval import offline
 

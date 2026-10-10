@@ -7,5 +7,6 @@ import * as chat from './components/chat/index.js';
 import * as securitylog from './components/securitylog/index.js';
 import * as rationale from './components/rationale/index.js';
 import * as timeline from './components/timeline/index.js';
+import * as ktolive from './components/ktolive/index.js';
 
-export const MODULES = { chat, timeline, map, cards, rationale, securitylog };
+export const MODULES = { chat, timeline, map, cards, rationale, securitylog, ktolive };

@@ -139,7 +139,7 @@ export function createMockEventsApi() {
       }
       const points = events.filter((e) => e.venue.lat != null).map((e) => ({ id: e.id, title: e.title, lat: e.venue.lat, lng: e.venue.lng, availability: e.availability, participation: e.participation.status }));
       return {
-        generated_at: '데모', timezone: 'Asia/Seoul', events, suggestions, excluded: [], problems: [], catalog_empty: false,
+        generated_at: '데모', timezone: 'Asia/Seoul', events, suggestions, excluded: [], excluded_total: 0, problems: [], catalog_empty: false,
         coverage: clone(DEMO_COVERAGE), map: { origin: body.origin ?? null, points, unlocated: events.filter((e) => e.venue.lat == null).map((e) => e.id) },
         counts: { events: events.length, excluded: 0 },
       };

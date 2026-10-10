@@ -1,0 +1,9 @@
+{
+  "OpenAPI_ServiceResponse": {
+    "cmmMsgHeader": {
+      "errMsg": "SERVICE ERROR",
+      "returnAuthMsg": "○○",
+      "returnReasonCode": "20"
+    }
+  }
+}

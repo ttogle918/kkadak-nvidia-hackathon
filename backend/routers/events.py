@@ -16,6 +16,7 @@ from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
 from backend.catalog_runner import CatalogBusy, CatalogRunnerError, run_catalog
+from backend.chat_story import _shrink_excluded  # 채팅 묶음과 같은 요약(D30 ③)
 from backend.limits import client_ip
 
 router = APIRouter(prefix="/api")
@@ -135,7 +136,10 @@ def _dump(m: BaseModel) -> dict:
 # ---- 공개 -----------------------------------------------------------------------------------
 @router.post("/events/search")
 def search(body: SearchBody, request: Request):
-    return _call(request, "search", _dump(body))
+    out = _call(request, "search", _dump(body))
+    if isinstance(out, dict) and isinstance(out.get("excluded"), list):
+        return _shrink_excluded(out, [])  # 새 리스트를 넘겨 버린다 — EXCLUDED_SUMMARIZED 를 problems 에 넣지 않는다
+    return out
 
 
 @router.post("/events/cards")

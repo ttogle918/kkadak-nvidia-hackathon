@@ -9,17 +9,20 @@
 from __future__ import annotations
 
 import json
+import os
 import unicodedata
+import warnings
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
 
-from domains.kcontext.paths import data_dir
+from domains.kcontext.paths import data_dir, var_dir
 
-__all__ = ["Place", "PlaceBook", "PlacesConfigError", "default_path", "load_places"]
+__all__ = ["Place", "PlaceBook", "PlacesConfigError", "auto_path", "default_path", "load_places", "norm"]
 
-_KEYS = {"name", "aliases", "lat", "lng", "source", "verified_at", "note"}
-_REQUIRED = _KEYS  # 전부 필수 — note 는 빈 문자열이어도 된다
+_REQUIRED = {"name", "aliases", "lat", "lng", "source", "verified_at", "note"}  # 전부 필수 — note 는 빈 문자열이어도 된다
+_AUTO_KEYS = {"auto", "origin"}  # 자동 사전(D25) 항목에만 허용
+_KEYS = _REQUIRED | _AUTO_KEYS
 MAX_STR = 200
 
 
@@ -36,6 +39,8 @@ class Place:
     source: str
     verified_at: str
     note: str
+    auto: bool = False  # 서울 API 좌표에서 자동 생성한 항목(D25) — 화면에 "공공 데이터 좌표" 로 밝힌다
+    origin: tuple[str, ...] = ()
 
 
 def norm(name: str) -> str:
@@ -64,6 +69,12 @@ def default_path() -> Path:
     return data_dir() / "places" / "demo_places.json"
 
 
+def auto_path() -> Path:
+    """자동 사전 위치: env KC_AUTO_PLACES, 기본 <var>/places/auto_places.json (커밋하지 않는다, D25 ⑤)."""
+    env = os.environ.get("KC_AUTO_PLACES")
+    return Path(env) if env else var_dir() / "places" / "auto_places.json"
+
+
 def _is_num(v: object) -> bool:
     return isinstance(v, (int, float)) and not isinstance(v, bool)
 
@@ -74,10 +85,10 @@ def _str(v: object, what: str, where: str, *, allow_empty: bool = False) -> str:
     return v
 
 
-def _parse_one(raw: object, where: str) -> Place:
+def _parse_one(raw: object, where: str, *, auto: bool = False) -> Place:
     if not isinstance(raw, dict):
         raise PlacesConfigError(f"{where}: 항목이 객체가 아니다")
-    unknown = set(raw) - _KEYS
+    unknown = set(raw) - (_KEYS if auto else _REQUIRED)
     if unknown:
         raise PlacesConfigError(f"{where}: 모르는 키 {sorted(unknown)}")
     missing = _REQUIRED - set(raw)
@@ -100,12 +111,18 @@ def _parse_one(raw: object, where: str) -> Place:
     except ValueError as e:
         raise PlacesConfigError(f"{where}: verified_at 은 YYYY-MM-DD 여야 한다") from e
     note = _str(raw["note"], "note", where, allow_empty=True)
-    return Place(name, al, float(lat), float(lng), source, verified, note)
+    origin: tuple[str, ...] = ()
+    if auto:
+        if raw.get("auto") is not True:
+            raise PlacesConfigError(f"{where}: 자동 사전 항목은 auto: true 여야 한다")
+        og = raw.get("origin")
+        if not isinstance(og, list) or not og:
+            raise PlacesConfigError(f"{where}: origin 은 비어 있지 않은 목록이어야 한다")
+        origin = tuple(_str(o, "origin 항목", where) for o in og)
+    return Place(name, al, float(lat), float(lng), source, verified, note, auto, origin)
 
 
-def load_places(path: Path | str | None = None) -> PlaceBook:
-    """사전 파일을 읽어 검증한다. 이름·별칭이 (정규화 후) 겹치면 거부한다."""
-    p = Path(path) if path is not None else default_path()
+def _read_places(p: Path, *, auto: bool) -> list[Place]:
     fname = p.name
     try:
         raw = json.loads(p.read_text(encoding="utf-8"))
@@ -113,7 +130,7 @@ def load_places(path: Path | str | None = None) -> PlaceBook:
         raise PlacesConfigError(f"{fname}: 읽을 수 없다 ({type(e).__name__})") from e
     if not isinstance(raw, list):
         raise PlacesConfigError(f"{fname}: 최상위가 목록이 아니다")
-    places = [_parse_one(r, f"{fname}[{i}]") for i, r in enumerate(raw)]
+    places = [_parse_one(r, f"{fname}[{i}]", auto=auto) for i, r in enumerate(raw)]
     seen: dict[str, str] = {}
     for pl in places:
         for n in (pl.name, *pl.aliases):
@@ -121,4 +138,30 @@ def load_places(path: Path | str | None = None) -> PlaceBook:
             if k in seen:
                 raise PlacesConfigError(f"{fname}: 이름·별칭 중복 ({seen[k]} / {pl.name})")
             seen[k] = pl.name
-    return PlaceBook(places)
+    return places
+
+
+def load_places(path: Path | str | None = None, *, auto: Path | str | None = "default") -> PlaceBook:
+    """사람 사전을 읽어 검증한다(이름·별칭이 정규화 후 겹치면 거부). 자동 사전(D25)이 있으면 덧붙인다.
+
+    ``auto``: "default" 는 ``path`` 를 따로 주지 않았을 때만 ``auto_path()`` 를 쓴다(path 를 준 호출은 그 파일만),
+    None 은 쓰지 않음, 경로는 그 파일. 자동 파일이 없으면 조용히 사람 사전만, 깨졌으면 경고 1줄 + 사람 사전만.
+    사람 이름·별칭과 겹치는 자동 항목은 버린다(사람 값 우선, D25 ④).
+    """
+    p = Path(path) if path is not None else default_path()
+    manual = _read_places(p, auto=False)
+    ap: Path | None
+    if auto == "default":
+        ap = auto_path() if path is None else None
+    else:
+        ap = Path(auto) if auto else None  # type: ignore[arg-type]
+    extra: list[Place] = []
+    if ap is not None and ap.exists():
+        try:
+            extra = _read_places(ap, auto=True)
+        except PlacesConfigError as e:
+            warnings.warn(f"자동 장소 사전을 쓰지 않음: {e}", stacklevel=2)
+    if extra:
+        taken = {norm(n) for pl in manual for n in (pl.name, *pl.aliases)}
+        extra = [pl for pl in extra if not any(norm(n) in taken for n in (pl.name, *pl.aliases))]
+    return PlaceBook([*manual, *extra])

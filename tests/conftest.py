@@ -13,4 +13,7 @@ from core.llm.envfile import DOTENV_PATH_ENV
 
 @pytest.fixture(autouse=True)
 def _isolate_dotenv(tmp_path_factory, monkeypatch):
+    monkeypatch.delenv("DATA_GO_KR_SERVICE_KEY", raising=False)  # TourAPI 실호출 차단(T434) — 키를 셸 env 에서도 못 읽게
     monkeypatch.setenv(DOTENV_PATH_ENV, str(tmp_path_factory.getbasetemp() / "no-such-dir" / ".env"))
+    # 자동 좌표 파일(var/places, D25)은 PC 마다 다르다 — 기본은 없는 경로, 필요한 테스트만 직접 지정한다
+    monkeypatch.setenv("KC_AUTO_PLACES", str(tmp_path_factory.getbasetemp() / "no-such-dir" / "auto_places.json"))

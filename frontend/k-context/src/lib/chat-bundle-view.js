@@ -44,6 +44,11 @@ export function mentionGroupNode(g, t, { ids = null, selectedId = null } = {}) {
     h('ul', { class: 'cb-list' }, g.mentions.map((m) => mentionNode(m, t, { id: ids?.get(m) ?? null, selected: !!selectedId && ids?.get(m) === selectedId }))));
 }
 
+/** 직선거리 m → "1.2" (소수 첫째 자리, 0.05 km 미만은 0.1). 직선거리일 뿐 이동 시간이 아니다. */
+export function distanceKm(m) {
+  return Math.max(0.1, Math.round(m / 100) / 10).toFixed(1);
+}
+
 /** 행사 간이 카드: 제목·기간·장소·공식 링크·출처 태그, tier C/미확인이면 "검색 수집 · 미확인" 딱지. */
 export function eventNode(ev, t, { selectable = false, selected = false } = {}) {
   const link = ev.links.find((l) => l.url) ?? null;
@@ -51,7 +56,8 @@ export function eventNode(ev, t, { selectable = false, selected = false } = {}) 
   const period = ev.start_date && ev.end_date && ev.start_date !== ev.end_date ? `${ev.start_date} ~ ${ev.end_date}` : (ev.start_date ?? ev.end_date ?? t('bundle.unknown_date'));
   return h('li', { class: ['cb-event', selected && 'is-selected'], dataset: { kind: 'event', id: ev.id ?? '' } },
     h('div', { class: 'cb-event__title' }, ev.title, ev.unverified ? h('span', { class: 'cb-flag', dataset: { flag: 'unverified' } }, t('bundle.events.unverified')) : null),
-    h('div', { class: 'cb-event__meta' }, period, ev.venue_name ? ` · ${ev.venue_name}` : ''),
+    h('div', { class: 'cb-event__meta' }, period, ev.venue_name ? ` · ${ev.venue_name}` : '',
+      Number.isInteger(ev.distance_m) ? h('span', { class: 'cb-event__dist', dataset: { distance: String(ev.distance_m) } }, ` · ${t('bundle.events.distance', { km: distanceKm(ev.distance_m) })}`) : ''),
     h('div', { class: 'cb-event__foot' },
       sourceTagNode(ev.tier, src?.source_name ?? null),
       link ? externalLink(link.url, t('bundle.events.official')) : null,

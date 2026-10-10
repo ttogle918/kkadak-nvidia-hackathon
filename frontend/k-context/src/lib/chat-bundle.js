@@ -143,7 +143,8 @@ export function mentionGroups(bundle) {
 /** 행사 카드 상태: 목록과 "아직 못 찾음" 여부. events 가 null(검색 불가)이어도 비어 있음으로 본다 — 지어내지 않는다. */
 export function eventsView(bundle) {
   const list = bundle?.events?.events ?? [];
-  return { items: list.map((e) => ({ ...e, unverified: e.tier == null || e.tier === 'C' })), empty: list.length === 0, unavailable: bundle?.events == null };
+  return { items: list.map((e) => ({ ...e, unverified: e.tier == null || e.tier === 'C' })), empty: list.length === 0, unavailable: bundle?.events == null,
+    scope: bundle?.events?.events_scope ?? null, farTotal: bundle?.events?.events_far_total ?? 0 };
 }
 
 // 문제 코드 -> 사전 키. 서버 message 는 화면에 쓰지 않는다(내부 문구·세부가 새지 않게) — 코드별 고정 문구만.
@@ -152,7 +153,7 @@ const K = 'bundle.problem.';
 const PROBLEM_KEYS = {
   TIME_FORMAT: `${K}time`, TIME_NOT_IN_QUOTE: `${K}time`, TIME_WITHOUT_DATE: `${K}time`,
   DATE_FORMAT: `${K}date`, DATE_NOT_IN_QUOTE: `${K}date`, DATE_INVALID: `${K}date`,
-  COORD_UNKNOWN: `${K}coord`, YEAR_ASSUMED: `${K}year_assumed`, OVERLAP: `${K}overlap`, LONG_SPAN: `${K}long_span`,
+  COORD_UNKNOWN: `${K}coord`, COORD_AUTO: `${K}coord_auto`, YEAR_ASSUMED: `${K}year_assumed`, OVERLAP: `${K}overlap`, LONG_SPAN: `${K}long_span`,
   DAY_UNTIMED: `${K}untimed`, FREE_SLOTS_INCOMPLETE: `${K}free_incomplete`,
   EVENTS_UNAVAILABLE: `${K}events`, TRUNCATED: `${K}truncated`,
   AMPM_ASSUMED: `${K}ampm`, NAME_PARTICLE_STRIPPED: `${K}particle`,
@@ -171,16 +172,16 @@ const GENERIC_KEY = `${K}generic`;
 /** 사용자에게 보이지 않는 내부 동작 코드(재시도·캐시). */
 export const HIDDEN_PROBLEM_CODES = ['LLM_RETRY', 'RETRY_SKIPPED_BUDGET', 'CACHE_UNAVAILABLE', 'EXCLUDED_SUMMARIZED'];
 /** 장소 이름을 붙일 수 있는 코드(이름 키는 `.named`). */
-const NAMED = new Set(['COORD_UNKNOWN', 'NAME_PARTICLE_STRIPPED', 'OVERLAP']);
+const NAMED = new Set(['COORD_UNKNOWN', 'COORD_AUTO', 'NAME_PARTICLE_STRIPPED', 'OVERLAP']);
 
 /**
  * 메시지에서 장소 이름을 뽑되, 묶음의 앵커 이름과 정확히 같은 것만 인정한다(아니면 null — 서버 문자열을 화면에 올리지 않는다).
- * COORD_UNKNOWN "이름: …" · NAME_PARTICLE_STRIPPED "원래 → 떼낸 이름: …" · OVERLAP "일정이 겹침: 이름 / 이름".
+ * COORD_UNKNOWN·COORD_AUTO "이름: …" · NAME_PARTICLE_STRIPPED "원래 → 떼낸 이름: …" · OVERLAP "일정이 겹침: 이름 / 이름".
  */
 function problemName(code, message, names) {
   const m = typeof message === 'string' ? message : '';
   let found = [];
-  if (code === 'COORD_UNKNOWN') {
+  if (code === 'COORD_UNKNOWN' || code === 'COORD_AUTO') {
     const i = m.indexOf(': ');
     if (i > 0) found = [m.slice(0, i)];
   } else if (code === 'NAME_PARTICLE_STRIPPED') {

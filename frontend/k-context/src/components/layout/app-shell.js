@@ -11,7 +11,7 @@ import { h, on } from '../../lib/dom.js';
 import { cardById } from '../../state/selectors.js';
 import { PANEL_PERCENT, PANEL_MIN, PANEL_MAX, dragHeight, levelHeight, snapLevel, toggleLevel } from '../../lib/panel-level.js';
 
-export const SLOT_NAMES = ['topbar', 'chat', 'timeline', 'map', 'rationale', 'cards', 'settings', 'securitylog'];
+export const SLOT_NAMES = ['topbar', 'chat', 'timeline', 'map', 'rationale', 'cards', 'ktolive', 'settings', 'securitylog'];
 export const SHEET_TABS = ['chat', 'timeline'];
 
 const PANEL_DRAG_MIN = 4; // 이 px 미만 움직임은 드래그가 아니라 탭으로 본다
@@ -43,7 +43,7 @@ export function mountAppShell(root, ctx) {
   const btnUp = h('button', { type: 'button', class: 'panel-handle__btn', dataset: { act: 'panel-up' } }, h('span', { 'aria-hidden': 'true' }, '▲'));
   const btnDown = h('button', { type: 'button', class: 'panel-handle__btn', dataset: { act: 'panel-down' } }, h('span', { 'aria-hidden': 'true' }, '▼'));
   const handle = h('div', { class: 'panel-handle' }, grip, btnUp, btnDown);
-  const zone = h('div', { class: 'cards-zone', dataset: { level: 'default' } }, handle, slots.rationale, slots.cards);
+  const zone = h('div', { class: 'cards-zone', dataset: { level: 'default' } }, handle, slots.rationale, slots.cards, slots.ktolive);
 
   const app = h('div', { class: 'app' },
     h('header', { class: 'app__top' }, slots.topbar),

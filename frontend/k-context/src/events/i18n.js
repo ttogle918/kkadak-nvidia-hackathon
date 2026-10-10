@@ -20,6 +20,7 @@ export const KO = {
   'results.empty': '조건에 맞는 행사가 없습니다.',
   'results.catalog_empty': '아직 수집된 행사가 없습니다. 수집 상태는 아래 "수집 범위"에서 확인하세요.',
   'results.excluded': '제외된 항목 {n}건 보기',
+  'results.excluded.reasons': '사유별 개수', 'results.excluded.sample': '예시 {n}건',
   'coverage.title': '수집 범위',
   'coverage.note': '수집한 출처에서 확인된 행사만 보여 줍니다. 지역의 모든 행사가 아닙니다.',
   'coverage.last': '마지막 수집 성공', 'coverage.never': '수집 기록 없음', 'coverage.error': '최근 오류',
@@ -94,7 +95,7 @@ export const KO = {
   'admin.refresh': '지금 다시 수집', 'admin.refreshed': '수집 결과', 'admin.checked': '확인함으로 기록', 'admin.check.note': '확인 메모',
   'admin.errors.retry': '다음 재시도', 'admin.errors.failures': '연속 실패', 'admin.last_success': '마지막 성공',
   'admin.due': '확인 필요', 'admin.method': '방식', 'admin.status': '구현 상태', 'admin.notes': '메모',
-  'admin.src.implemented': '구현됨', 'admin.src.partial': '일부 구현', 'admin.src.configurable_unverified': '키·문서 확인 전', 'admin.src.candidate_not_implemented': '후보(미구현)', 'admin.src.manual_only': '수동 확인만',
+  'admin.src.implemented': '구현됨', 'admin.src.partial': '일부 구현', 'admin.src.configurable_unverified': '키·문서 확인 전', 'admin.src.live_display_only': '수집 안 함(실시간 원문 표시만)', 'admin.src.candidate_not_implemented': '후보(미구현)', 'admin.src.manual_only': '수동 확인만',
 };
 
 export const EN = {
@@ -117,6 +118,7 @@ export const EN = {
   'results.empty': 'No events match.',
   'results.catalog_empty': 'No events have been collected yet. See "Coverage" below for collection status.',
   'results.excluded': 'Show {n} excluded items',
+  'results.excluded.reasons': 'Count by reason', 'results.excluded.sample': 'Examples ({n})',
   'coverage.title': 'Coverage',
   'coverage.note': 'Only events confirmed from the sources we collect are shown. This is not every event in the area.',
   'coverage.last': 'Last successful collection', 'coverage.never': 'Never collected', 'coverage.error': 'Latest error',
@@ -191,7 +193,7 @@ export const EN = {
   'admin.refresh': 'Collect now', 'admin.refreshed': 'Collection result', 'admin.checked': 'Record as checked', 'admin.check.note': 'Check note',
   'admin.errors.retry': 'Next retry', 'admin.errors.failures': 'Consecutive failures', 'admin.last_success': 'Last success',
   'admin.due': 'Due', 'admin.method': 'Method', 'admin.status': 'Status', 'admin.notes': 'Notes',
-  'admin.src.implemented': 'Implemented', 'admin.src.partial': 'Partly implemented', 'admin.src.configurable_unverified': 'Awaiting key / docs', 'admin.src.candidate_not_implemented': 'Candidate (not built)', 'admin.src.manual_only': 'Manual check only',
+  'admin.src.implemented': 'Implemented', 'admin.src.partial': 'Partly implemented', 'admin.src.configurable_unverified': 'Awaiting key / docs', 'admin.src.live_display_only': 'Not collected (live original text only)', 'admin.src.candidate_not_implemented': 'Candidate (not built)', 'admin.src.manual_only': 'Manual check only',
 };
 
 export const LANGS = ['ko', 'en'];

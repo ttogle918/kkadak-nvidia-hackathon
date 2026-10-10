@@ -38,7 +38,8 @@ backend 는 `domains`·`mcp_server` 를 import 하지 않는다(D3·D10). 파이
  "itinerary": {"anchors": [{type: visit|hotel, name, day, from, to, lat, lng, source_quote}],
                "free_slots": [{day, from, to, near, inferred, assumption:{ko,en}}]},
  "mentions": kc-mention/v1  // anchors[].mentions[]: {article_id, king, date_label, title_summary, quote(한문 원문), lang:"orig", locator, url, tier, source{...}}; 행마다 excluded_count(int, 주입 검사로 뺀 수 — 근거 pick 칩의 값); 언급마다 `card_id`(문자열, 카드를 만든 언급에만) = 그 언급의 `cards[].card.id`(같은 기사가 두 앵커에 걸리면 `story_A`, `story_A_2`). 근거 키 = `"mention:" + card_id`. 프론트는 이 필드가 정확히 일치할 때만 찾는다(id 를 추정하지 않는다)
- "events": /api/events/search 응답 {events, excluded, problems, coverage} | null. 단 묶음에서는 `excluded` 를 앞 20건 표본으로 줄이고 `excluded_total`(int, 원본 전체 개수)·`excluded_by_reason`({사유: 개수}, 상위 20개 사유)를 더한다. 근거 수치(funnel)는 줄이기 전 원본으로 센다. 줄였으면 problems 에 내부용 `EXCLUDED_SUMMARIZED`(화면에서 숨김 — 행사 자체는 다 보이므로 "일부만 보여요"가 아니다). 공개 `/api/events/search` 응답은 그대로 둔다 (검색 불가 시 null + problems 에 EVENTS_UNAVAILABLE)
+ "events": /api/events/search 응답 {events, excluded, problems, coverage} | null. 단 묶음에서는 `excluded` 를 앞 20건 표본으로 줄이고 `excluded_total`(int, 원본 전체 개수)·`excluded_by_reason`({사유: 개수}, 상위 20개 사유)를 더한다. 근거 수치(funnel)는 줄이기 전 원본으로 센다. 줄였으면 problems 에 내부용 `EXCLUDED_SUMMARIZED`(화면에서 숨김 — 행사 자체는 다 보이므로 "일부만 보여요"가 아니다). 공개 `/api/events/search` 응답도 같은 요약(`excluded` 표본·`excluded_total`·`excluded_by_reason`, problems 에는 넣지 않음 — D30 ③) (검색 불가 시 null + problems 에 EVENTS_UNAVAILABLE)
+ //   **주변 행사(D30 ①②, T438)**: 묶음 `events` 안에 가산 필드. 좌표(`lat`·`lng`)가 있는 앵커(사람 사전·COORD_AUTO 자동 좌표 모두)가 하나라도 있으면 `events_scope: "nearby"` — 각 행사에 `distance_m`(int, 앵커 중 최소 하버사인 직선거리 m, 좌표를 모르는 행사는 null)를 더하고 오름차순, 반경 `NEARBY_KM=3` 밖은 목록에서 빼며 그 개수는 `events_far_total`(int), 최대 `NEARBY_MAX=20`건(좌표 모르는 행사는 반경 안 행사 뒤, 건수 안에서만). 좌표 있는 앵커가 0개면 정렬·반경 없이 전체를 그대로 두고 `events_scope: "seoul"`(화면: "장소 위치를 몰라 서울 전체 행사를 보여요"). `distance_m` 은 직선거리일 뿐 이동 시간·일정 적합 판정이 아니다(화면 "직선 약 N km"). `events_rationale` 근거 수치는 걸러내기 전 원본으로 센다. 필드가 없으면(옛 묶음) 화면은 안내를 보이지 않는다.
  "cards": [{card, card_ready, missing}],   // card_ready=false 인 것은 화면이 '언급 기록' 간이 카드로 그린다
  "problems": [{code, message}], "coverage_note": "..."
 }
@@ -126,3 +127,23 @@ story_routes_note: {"ko": "이야기 길 없음 — 근거 좌표가 있는 이�
 ## 행사 검색 범위·연도 추정 (D22)
 - **연도 추정**: trip 이 없고 연도도 없는 날짜는 오늘(KST, 오늘 포함) 이후 가장 가까운 그 월·일로 정하고 problems 에 `YEAR_ASSUMED`(메시지에 정한 날짜, "확인 필요")를 남긴다. 2/29 처럼 그 해에 없는 날은 다음에 존재하는 해. trip 이 있거나 연도를 쓴 날짜는 그대로. (`YEAR_UNKNOWN` 은 오늘 기준이 주어지지 않은 순수 함수 호출에서만 난다.)
 - **행사 검색 범위 우선순위**(backend `attach_events`, 날짜는 묶음 JSON 에서만 읽는다): ① 모든 앵커 from·to 날짜의 최소~최대(31일 이내) — 문장에 날짜가 있으면 trip 이 있어도 언제나 이것 → ② 요청의 `context.trip` → ③ 오늘(KST)부터 7일. 쓴 기준을 `coverage_note` 끝에 고정 문구로 덧붙인다: ① "일정 날짜 범위로 찾았어요." ② "여행 기간으로 찾았어요." ③ "날짜를 몰라 오늘부터 7일 안에서 찾았어요." (시간이 모자라 건너뛴 경우는 기준 문구 없이 기존 "시간이 모자라 행사 검색을 건너뜀." 만.) 범위를 정할 수 없는 경우(오늘 기준 없음)에만 `EVENTS_UNAVAILABLE` "여행 기간과 일정 날짜를 몰라 행사를 찾지 않았어요".
+
+## `kto_live` — 한국관광공사 실시간 원문 (sprint-4 §5.2, D29)
+```json
+"kto_live": {
+  "status": "ok" | "unavailable",
+  "reason": null | "no_key" | "limit" | "budget" | "timeout" | "http" | "gateway:<코드>" | "result:<코드>" | "bad_shape",
+  "fetched_at": "<서버 시각 ISO, KST>",
+  "total": <정수 | null>,
+  "items": [ { "contentid": "…", "title": "…", "addr1": "…", "addr2": "…", "eventstartdate": "YYYYMMDD", "eventenddate": "YYYYMMDD", "tel": "…", "progresstype": "…", "lDongSignguCd": "…", "cpyrhtDivCd": "Type3" } ],
+  "attribution": { "Type3": "출처: 한국관광공사 TourAPI · 공공누리 제3유형(변경금지)", "Type1": "출처: 한국관광공사 TourAPI · 공공누리 제1유형(출처표시)" },
+  "source_url": "https://www.data.go.kr/data/15101578/openapi.do"
+}
+```
+- **필드는 선택**이다. 없으면 화면 절도 없다. 일정 실패·고정 문구 응답, 행사 검색 범위를 정할 수 없는 경우에는 붙이지 않는다.
+- 항목의 값은 TourAPI 응답 문자열 **그대로**다(날짜 `YYYYMMDD` 도 그대로 — 라벨은 화면이 붙임). 서버도 바꾸지 않는다.
+- `reason` 은 내부 코드로 화면에 보이지 않는다. 화면은 `status` 만 본다.
+- 좌표(`mapx`·`mapy`)·이미지 필드는 계약에 없다.
+- **생산**: backend `ChatService` 가 `attach_events` 뒤, 일정이 정상이고 행사 검색 범위가 정해졌을 때 요청 시점에 한 번 부른다. 캐시 적중 일정도 매번 다시 부른다(재사용 없음, D29 ②). 남은 프론트 예산이 8초 미만이면 호출하지 않고 `budget`, 세션당 하루 10회(KST 날짜 기준)를 넘으면 `limit`. 전역 일일 상한·키·오류 판정은 `backend/tourapi_live.py`. 앵커가 모두 같은 구(`gu`)이고 코드표에 있을 때만 그 구로 좁히고, 아니면 서울 전체.
+- **검사**(`chat_story.kto_live_block`): `status` 는 두 값만(아니면 `unavailable`/`bad_shape`), `items` 최대 20, 값은 문자열·200자 이하 — 어기는 **항목은 통째로 버린다**(값을 자르거나 고치지 않는다). 계약 밖 키는 버린다.
+- **저장·노출 금지**: 값은 묶음에만 있다. LLM 맥락·세션 history·audit 본문·응답 `reply` 문구에 넣지 않는다(D17: 서버는 묶음을 보관하지 않는다).

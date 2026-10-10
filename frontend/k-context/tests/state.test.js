@@ -130,6 +130,6 @@ test('format: 출처 태그 문구와 딱지 분류', async () => {
 });
 
 test('모듈 레지스트리: 모두 mount 를 export 한다', () => {
-  assert.deepEqual(Object.keys(MODULES).sort(), ['cards', 'chat', 'map', 'rationale', 'securitylog', 'timeline']);
+  assert.deepEqual(Object.keys(MODULES).sort(), ['cards', 'chat', 'ktolive', 'map', 'rationale', 'securitylog', 'timeline']);
   for (const m of Object.values(MODULES)) assert.equal(typeof m.mount, 'function');
 });

@@ -23,7 +23,7 @@ _BASE_ENV = ("PATH", "HOME", "LANG", "LC_ALL", "PYTHONPATH", "VIRTUAL_ENV", "KC_
 # 키를 넘기지 않는다 — 검색 수집기(web_run)는 호스트에서 사람이 따로 돌린다.
 _SOURCE_KEYS = {
     "seoul_openapi": ("SEOUL_OPENAPI_KEY",),
-    "tourapi_kto": ("DATA_GO_KR_SERVICE_KEY",),
+    # tourapi_kto 는 없다 — D29: 수집하지 않고 backend(tourapi_live)만 실시간 호출, 키는 자식 프로세스로 가지 않는다
 }
 TIMEOUTS = {"admin_refresh": 180}
 DEFAULT_TIMEOUT = 60

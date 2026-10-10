@@ -24,9 +24,13 @@ from typing import Any
 from backend.catalog_runner import run_catalog
 from backend.chat_story import (
     BadBundle,
+    anchor_signgu,
     attach_events,
     clean_bundle,
     counts,
+    event_range,
+    kto_budget_ok,
+    kto_live_block,
     reply_text,
     search_budget_s,
 )
@@ -36,6 +40,7 @@ from backend.security_log import entries_from_events
 from backend.session import LOCAL_SESSION_ID, Session
 from backend.settings import REPO_ROOT, Settings
 from backend.story_runner import LLM_BUDGET_S, StoryRunnerError, run_story
+from backend.tourapi_live import TourApiLive, env_key_lookup, load_signgu_codes
 from core.audit import AuditEvent, AuditLog, JsonlSink
 from core.guard import Verdict, scan
 from core.llm import (
@@ -96,6 +101,8 @@ BLOCKED_REPLY = {
 # 시간 예산(sprint-3 §6.4). F = 프론트 요청 상한(frontend http.js REQUEST_TIMEOUT_MS 와 같은 100초).
 FRONT_LIMIT_S = 100
 FALLBACK_MARGIN_S = 5
+SESSION_TOURAPI_DAILY = 10  # D29 ⑤ 세션당 하루 TourAPI 호출 상한
+NOT_CALLED_REASONS = frozenset({"no_key", "limit"})  # TourApiLive 가 네트워크에 닿기 전에 끝낸 사유
 DEFAULT_LLM_TIMEOUT_S = 45.0  # 설정에서 provider timeout_s 를 못 읽을 때(§6.4 기본 예산)
 
 # D15 ④ 캐시 적중 표시. 서버가 붙이는 고정 문구(LLM 이 만든 문구가 아니다).
@@ -214,6 +221,7 @@ class ChatService:
         env: dict[str, str] | None = None,
         config_path: Path | None = None,
         dotenv_path: Path | None = None,
+        tourapi: TourApiLive | None = None,
     ) -> None:
         self._settings = settings
         self._transport = transport or HttpxTransport(max_tokens=CHAT_MAX_TOKENS)
@@ -229,6 +237,11 @@ class ChatService:
         self._audit = AuditLog(self._sink, run_id=self._run_id, actor="backend:chat")
         # 일정 흐름 인스턴스 전체 동시 상한(D24 ②). 세션당 1건은 Session.busy 가 맡는다.
         self._story_slots = threading.BoundedSemaphore(settings.story_concurrency)
+        # TourAPI 실시간 클라이언트 하나(전역 일일 상한 공유, D29). 키는 이 서비스의 env 해석과 같은 방식으로만 읽는다.
+        self._tourapi = tourapi or TourApiLive(
+            key_lookup=lambda: env_key_lookup(self._env), timeout_s=settings.tourapi_timeout_s,
+            daily_calls=settings.tourapi_daily_calls)
+        self._signgu_by_name = {v: k for k, v in load_signgu_codes().items()}
         # 세션을 넘기지 않은 호출(단위 테스트·로컬 직접 사용)은 공용 `local` 세션 하나를 쓴다.
         self._local = Session(LOCAL_SESSION_ID, 0.0, 0.0)
 
@@ -318,6 +331,35 @@ class ChatService:
         return run_catalog(self._settings.catalog_dir, "search", body.model_dump(by_alias=True, exclude_none=False),
                            timeout_s=_SEARCH_TIMEOUT.get())  # 요청 단위 한도(W5)
 
+    async def _kto_live(self, bundle: dict[str, Any], trip: tuple[str, str] | None,
+                        elapsed_s: float) -> dict[str, Any] | None:
+        """D29 — 실시간 TourAPI 원문. 값은 묶음에만 싣고 LLM 맥락·history·audit 에는 넣지 않는다. 범위를 모르면 None(필드 없음)."""
+        try:
+            rng, _ = event_range(bundle, trip, self._today())
+        except (KeyError, TypeError):  # 묶음 모양이 비정상이면 필드를 붙이지 않는다
+            return None
+        if rng is None:
+            return None
+        at = datetime.now(UTC).astimezone(timezone(timedelta(hours=9))).isoformat(timespec="seconds")
+        if not kto_budget_ok(elapsed_s, front_limit_s=FRONT_LIMIT_S, margin_s=FALLBACK_MARGIN_S):
+            return kto_live_block("unavailable", "budget", (), None, fetched_at=at)
+        sess, day = self._session(), self._today()
+        with sess.lock:
+            if sess.tourapi_day != day:
+                sess.tourapi_day, sess.tourapi_calls = day, 0
+            if sess.tourapi_calls >= SESSION_TOURAPI_DAILY:
+                return kto_live_block("unavailable", "limit", (), None, fetched_at=at)
+            sess.tourapi_calls += 1
+        signgu = anchor_signgu(bundle["itinerary"]["anchors"], self._signgu_by_name)
+        try:
+            r = await asyncio.to_thread(self._tourapi.festivals, date_from=rng[0], date_to=rng[1], signgu=signgu)
+            if r.reason in NOT_CALLED_REASONS:  # 키 없음·전역 상한 — 네트워크에 닿지 않았으면 세션 몫을 돌려준다
+                with sess.lock:
+                    sess.tourapi_calls = max(0, sess.tourapi_calls - 1)
+            return kto_live_block(r.status, r.reason, r.items, r.total, fetched_at=at)
+        except Exception:  # noqa: BLE001 - 오류 본문은 싣지 않는다
+            return kto_live_block("unavailable", "http", (), None, fetched_at=at)
+
     def _llm_timeout_s(self) -> float:
         """T_llm — chat 기능 provider 의 timeout_s(설정). 한 번만 읽어 저장한다. 못 읽으면 기본 예산 값."""
         if self._t_llm is None:
@@ -398,6 +440,10 @@ class ChatService:
                                         skip=budget_s is None, today=self._today())
             finally:
                 _SEARCH_TIMEOUT.reset(tok)
+            bundle.pop("kto_live", None)  # 이 필드는 backend 만 만든다 — 파이프라인 출력에 있어도 버린다
+            kto = await self._kto_live(bundle, trip, self._clock() - t0)  # 캐시 적중 일정도 매번 실시간(D29 ②)
+            if kto is not None:
+                bundle["kto_live"] = kto
             n, m, k = counts(bundle)
             self._audit.result(cid, {"anchors": n, "mentions": m, "events": k, "problems": len(bundle["problems"])})
             user = self._new("user", text)

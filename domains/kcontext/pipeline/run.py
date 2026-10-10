@@ -97,6 +97,8 @@ def _attach_coords(
             problems.append(_problem("COORD_UNKNOWN", f"{name}: 장소 사전에 없어 좌표를 비워 둠"))
         else:
             a["lat"], a["lng"] = place.lat, place.lng
+            if place.auto:
+                problems.append(_problem("COORD_AUTO", f"{name}: 공공 데이터 좌표(사람 확인 전)"))
 
 
 def _unique_card_ids(cards: list[dict[str, Any]]) -> None:

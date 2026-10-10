@@ -28,6 +28,8 @@ MAX_ROWS = 12
 MAX_ITEMS = 20
 MAX_EXCLUDED = 20  # 묶음 events.excluded 표본 상한 — 개수는 excluded_total·excluded_by_reason 이 갖는다
 MAX_EXCLUDED_REASONS = 20
+NEARBY_KM = 3  # D30 ① 주변 행사 반경(직선거리)
+NEARBY_MAX = 20  # 묶음 events.events 최대 건수
 CAP_TEXT = 300  # 프론트 CAP.text 와 같은 문자열 상한
 CAP_KEY = 120
 SCHEDULE_KEYS = frozenset({"source", "attempts", "model", "prompt_sha", "cache_created_at"})
@@ -470,7 +472,48 @@ def attach_events(bundle: dict[str, Any], trip: tuple[str, str] | None,
         er = event_rationale(res)  # 개수는 줄이기 전 원본 전체로 센다
         if er:
             bundle["events_rationale"] = er
-        bundle["events"] = _shrink_excluded(res, bundle["problems"])
+        shrunk = _shrink_excluded(res, bundle["problems"])
+        bundle["events"] = nearby_events(shrunk, bundle["itinerary"]["anchors"])
+
+
+def _haversine_m(a: tuple[float, float], b: tuple[float, float]) -> float:
+    la1, lo1, la2, lo2 = map(math.radians, (a[0], a[1], b[0], b[1]))
+    h = math.sin((la2 - la1) / 2) ** 2 + math.cos(la1) * math.cos(la2) * math.sin((lo2 - lo1) / 2) ** 2
+    return 2 * 6371000.0 * math.asin(min(1.0, math.sqrt(h)))
+
+
+def _pt(lat: Any, lng: Any) -> tuple[float, float] | None:
+    ok = all(isinstance(v, (int, float)) and not isinstance(v, bool) and math.isfinite(v) for v in (lat, lng))
+    return (float(lat), float(lng)) if ok and -90 <= lat <= 90 and -180 <= lng <= 180 else None
+
+
+def nearby_events(events_doc: dict[str, Any], anchors: list[Any]) -> dict[str, Any]:
+    """D30 ①②: 좌표 있는 앵커까지의 최소 직선거리(m)로 오름차순, NEARBY_KM 밖은 빼고(events_far_total), 최대 NEARBY_MAX 건.
+
+    좌표 없는 행사는 distance_m=None 으로 반경 안 행사 뒤(건수 상한 안에서만). 좌표 있는 앵커가 없으면 그대로 +
+    events_scope="seoul". 거리는 직선거리일 뿐이다(이동 시간 아님). 원본은 건드리지 않는다.
+    """
+    evs = events_doc.get("events") if isinstance(events_doc.get("events"), list) else []
+    pts = [p for a in anchors if isinstance(a, dict) and (p := _pt(a.get("lat"), a.get("lng"))) is not None]
+    if not pts:
+        return {**events_doc, "events_scope": "seoul"}
+    near: list[tuple[int, int, dict[str, Any]]] = []
+    unknown: list[dict[str, Any]] = []
+    far = 0
+    for i, e in enumerate(evs):
+        v = e.get("venue") if isinstance(e, dict) else None
+        q = _pt(v.get("lat"), v.get("lng")) if isinstance(v, dict) else None
+        if q is None:
+            unknown.append({**e, "distance_m": None} if isinstance(e, dict) else e)
+            continue
+        d = round(min(_haversine_m(p, q) for p in pts))
+        if d > NEARBY_KM * 1000:
+            far += 1
+        else:
+            near.append((d, i, {**e, "distance_m": d}))
+    near.sort(key=lambda t: (t[0], t[1]))
+    out = [t[2] for t in near] + unknown
+    return {**events_doc, "events": out[:NEARBY_MAX], "events_far_total": far, "events_scope": "nearby"}
 
 
 def _shrink_excluded(res: dict[str, Any], problems: list[dict[str, str]]) -> dict[str, Any]:
@@ -487,6 +530,60 @@ def _shrink_excluded(res: dict[str, Any], problems: list[dict[str, str]]) -> dic
     if len(excl) > MAX_EXCLUDED:
         problems.append(_problem("EXCLUDED_SUMMARIZED", "제외 목록을 사유별 개수와 앞 20건으로 줄임"))  # 내부용 — 화면에서 숨김(행사 자체는 다 보인다)
     return out
+
+
+KTO_MAX_ITEMS = 20
+KTO_MAX_VALUE = 200
+KTO_MIN_BUDGET_S = 8.0  # 남은 프론트 예산이 이보다 적으면 TourAPI 를 부르지 않는다(D29)
+KTO_KEYS = ("contentid", "title", "addr1", "addr2", "eventstartdate", "eventenddate", "tel", "progresstype",
+            "lDongSignguCd", "cpyrhtDivCd")  # 계약 §5.2 — 좌표·이미지 필드는 없다
+KTO_ATTRIBUTION = {
+    "Type3": "출처: 한국관광공사 TourAPI · 공공누리 제3유형(변경금지)",
+    "Type1": "출처: 한국관광공사 TourAPI · 공공누리 제1유형(출처표시)",
+}
+KTO_SOURCE_URL = "https://www.data.go.kr/data/15101578/openapi.do"
+_KTO_REASON = re.compile(r"^(no_key|limit|budget|timeout|http|bad_shape|gateway:[A-Za-z0-9]{1,16}|result:[A-Za-z0-9]{1,16})$")
+
+
+def kto_budget_ok(elapsed_s: float, *, front_limit_s: float, margin_s: float) -> bool:
+    return front_limit_s - margin_s - elapsed_s >= KTO_MIN_BUDGET_S
+
+
+def _kto_item(v: Any) -> dict[str, str] | None:
+    """값이 문자열이 아니거나 200자를 넘는 항목은 통째로 버린다. 값을 자르거나 고치지 않는다."""
+    if not isinstance(v, dict):
+        return None
+    out: dict[str, str] = {}
+    for k in KTO_KEYS:
+        if k not in v:
+            continue
+        x = v[k]
+        if not isinstance(x, str) or len(x) > KTO_MAX_VALUE:
+            return None
+        out[k] = x
+    return out
+
+
+def kto_live_block(status: Any, reason: Any, items: Any, total: Any, *, fetched_at: str) -> dict[str, Any]:
+    """TourApiLive 결과 -> 묶음 `kto_live` (계약 §5.2). 모양이 틀리면 unavailable/bad_shape."""
+    if status not in ("ok", "unavailable") or not isinstance(items, (list, tuple)) \
+            or (reason is not None and not (isinstance(reason, str) and _KTO_REASON.match(reason))):
+        status, reason, items, total = "unavailable", "bad_shape", (), None
+    if status == "unavailable":
+        items = ()
+    kept = [it for it in (_kto_item(x) for x in items) if it is not None][:KTO_MAX_ITEMS]
+    t = total if isinstance(total, int) and not isinstance(total, bool) and total >= 0 else None
+    return {"status": status, "reason": reason if status == "unavailable" else None, "fetched_at": fetched_at,
+            "total": t, "items": kept, "attribution": dict(KTO_ATTRIBUTION), "source_url": KTO_SOURCE_URL}
+
+
+def anchor_signgu(anchors: list[Any], name_to_code: dict[str, str]) -> str | None:
+    """방문 앵커 전부가 같은 구 이름(`gu`)을 갖고 코드표에 있을 때만 코드. 지금 묶음 앵커에는 `gu` 가 없어 보통 None(서울 전체)."""
+    gus = {a.get("gu") for a in anchors if isinstance(a, dict) and a.get("type") == "visit"}
+    if len(gus) != 1:
+        return None
+    g = next(iter(gus))
+    return name_to_code.get(g) if isinstance(g, str) else None
 
 
 def search_budget_s(elapsed_s: float, *, front_limit_s: float, margin_s: float) -> float | None:

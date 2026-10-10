@@ -168,8 +168,8 @@ def test_source_registry_is_valid_and_honest_about_what_is_implemented():
     assert by["seoul_openapi"]["status"] == "implemented" and by["seoul_openapi"]["cadence_hours"] == 24
     for sid in ("junggu_sns", "caci", "jeongdong"):
         assert by[sid]["status"] == "manual_only" and by[sid]["method"] == "manual"
-    assert by["tourapi_kto"]["status"] == "configurable_unverified"
-    assert "확인 필요" in by["tourapi_kto"]["notes"]
+    assert by["tourapi_kto"]["status"] == "live_display_only"  # D29: 수집 없음, 실시간 원문 표시만
+    assert "수집" in by["tourapi_kto"]["notes"] and "D29" in by["tourapi_kto"]["notes"]
     assert all(s["url"].startswith("https://") for s in by.values())
 
 

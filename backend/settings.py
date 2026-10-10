@@ -24,6 +24,16 @@ def _int(e: Mapping[str, str], name: str, default: int | None) -> int | None:
         raise ValueError(f"{name} 는 정수여야 한다") from None
 
 
+def _float(e: Mapping[str, str], name: str, default: float) -> float:
+    raw = (e.get(name) or "").strip()
+    if not raw:
+        return default
+    try:
+        return float(raw)
+    except ValueError:
+        raise ValueError(f"{name} 는 숫자여야 한다") from None
+
+
 def _public(e: Mapping[str, str]) -> bool:
     raw = (e.get("KC_PUBLIC_MODE") or "").strip()
     if raw not in ("", "0", "1"):  # 오타("true")가 조용히 로컬 모드가 되지 않게 시작 실패
@@ -51,6 +61,9 @@ class Settings:
     catalog_concurrency: int = 2  # 1~8 (D24 ②)
     session_ttl_s: int = 7200
     session_max: int = 1000
+    # ---- TourAPI 실시간(D29 ⑤) ----
+    tourapi_daily_calls: int = 300  # 전역 일일 소프트 상한
+    tourapi_timeout_s: float = 5.0
 
     def __post_init__(self) -> None:
         rid = self.reviewer_id.strip() if isinstance(self.reviewer_id, str) else ""
@@ -71,6 +84,10 @@ class Settings:
             raise ValueError("KC_CATALOG_CONCURRENCY 는 1~8 이어야 한다")
         if self.session_ttl_s < 1 or self.session_max < 1:
             raise ValueError("KC_SESSION_TTL_S·KC_SESSION_MAX 는 1 이상이어야 한다")
+        if self.tourapi_daily_calls < 0:
+            raise ValueError("KC_TOURAPI_DAILY_CALLS 는 0 이상이어야 한다")
+        if not 0 < self.tourapi_timeout_s <= 30:
+            raise ValueError("KC_TOURAPI_TIMEOUT_S 는 0 초과 30 이하여야 한다")
         object.__setattr__(self, "reviewer_id", rid)
 
     @classmethod
@@ -98,4 +115,6 @@ class Settings:
             catalog_concurrency=_int(e, "KC_CATALOG_CONCURRENCY", 2),
             session_ttl_s=_int(e, "KC_SESSION_TTL_S", 7200),
             session_max=_int(e, "KC_SESSION_MAX", 1000),
+            tourapi_daily_calls=_int(e, "KC_TOURAPI_DAILY_CALLS", 300),
+            tourapi_timeout_s=_float(e, "KC_TOURAPI_TIMEOUT_S", 5.0),
         )

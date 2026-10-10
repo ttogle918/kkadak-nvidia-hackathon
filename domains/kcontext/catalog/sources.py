@@ -22,7 +22,8 @@ from .web_events import default_events_file, make_web_fetcher
 __all__ = ["METHODS", "STATUSES", "SourceError", "load_sources", "make_fetcher"]
 
 METHODS = ("api", "search", "html", "manual")
-STATUSES = ("implemented", "partial", "configurable_unverified", "candidate_not_implemented", "manual_only")
+STATUSES = ("implemented", "partial", "configurable_unverified", "candidate_not_implemented", "manual_only",
+            "live_display_only")  # live_display_only: 수집 안 함, backend 가 요청 시 원문만 보인다(D29)
 _KEYS = {"id", "name", "url", "method", "status", "cadence_hours", "env_keys", "verified_at", "license",
          "links", "notes", "web_source"}
 _REQUIRED = {"id", "name", "url", "method", "status", "cadence_hours", "env_keys", "verified_at", "notes"}

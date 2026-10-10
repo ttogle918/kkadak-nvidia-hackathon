@@ -78,7 +78,7 @@ def observations_from_records(records: Iterable[EventRecord], *, region: Region,
                               only_region: str | None = None) -> list[Observation]:
     """``only_region`` 이 있으면 그 지역 레코드만(출처 하나가 지역 하나를 맡을 때)."""
     try:
-        places = load_places()
+        places = load_places(auto=None)  # 사람 사전만 — 자동 좌표(D25)는 일정 앵커용이고 웹 유래 행사에는 붙이지 않는다
     except Exception:  # noqa: BLE001 - 좌표 사전이 없거나 깨져도 좌표만 비운다
         places = None
     out = []

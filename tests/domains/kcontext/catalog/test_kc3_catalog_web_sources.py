@@ -109,3 +109,15 @@ def test_unconfirmed_or_missing_web_source_is_source_error(tmp_path, monkeypatch
 def test_missing_events_file_is_source_error(tmp_path):
     with pytest.raises(SourceError):
         make_fetcher(GANGNAM_ID, region=REGIONS["gangnam"], now=NOW, web_events=tmp_path / "none.jsonl")
+
+
+def test_web_records_do_not_get_auto_coords(tmp_path, monkeypatch):
+    """자동 좌표(D25)는 일정 앵커용이다 — 웹 유래 행사 장소에는 붙이지 않는다(사람 사전만)."""
+    auto = tmp_path / "auto.json"
+    auto.write_text(json.dumps([{"name": "○○ 자동 장소", "aliases": [], "lat": 37.5, "lng": 127.0, "source": "s",
+                                 "verified_at": "2026-10-10", "note": "n", "auto": True, "origin": ["seoul_openapi"]}],
+                               ensure_ascii=False), encoding="utf-8")
+    monkeypatch.setenv("KC_AUTO_PLACES", str(auto))
+    (o,) = web_events.observations_from_records(_records([_rec("gangnam", 1, "○○ 자동 장소")]),
+                                                region=REGIONS["gangnam"], source_id="s")
+    assert o.venue.lat is None and o.venue.lng is None

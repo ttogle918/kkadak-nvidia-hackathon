@@ -215,6 +215,10 @@ def test_runner_failure_becomes_a_generic_500(client, monkeypatch):
     assert "내부 사정" not in r.text
 
 
+def keys_all():
+    return {"SEOUL_OPENAPI_KEY", "TAVILY_SEARCH_KEY", "DATA_GO_KR_SERVICE_KEY", "NVIDIA_API_KEY"}
+
+
 def test_runner_passes_only_that_sources_key_and_only_for_manual_refresh(monkeypatch, tmp_path):
     seen = []
 
@@ -232,6 +236,9 @@ def test_runner_passes_only_that_sources_key_and_only_for_manual_refresh(monkeyp
     run_catalog(tmp_path, "admin_refresh", {"source_id": "caci"}, "human:demo")
     run_catalog(tmp_path, "admin_refresh", {"source_id": "junggu_site"}, "human:demo")
     run_catalog(tmp_path, "admin_refresh", {"source_id": "gangnam_site"}, "human:demo")
+    run_catalog(tmp_path, "admin_refresh", {"source_id": "tourapi_kto"}, "human:demo")
+    *seen, kto_env = seen
+    assert not keys_all() & set(kto_env)  # D29 ①: TourAPI 키는 backend 에만 — 카탈로그 자식으로 가지 않는다
     search_env, seoul_env, manual_env, *web_envs = seen
     keys = {"SEOUL_OPENAPI_KEY", "TAVILY_SEARCH_KEY", "DATA_GO_KR_SERVICE_KEY", "NVIDIA_API_KEY"}
     assert not keys & set(search_env)  # 일반 요청에는 어떤 키도 넘기지 않는다

@@ -132,9 +132,19 @@ export function mountEvents(root, ctx) {
       if (r.problems?.length) nodes.push(h('p', { class: 'ev-error' }, r.problems.join(' · ')));
       if (r.events.length) nodes.push(h('ul', { class: 'ev-list' }, ...r.events.map((ev) => eventCard(ev, s, t))));
       else nodes.push(h('p', { class: 'ev-empty' }, r.catalog_empty ? t('results.catalog_empty') : t('results.empty')));
-      if (r.excluded?.length) {
-        nodes.push(h('details', { class: 'ev-excluded' }, h('summary', null, t('results.excluded', { n: r.excluded.length })),
-          h('ul', null, ...r.excluded.map((x) => h('li', null, `${x.title} — ${x.reason}`)))));
+      const exTotal = r.excluded_total ?? r.excluded?.length ?? 0;
+      if (exTotal > 0 || r.excluded?.length) {
+        const byReason = Object.entries(r.excluded_by_reason ?? {});
+        const parts = [];
+        if (byReason.length) {
+          parts.push(h('p', null, t('results.excluded.reasons')),
+            h('ul', { class: 'ev-excluded-reasons' }, ...byReason.map(([k, n]) => h('li', null, `${k} — ${n}`))));
+        }
+        if (r.excluded?.length) {
+          if (byReason.length) parts.push(h('p', null, t('results.excluded.sample', { n: r.excluded.length })));
+          parts.push(h('ul', null, ...r.excluded.map((x) => h('li', null, `${x.title} — ${x.reason}`))));
+        }
+        nodes.push(h('details', { class: 'ev-excluded' }, h('summary', null, t('results.excluded', { n: exTotal })), ...parts));
       }
     }
     render(resultsEl, ...nodes);

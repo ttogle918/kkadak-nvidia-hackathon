@@ -1,0 +1,33 @@
+{
+  "response": {
+    "header": {
+      "resultCode": "0000",
+      "resultMsg": "OK"
+    },
+    "body": {
+      "items": {
+        "item": {
+          "contentid": "○○1",
+          "contenttypeid": "15",
+          "title": "○○ 축제",
+          "addr1": "서울특별시 ○○구 ○○로",
+          "addr2": "○○",
+          "eventstartdate": "20261010",
+          "eventenddate": "20261031",
+          "mapx": "127.0",
+          "mapy": "37.5",
+          "lDongRegnCd": "11",
+          "lDongSignguCd": "110",
+          "progresstype": "○○",
+          "festivaltype": "○○",
+          "cpyrhtDivCd": "Type3",
+          "tel": "○○",
+          "firstimage": "http://example.invalid/○○.jpg"
+        }
+      },
+      "numOfRows": 20,
+      "pageNo": 1,
+      "totalCount": 1
+    }
+  }
+}

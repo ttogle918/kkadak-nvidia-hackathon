@@ -37,7 +37,7 @@ test('boot: 슬롯 8개(오른쪽 열 없음)에 모듈이 마운트되고 데�
   assert.equal(s.mode, 'now');
   assert.equal(documentElement.lang, 'en');
   const slots = root.find((e) => e.dataset?.slot);
-  assert.deepEqual(slots.map((e) => e.dataset.slot).sort(), ['cards', 'chat', 'map', 'rationale', 'securitylog', 'settings', 'timeline', 'topbar']);
+  assert.deepEqual(slots.map((e) => e.dataset.slot).sort(), ['cards', 'chat', 'ktolive', 'map', 'rationale', 'securitylog', 'settings', 'timeline', 'topbar']);
   assert.equal(root.find((e) => /col-right/.test(e.attrs?.class ?? '')).length, 0, '오른쪽 열이 없다');
   for (const name of ['chat', 'timeline', 'map', 'cards', 'rationale', 'securitylog', 'settings']) {
     const slot = slots.find((e) => e.dataset.slot === name);
