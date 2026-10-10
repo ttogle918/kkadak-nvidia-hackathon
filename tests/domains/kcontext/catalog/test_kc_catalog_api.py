@@ -72,6 +72,42 @@ def test_detail_includes_history_stories_and_coverage(tmp_path):
     assert ei.value.code == "not_found"
 
 
+def test_detail_and_saved_changes_do_not_convert_whole_catalog(tmp_path, monkeypatch):
+    """25개 구에서 전체 변환은 약 16초 — 상세·저장 변경 확인은 한 건(또는 0건)만 변환한다."""
+    st = seeded(tmp_path)
+    eid = st.load_entries()[0].id
+    monkeypatch.setattr(CatalogStore, "load_entries", lambda self: pytest.fail("전체 변환 금지"))
+    assert call("detail", {"entry_id": eid}, st)["id"] == eid
+    assert call("saved_changes", {"ids": [eid]}, st) == {"saved": []}  # __new__ 는 변경이 아니다
+    with pytest.raises(ApiError) as ei:
+        call("detail", {"entry_id": ["목록"]}, st)
+    assert ei.value.code == "not_found"
+
+
+def test_detail_on_damaged_entries_is_internal_error(tmp_path, monkeypatch, capsys):
+    """손상 파일은 요청 잘못(bad_request)이 아니라 internal_error — 대상 항목 손상·dict 아닌 원소 모두."""
+    from domains.kcontext.catalog import api as api_mod
+
+    st = seeded(tmp_path)
+    path = st.dir / "entries.json"
+    raw = json.loads(path.read_text(encoding="utf-8"))
+    eid = raw["entries"][0]["id"]
+    monkeypatch.setenv("KC_CATALOG_DIR", str(path.parent))
+    for broken in ([{"id": eid, "title": 3}], [{"id": eid}, "문자열 원소"]):
+        path.write_text(json.dumps({**raw, "entries": broken}, ensure_ascii=False), encoding="utf-8")
+        monkeypatch.setattr("sys.stdin", __import__("io").StringIO(json.dumps({"op": "detail", "args": {"entry_id": eid}})))
+        assert api_mod.main() == 0
+        assert json.loads(capsys.readouterr().out)["error"]["code"] == "internal_error"
+
+
+def test_find_entry_and_titles(tmp_path):
+    st = seeded(tmp_path)
+    e = st.load_entries()[0]
+    assert st.find_entry(e.id) == e and st.find_entry("ev:none") is None
+    assert st.entry_titles() == {e.id: "○○ 저녁 공연"}
+    assert CatalogStore(tmp_path / "none").find_entry("x") is None
+
+
 def test_itinerary_add_and_remove_roundtrip(tmp_path):
     st = seeded(tmp_path)
     eid = st.load_entries()[0].id

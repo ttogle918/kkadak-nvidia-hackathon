@@ -23,6 +23,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any
 
+from domains.kcontext.contract.errors import ContractError
 from domains.kcontext.paths import var_dir
 
 from .model import EventEntry, Observation, entry_from_dict, observation_from_dict
@@ -107,6 +108,22 @@ class CatalogStore:
 
     def load_entries(self) -> list[EventEntry]:
         return [entry_from_dict(e) for e in self.read_entries_raw().get("entries", [])]
+
+    def _raw_entry_dicts(self) -> list[dict]:
+        """원본 항목 dict 목록. dict 가 아닌 원소가 있으면 손상(``ContractError`` → internal_error)."""
+        raw = self.read_entries_raw().get("entries", [])
+        if not isinstance(raw, list) or not all(isinstance(e, dict) for e in raw):
+            raise ContractError(["entries: 항목이 객체가 아니다"])
+        return raw
+
+    def find_entry(self, entry_id: str) -> EventEntry | None:
+        """한 건만 모델로 바꾼다 — 전체 변환(25개 구 약 16초)을 피한다. 다른 항목의 필드 손상은 이 건 조회를 막지 않는다."""
+        d = next((e for e in self._raw_entry_dicts() if e.get("id") == entry_id), None)
+        return entry_from_dict(d) if d is not None else None
+
+    def entry_titles(self) -> dict[str, str]:
+        """id → 제목. 모델 변환 없이 원본 dict 에서 꺼낸다."""
+        return {e["id"]: e.get("title", "") for e in self._raw_entry_dicts() if "id" in e}
 
     def entries_built_at(self) -> str | None:
         """파일 앞부분만 읽어 ``built_at`` 을 꺼낸다(23MB 를 다시 파싱하지 않는다). 앞부분에 없으면 전체 파싱."""

@@ -59,7 +59,7 @@ def status(store: CatalogStore, sources: list[dict]) -> dict:
     runs, checks = store.load_runs(), store.load_link_checks()
     return {
         "built_at": store.entries_built_at(),
-        "entries": len(store.load_entries()),
+        "entries": len(store.read_entries_raw().get("entries", [])),
         "sources": [{**{k: s[k] for k in ("id", "name", "method", "status", "url")},
                      "keys": {k: key_origin(k) for k in s["env_keys"] if k in CATALOG_KEY_NAMES},  # 값이 아니라 위치만
                      "run": runs.get(s["id"]), "link_check": checks.get(s["id"])} for s in sources],

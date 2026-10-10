@@ -104,7 +104,7 @@ def _search(a: Mapping, store: CatalogStore, sources: list[dict], now: datetime,
 
 def _changes_for(store: CatalogStore, ids: list[str], since: str | None) -> list[dict]:
     by: dict[str, dict] = {}
-    titles = {e.id: e.title for e in store.load_entries()}
+    titles = store.entry_titles()
     for c in store.load_changes():
         if c["entry_id"] in ids and c["field"] != "__new__" and (not since or c["detected_at"] > since):
             slot = by.setdefault(c["entry_id"], {"entry_id": c["entry_id"],
@@ -144,7 +144,7 @@ def handle(
         out["coverage"], out["problems"] = res["coverage"], res["problems"]
         return out
     if op == "detail":
-        entry = next((e for e in store.load_entries() if e.id == args.get("entry_id")), None)
+        entry = store.find_entry(args.get("entry_id")) if isinstance(args.get("entry_id"), str) else None
         if entry is None:
             raise ApiError("not_found", "행사를 찾을 수 없다")
         out = summarize_entry(entry, now)

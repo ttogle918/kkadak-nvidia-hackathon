@@ -15,12 +15,12 @@
 | **게이트 G1** | D24~D29 | — | **사람 승인 2026-10-10** → 코디네이터가 §2 문안을 `docs/DECISIONS.md` 로 옮김 |
 | Stage 2 — 공개 안전장치 (D24) | 2a: T409 세션·제한·설정·미들웨어 순서·gzip·카탈로그 동시성 2 ∥ T410 프론트 세션·오류·배포 주소(+`events.html` 설정 로드) → 2b: T411 채팅 세션 분리·동시 처리·일일 상한 ∥ T412 공개 모드 보안 로그·승인·관리자·제보 → 2c: T413 공개 모드 통합 테스트·`kc_demo --public` | 2a 2개 → 2b 2개 → 2c 1개 | 방문자별 대화, 동시 2건, 세션·전역 상한(IP 제한은 실측 뒤에만), 관리자·승인 닫힘, 모든 오류 응답에 CORS 헤더 |
 | Stage 3 — 서울 25개 구 (D28) | 3a: T414 지역 파일 21개(+기존 테스트 fixture 전환) ∥ T415 실록 키워드 측정·자동 후보 도구 ∥ T416 카탈로그 25개 구(전체 별칭·쪽 상한·월 버킷 병합 블로킹) ∥ T433 검색 색인(변환 건수 축소, `excluded` 보존) → 3b: **T418 실행**(25개 구 수집·색인(키워드 선택 시)·스냅샷·2차 측정) | 3a 4개 → 3b 단독 | 25개 구 카탈로그(`var/catalog.all`), 검색 1.5초 이하 목표, 2차 측정으로 메모리 확정 |
-| Stage 4 — TourAPI 실시간 원문·좌표 (D25·D29) | 4a: T419 TourAPI 실시간 클라이언트(backend 전용, 저장 없음) ∥ T417 좌표 자동 부착(서울 API 장소만) → 4b: T434 묶음 연결·계약 ∥ T435 프론트 "한국관광공사 관광정보(원문)" 절 → 4c: **T422 자동 좌표 생성·실시간 원문 실확인** | 4a 2개 → 4b 2개 → 4c | `backend/tourapi_live.py`, 묶음 `kto_live` 필드, 화면 별도 절, 자동 좌표 사전(서울 API 유래) |
+| Stage 4 — TourAPI 실시간 원문·좌표 (D25·D29) | 4a: T419 TourAPI 실시간 클라이언트(backend 전용, 저장 없음) ∥ T417 좌표 자동 부착(서울 API 장소만) ∥ T437 행사 검색 `excluded` 요약(D30 ③) → 4b: T434 묶음 연결·계약 ∥ T435 프론트 "한국관광공사 관광정보(원문)" 절 → 4c: T438 주변 행사 거리 정렬(D30 ①②) → 4d: **T422 자동 좌표 생성·실시간 원문 실확인** | 4a 3개 → 4b 2개 → 4c → 4d | `backend/tourapi_live.py`, 묶음 `kto_live` 필드, 화면 별도 절, 자동 좌표 사전(서울 API 유래) |
 | Stage 5 — 배포 패키징 (D27) | T423 Dockerfile·이미지 데이터(서울 API 유래만)·`.gitignore` ∥ T424 Netlify 설정·빌드 스크립트(직접 CORS) ∥ T425 Cloud Run 배포 스크립트·가이드(us-central1·비밀 2개 숫자 버전) ∥ T436 쓰기 경로(`/tmp`) 크기 상한 | 4개 병렬 | `Dockerfile`, `netlify.toml`, `scripts/{build_image_data,netlify_build,deploy_cloudrun}.sh`, `docs/guides/DEPLOY.md`, 감사·캐시 상한 |
 | Stage 6 — 실제 배포 (계정 필요) | T426 Cloud Run 배포·XFF 실측·남용 점검 → T427 Netlify 배포·카카오 도메인·화면 확인 | 순차 | 공개 URL 2개, `docs/status/deploy_*.md` |
 | Stage 7 — 문서 | T428 README·상태·가이드 ∥ T429 배포 URL 스크린샷 | 2개 병렬 | 배포 URL 기준 문서, `docs/demo/s4-*.png` |
 
-- **필수 경로**: (완료) T401~T408 → (승인) G1 → T409·T410 → T411·T412 → T413 → T414·T415·T416·T433 → T418 → T419·T417 → T434·T435 → T422 → T423·T424·T425·T436 → (H4·H5·H11) T426 → (H6) T427 → T428·T429.
+- **필수 경로**: (완료) T401~T408 → (승인) G1 → T409·T410 → T411·T412 → T413 → T414·T415·T416·T433 → T418 → T419·T417·T437 → T434·T435 → T438 → T422 → T423·T424·T425·T436 → (H4·H5·H11) T426 → (H6) T427 → T428·T429.
 - **측정 순서**: T407 프로파일(완료) → T408 1차(완료) → T433 → **T418 안에서 2차**(`measure_seoul_rows --full` + LLM 경로 RSS 추가). 2차 값으로 D27 메모리(2Gi)·카탈로그 동시성(2)을 다시 확인한다.
 - **키·계정이 필요한 일**: T418(서울 키 — 있음, NVIDIA ≤ 2), T422(TourAPI 키 — 있음, H2 충족), T426(GCP H4·H11), T427(Netlify H5·카카오 H6). 모두 해당 스테이지 끝에 있다.
 - **사람 데이터가 없어도 끝까지 간다**: 21개 구 실록 키워드(H3)는 선택이다. 고르지 않으면 그 구는 "실록 색인 대상 아님"(D28 ③).
@@ -92,9 +92,10 @@ Stage 3 (D28)
   3b: T418 실행 + 2차 측정 (H3 선택)
                                    │
 Stage 4 (D25·D29)
-  4a: T419 TourAPI 실시간 클라이언트(backend/tourapi_live.py) ∥ T417 자동 좌표(서울 API만)
+  4a: T419 TourAPI 실시간 클라이언트(backend/tourapi_live.py) ∥ T417 자동 좌표(서울 API만) ∥ T437 행사 검색 excluded 요약(D30 ③)
   4b: T434 묶음 연결·계약(chat.py·chat_story.py·계약 문서) ∥ T435 프론트 원문 절
-  4c: T422 자동 좌표 생성 + 실시간 원문 실확인
+  4c: T438 주변 행사 거리 정렬·반경(chat_story.py·i18n·계약 문서, D30 ①②)
+  4d: T422 자동 좌표 생성 + 실시간 원문 실확인
                                    │
 Stage 5 (D27): T423 이미지 ∥ T424 Netlify ∥ T425 배포 스크립트 ∥ T436 /tmp 상한
                                    │
@@ -248,7 +249,9 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. **아래 §2.1 문안�
 | T417 | 좌표 자동 부착 — 서울 API 장소만 (4a) | `domains/kcontext/places.py`, `domains/kcontext/places_build.py`(신규), `domains/kcontext/data/places/auto_rules.json`(신규), `domains/kcontext/pipeline/run.py`(`_attach_coords` 만), `frontend/k-context/src/lib/chat-bundle.js`, `src/i18n/{ko,en}.js`, `tests/domains/kcontext/test_kc4_places_auto.py`, `frontend/k-context/tests/coordauto.kc4.test.js` | D25 | 없음 |
 | T434 | 묶음 연결·계약 `kto_live` (4b) | `backend/chat.py`(일정 흐름 끝 1곳), `backend/chat_story.py`(`kto_live` 모양 검사), `docs/chat-bundle.contract.md`, `tests/backend/test_kc4_kto_bundle.py` | T419, T411 | 없음 |
 | T435 | 프론트 "한국관광공사 관광정보(원문)" 절 (4b) | `frontend/k-context/src/api/bundle.js`(`kto_live` 수용), `src/components/ktolive/{index,logic}.js`(신규), `src/components/ktolive/ktolive.css`(신규), `src/modules.js`, `src/components/layout/app-shell.js`(슬롯 1개), `src/i18n/{ko,en}.js`, `tests/ktolive.kc4.test.js` | §5.2 계약, T417(i18n 머지 뒤) | 4b 에서 T434 와 파일 겹침 없음 |
-| T422 | 자동 좌표 생성·실시간 원문 실확인 (4c) | `docs/status/events_data_2026-10-xx.md`(신규), `domains/kcontext/data/places/auto_rules.json`(값 조정 시), `domains/kcontext/data/catalog_sources.json`(`tourapi_kto` status·notes) | T417·T434·T435 | 단독 |
+| T437 | 행사 검색 응답 `excluded` 요약 (4a, D30 ③) | `backend/routers/events.py`(검색 응답만), `frontend/k-context/src/events/{view,i18n}.js`, `docs/chat-bundle.contract.md`(events 절의 "공개 응답은 그대로" 문장만), `tests/backend/test_kc4_events_summary.py`, `frontend/k-context/tests/events-summary.kc4.test.js` | D30 | 없음(`src/i18n` 이 아니라 `src/events/i18n.js` — T417 과 겹치지 않음. 계약 문서는 T434 와 다른 줄, 4a→4b 순서) |
+| T438 | 채팅 주변 행사 거리 정렬·반경 (4c, D30 ①②) | `backend/chat_story.py`(`attach_events` 뒤 정렬 1곳), `frontend/k-context/src/components/events*`(거리·"서울 전체" 표시 — 실제 파일은 dev 가 확인), `src/i18n/{ko,en}.js`, `docs/chat-bundle.contract.md`, `tests/backend/test_kc4_nearby_events.py`, 프론트 테스트 1개 | T417(새 구 좌표), T434(`chat_story.py`·i18n·계약 문서 겹침) | 단독 |
+| T422 | 자동 좌표 생성·실시간 원문 실확인 (4d) | `docs/status/events_data_2026-10-xx.md`(신규), `domains/kcontext/data/places/auto_rules.json`(값 조정 시), `domains/kcontext/data/catalog_sources.json`(`tourapi_kto` status·notes) | T417·T434·T435·T437·T438 | 단독 |
 
 ### Stage 5 — 배포 패키징 (D27)
 | TASK | 제목 | 범위 | 선행 | 병렬 충돌 |
@@ -273,7 +276,7 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. **아래 §2.1 문안�
 ### 스테이지 구성 근거
 - **Stage 2**: 공유 인터페이스(`session.py`·`limits.py`·설정·`app.state`·미들웨어 순서·`session_from_request`·카탈로그 동시성)를 T409 가 먼저 만들어 2b 의 두 태스크가 서로의 파일에 기대지 않는다. 프론트는 §5.1 계약만 알면 되므로 2a 병렬.
 - **Stage 3**: 25개 구 수집은 병합 블로킹(T416)과 검색 색인(T433) 없이는 시간(병합 수십 분)·메모리(검색 자식 약 413MiB)가 감당되지 않으므로 그 뒤 T418.
-- **Stage 4**: TourAPI 는 수집이 없어져 "클라이언트(T419) → 묶음 연결(T434) → 화면(T435)" 의 얇은 경로가 됐다. T417 과 T435 가 `i18n` 을 같이 고치므로 T435 는 4b. T434 는 Stage 2 의 `chat.py` 변경(T411) 뒤에 같은 파일을 고친다(다른 스테이지). 실확인(T422)은 4c.
+- **Stage 4**: TourAPI 는 수집이 없어져 "클라이언트(T419) → 묶음 연결(T434) → 화면(T435)" 의 얇은 경로가 됐다. T417 과 T435 가 `i18n` 을 같이 고치므로 T435 는 4b. T434 는 Stage 2 의 `chat.py` 변경(T411) 뒤에 같은 파일을 고친다(다른 스테이지). T437 은 `src/events/i18n.js` 만 고쳐 4a 에 둔다. T438 은 T434 와 `chat_story.py`·계약 문서, T435 와 `src/i18n` 이 겹쳐 4c. 실확인(T422)은 4d.
 - **Stage 5**: 이미지 데이터가 T418·T422 산출물에 걸려 Stage 4 뒤. 네 태스크의 파일이 겹치지 않는다(`chat.py` 는 T436 만).
 - **Stage 6·7**: 계정이 필요한 일, 그 뒤 문서.
 
@@ -455,6 +458,20 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. **아래 §2.1 문안�
 - **지켜야 할 규칙**: D29 · D17(묶음은 서버에 보관하지 않음) · D24 ③(TourAPI 는 LLM 단위가 아니라 별도 상한) · D3·D10.
 - **DoD**: `test_kc4_kto_bundle.py`(가짜 `TourApiLive`): 정상 → 필드 있음, 실패 → `unavailable`, 예산 부족 → 호출 안 함, 세션 10회 초과, 고정 문구 응답엔 필드 없음, LLM 맥락·history 에 TourAPI 값 없음, 200자 초과 항목은 버려지고 나머지 값은 바이트 동일. 기존 `tests/backend/*`·`test_kc3_e2e_chat.py` 통과. 계약 문서 diff 를 reviewer 가 확인.
 - **병렬 충돌**: 없음.
+
+#### T437 — 행사 검색 응답 `excluded` 요약 (D30 ③)
+- **핵심 로직**: `routers/events.py` 의 검색 핸들러가 카탈로그 결과를 돌려주기 직전에 `excluded` 를 앞 20건 표본으로 줄이고 `excluded_total`(int)·`excluded_by_reason`({사유: 개수}, 상위 20개, 사유 문자열 80자)를 더한다. 채팅 묶음과 같은 모양 — `backend/chat_story.py::_shrink_excluded` 를 import 해 재사용하고 `problems` 에는 `EXCLUDED_SUMMARIZED` 를 넣지 않는다(새 리스트를 넘겨 버린다). 다른 op(상세·일정 추가 등)는 그대로.
+- **화면**: `events/view.js` 의 "제외된 항목 {n}건 보기" 에서 n 은 `excluded_total ?? excluded.length`. 펼치면 사유별 개수 목록 + "예시 20건" 표본. 문구는 `events/i18n.js` 에 ko·en.
+- **계약**: `docs/chat-bundle.contract.md` events 절의 "공개 `/api/events/search` 응답은 그대로 둔다" → "공개 응답도 같은 요약(D30 ③)". 데모 데이터(`events/api.js` mock)는 `excluded_total: 0` 을 더한다.
+- **DoD**: 25개 구 실서버 10/15 검색 응답 크기(목표 < 1MB, gzip 전후 기록), 4개 구 99건 · 제외 총 8,620 이 화면 문구에 그대로, 백엔드 테스트(요약 모양·20건 상한·원본 개수), 프론트 테스트(`excluded_total` 우선·없으면 길이), 전체 회귀.
+
+#### T438 — 채팅 주변 행사 거리 정렬·반경 (D30 ①②)
+- **핵심 로직**: `attach_events` 가 `bundle["events"]` 를 만든 뒤, 묶음 앵커 중 좌표가 있는 것의 `[lat, lng]` 목록으로 각 행사 `venue` 좌표까지의 최소 직선거리(하버사인, m 정수)를 계산해 `distance_m` 을 행사에 더하고 오름차순 정렬한다. 반경 `NEARBY_KM = 3`(상수, 넘으면 목록에서 빼고 개수는 `events_far_total`), 최대 `NEARBY_MAX = 20`건. 좌표 없는 행사는 `distance_m: null` 로 반경 안 행사 뒤에 두되 최대 건수 안에서만.
+- 좌표 있는 앵커가 0개면 정렬·반경 없이 지금 목록 그대로 + 묶음 `events_scope: "seoul"`(있으면 `"nearby"`) — 화면은 "장소 위치를 몰라 서울 전체 행사를 보여요" 안내.
+- 근거 수치(`events_rationale`)는 거르기 전 원본으로 센다(지금 규칙과 같음). 결정적 계산 — LLM 없음.
+- **앵커 좌표**: 사람 사전 좌표와 T417 자동 좌표(`COORD_AUTO`) 모두 쓴다. 자동 좌표 앵커로 고른 경우에도 화면의 `COORD_AUTO` 근거 표시는 그대로 둔다(D25 ⑦ — 자동 좌표의 쓰임에 "주변 행사 정렬·반경" 을 더하는 것은 D30 ① 이 정한다).
+- **지켜야 할 규칙**: `distance_m` 은 직선거리다 — 화면은 "직선 약 N km" 로만 보이고 도보·이동 시간이나 "일정에 넣을 수 있음" 판정으로 바꾸지 않는다(D9·D13 ⑥·D16; 넣을 수 있는지는 기존 suggestions 가 정한다). D30 · D17 · D3·D10.
+- **DoD**: 테스트(정렬·반경 밖 제외 개수·좌표 없는 행사·앵커 없음 → seoul·근거 수치 불변), 실서버 25개 구 데모 문장(캐시 적중, NVIDIA 0회)에서 종로 근처 행사가 먼저·건수 ≤ 20, 전체 회귀.
 
 ### 5.2 `kto_live` 묶음 계약 (T434·T435 공통, D29)
 ```json
@@ -708,7 +725,8 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. **아래 §2.1 문안�
 - 실호출: 서울 API 63(상한 85). **NVIDIA 4(T418 상한 2 초과)** — `QUOTE_NOT_FOUND` 결과는 캐시되지 않는데(D15 보충 2) 캐시 적중을 기대하고 같은 문장을 다시 보냈다. 스프린트 합계 4/20 → **남은 예산에서 T426 을 ≤ 8 로 줄인다.** 이후 `QUOTE_NOT_FOUND` 가 나온 문장은 다시 보내지 않는다.
 - H3(21개 구 실록 키워드)는 사람이 고르지 않아 실록 색인은 4개 구 그대로(D28 ③).
 - reviewer: PASS(블로커 0, 경고 7). 커밋 전 반영 — 깨진 색인 원소도 전체 경로 폴백(+테스트), `reindex` 잠금, 지역 파일 note 의 옛 H7 표기, 메모리 문구(D27 2Gi 유지, T426 에서 확정).
-- **배포 전 결정 필요(Stage 4 착수 전)**:
+- **배포 전 결정 필요(Stage 4 착수 전)** → **2026-10-10 사람 결정: D30** — ① 거리 기준(구 섞여도 됨) = T438, ② ⓐ `excluded` 요약 = T437:
   1. **채팅 "주변 행사"가 서울 전체**(25개 구 244건, 거리·구 필터 없음). T434(`backend/chat.py`)와 함께 거리·구 기준 필터/정렬 또는 문구 변경.
   2. **행사 화면 검색 응답 3.25MB(gzip 818KB)** — `excluded` 19,342건 전체. `events` 전역 120회/분 상한으로는 무료 송출 1GiB 를 약 11분에 소진 가능(IP 제한 꺼짐 상태). 배포(T426) 전 블로커: ⓐ 행사 API `excluded` 요약(계약 변경) ⓑ `events` 일일 송출·요청 상한 ⓒ 둘 다.
 - 이월: LLM 경로 파이프라인 RSS(`measure_runtime.py --with-llm` 없음) → T426 컨테이너 실측. 새 구 문장 2번째 실서버 확인 미실시(NVIDIA 상한).
+- **수동 확인 후속(2026-10-10, 코디네이터 실서버·화면)**: 4개 구 데모 문장 캐시 적중 2.6초(NVIDIA 0회) · 행사 화면 99건/제외 8,620 · 일정 추가→취소 정상, 25개 구 244건(25개 구 모두)·제외 19,342 · 추가→취소 정상, 페이지 오류 0. **발견·수정: 행사 상세가 4개 구 9.7초, 25개 구 18.5초** — `detail`·`saved_changes` 가 전체 항목을 모델로 바꿨다(25개 구 15.8초). `CatalogStore.find_entry`·`entry_titles` 로 한 건만 변환 → 25개 구 상세 2.7초. 관리자 검토 대기열(`review_queue`)은 전체를 훑어야 해서 그대로(공개 모드에서 닫힘). 결정 2건은 D30 → T437·T438.
