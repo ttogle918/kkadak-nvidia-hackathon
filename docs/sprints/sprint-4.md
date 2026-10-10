@@ -730,3 +730,24 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. **아래 §2.1 문안�
   2. **행사 화면 검색 응답 3.25MB(gzip 818KB)** — `excluded` 19,342건 전체. `events` 전역 120회/분 상한으로는 무료 송출 1GiB 를 약 11분에 소진 가능(IP 제한 꺼짐 상태). 배포(T426) 전 블로커: ⓐ 행사 API `excluded` 요약(계약 변경) ⓑ `events` 일일 송출·요청 상한 ⓒ 둘 다.
 - 이월: LLM 경로 파이프라인 RSS(`measure_runtime.py --with-llm` 없음) → T426 컨테이너 실측. 새 구 문장 2번째 실서버 확인 미실시(NVIDIA 상한).
 - **수동 확인 후속(2026-10-10, 코디네이터 실서버·화면)**: 4개 구 데모 문장 캐시 적중 2.6초(NVIDIA 0회) · 행사 화면 99건/제외 8,620 · 일정 추가→취소 정상, 25개 구 244건(25개 구 모두)·제외 19,342 · 추가→취소 정상, 페이지 오류 0. **발견·수정: 행사 상세가 4개 구 9.7초, 25개 구 18.5초** — `detail`·`saved_changes` 가 전체 항목을 모델로 바꿨다(25개 구 15.8초). `CatalogStore.find_entry`·`entry_titles` 로 한 건만 변환 → 25개 구 상세 2.7초. 관리자 검토 대기열(`review_queue`)은 전체를 훑어야 해서 그대로(공개 모드에서 닫힘). 결정 2건은 D30 → T437·T438.
+
+### Stage 4 — TourAPI 실시간 원문·자동 좌표·주변 행사 (2026-10-11, 커밋 `f7b9873`)
+- 4a ∥: T419 · T417 · T437 → 4b ∥: T434 · T435 → 4c: T438 → 4d: T422(코디네이터)
+- 파일:
+  - T419 `backend/tourapi_live.py` · `backend/fixtures/tourapi_codes.json` · `backend/settings.py` · `.env.example` · `tests/backend/test_kc4_tourapi_live.py` · `tests/fixtures/tourapi/*`
+  - T417 `domains/kcontext/{places,places_build}.py` · `domains/kcontext/data/places/auto_rules.json` · `pipeline/run.py`(`_attach_coords`) · 프론트 `src/lib/chat-bundle.js`·`src/i18n/*` · `tests/domains/kcontext/test_kc4_places_auto.py` · `tests/coordauto.kc4.test.js`
+  - T437 `backend/routers/events.py` · `src/events/{view,i18n,api}.js` · `tests/backend/test_kc4_events_summary.py` · `tests/events-summary.kc4.test.js`
+  - T434 `backend/{chat,chat_story}.py` · `docs/chat-bundle.contract.md`(§5.2) · `tests/backend/test_kc4_kto_bundle.py` · `tests/conftest.py`(TourAPI 키 차단)
+  - T435 `src/api/bundle.js` · `src/components/ktolive/*` · `src/{modules.js,components/layout/app-shell.js,styles/*}` · `tests/ktolive.kc4.test.js` · `tests/{smoke,state}.test.js`
+  - T438 `backend/chat_story.py`(`nearby_events`) · `src/{lib/chat-bundle*.js,components/cards/bundle-view.js}` · `tests/backend/test_kc4_nearby_events.py` · `tests/nearby.kc4.test.js`
+  - T422 `docs/status/events_data_2026-10-11.md` · `auto_rules.json`(note) · `catalog_sources.json`(`tourapi_kto` → `live_display_only`) · `catalog/sources.py`(상태 값) · `backend/catalog_runner.py`(TourAPI 키 전달 제거) · `src/events/i18n.js`(관리자 라벨)
+- 회귀: pytest 2,149 · node 407 · ruff · eval validate/check 0 · kc_demo `--check`·`--smoke`·`--public --smoke` 0
+- 실측: 행사 검색 25개 구 3.25MB → 635KB(gzip 818KB → 75KB). 자동 좌표 6,330곳(모호 99 · 구 이상치 73 · 구 없음 58 · 사람 우선 1). `max_gu_dist_km` 8 유지(근거 보고서). 데모 문장 주변 행사 244 → 20건(3km 밖 164).
+- 실호출: TourAPI 2(상한 10) · NVIDIA 2(T422 상한 2). 스프린트 합계 NVIDIA 6/20 → 남은 14 = T426 ≤ 8 · T427 ≤ 6. TourAPI 12/25.
+- 코디네이터 수정: T435 가 300자 넘는 값을 잘라 "…" 를 붙이던 것 → 항목 버림(D29 ② 변경금지, 테스트).
+- reviewer: PASS(블로커 0, 경고 6 전부 반영) — 웹 행사에 자동 좌표 안 붙임 · 보고서에서 TourAPI 원문 값 제거 · TourAPI 전체 5초 마감 · 파이프라인 출력의 `kto_live` 버림 · 세션 횟수는 호출 안 했으면 되돌림 · 테스트·평가는 자동 좌표 파일 없이(`KC_AUTO_PLACES` 고정).
+- 발견(이월 후보, 보고서 §발견):
+  1. 데모 캐시는 날짜가 바뀌면 다시 LLM 을 부른다(캐시 키의 "오늘") → 공개 데모 날 아침 1회 채우기, T426 예산에 포함.
+  2. 일정 어휘 없이 자동 좌표 장소만 쓴 문장("10/16에 국립중앙박물관 11시, 노들섬 3시")은 게이트가 일반 대화로 보낸다(D25 ⑧ 그대로).
+  3. 랜드마크 이름 일치율이 낮다(세종문화회관·올림픽공원·코엑스·롯데월드 없음 — 서울 API 장소명이 "○○ 대극장" 식). 접미사 별칭은 D25 ② 확장이라 사람 결정 필요.
+  4. 앵커에 구 정보가 없어 TourAPI 는 늘 서울 전체 조회(명세의 폴백).
