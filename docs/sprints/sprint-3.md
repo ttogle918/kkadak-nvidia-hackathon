@@ -915,3 +915,26 @@ uv run python eval/kc.py run --check --known-failures eval/BASELINE.md     # Sta
 - D21 낮 시간 범위 08:00~20:59 → "9시"를 모델이 21:00 으로 내도 09:00 으로 바뀜. 07:00~22:59 로 넓힐지 사람 판단 대기.
 - 지역 bbox 를 채우면(H7) 합친 지역 판정에서 좌표만 있는 장소는 unknown — 지역별 bbox 도우미 검토.
 - T320·T321: 수집기는 `EventRecord.region` 에 지역 하나 → 4개 구는 구마다 실행. `docs/guides/EVENTS_CATALOG.md` 쉼표 목록 안내는 T325.
+
+### Stage 5 — 행사 실데이터 · 재측정 (2026-10-10, 커밋 `9c91e66`, 결정 D19 `72d3417`·D23 `760789c`)
+- 사람 결정: Tavily 검색 수집 실행(H6 대신 사용자 승인) · D19 승인 · T323 실행 · D23 승인 · 서울 인증키(H5) 발급·`.env` 입력.
+- 태스크별 파일
+  - T320 `catalog/{web_events,sources}.py` · `data/catalog_sources.json`(gangnam_site, web_source) · `tests/.../test_kc3_catalog_web_sources.py`
+  - T321 수집(코디네이터 실행) + `docs/status/events_data_2026-10-10.md` · `catalog_sources.json` verified_at·notes
+  - T322 `scripts/snapshot_catalog.py` · `domains/kcontext/data/snapshots/catalog/`(162건·836K) · `tests/test_kc3_snapshot.py`
+  - T323 `eval/results/final-*.json`(4) · `eval/BASELINE.md` "최종" + 코디네이터 메모
+  - D23 `catalog/query.py` · judge 케이스 `trap_stale_open_ended`
+  - 보안·격리: `core/llm/envfile.py`(`APP_DOTENV_PATH`, `default_dotenv_path`) · `tests/conftest.py` · `tests/test_dotenv_isolation.py` · backend·catalog·schedule `.env` 경로 · `catalog_runner._SOURCE_KEYS`(웹 출처 키 미전달)
+  - 묶음 축소: `backend/chat_story.py`(`EXCLUDED_SUMMARIZED`, 숨김)
+- 회귀: pytest 1,929 · node 360 · ruff · eval validate 0 · check 0
+- reviewer: FAIL(테스트·계약 불일치, 웹 출처에 불필요한 Tavily 키 전달) + 권장 3 → PASS
+- 실제 화면: 데모 문장 → 행사 99건(일정 날짜 범위), 행사 근거(기간·등급·"수집 8719건 중 99건 남김"), MOCK 0, "일부만 보여요" 오표시 제거.
+
+### Stage 5 에서 이월 (2026-10-10)
+- **사람 결정 대기**: "캐시 켬 재요청 변동 0" 목표를 "저장된 결과의 재요청 변동 0" 으로 다시 정의할지(D15 보충 2 의 결과). 승인 전 BASELINE 판정은 "미충족(해석 대기)". DECISIONS D15 기준선 값 줄의 "같은 문장 재요청은 캐시로 변동 0" 문장도 함께 정리.
+- 변동 목표 미달(파이프라인 7/20, API 3/10) — H10 검수 뒤 재판정.
+- 검색 수집 7건은 기간·구가 비어 날짜 검색에 잡히지 않음(관리자 검토 대기). Tavily 추출 LlmCallError 3건 원인 미확인(40초 한도 추정).
+- 행사 검색 1회 약 6초(8.7k 항목 매번 로드) — 끝난 행사 사전 제외·색인화 검토.
+- 묶음 events 233KB(남은 99건 × 약 2.3KB) — 항목 필드 다듬기 검토.
+- BASELINE 결정적 세트의 judge 수치(18/18)는 D23 케이스 추가 전 — 다음 측정 때 19/19 로 갱신.
+- 스냅샷은 시점 자료 — 데모가 오래되면 다시 생성.
