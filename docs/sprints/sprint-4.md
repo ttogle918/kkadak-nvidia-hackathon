@@ -751,3 +751,19 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. **아래 §2.1 문안�
   2. 일정 어휘 없이 자동 좌표 장소만 쓴 문장("10/16에 국립중앙박물관 11시, 노들섬 3시")은 게이트가 일반 대화로 보낸다(D25 ⑧ 그대로).
   3. 랜드마크 이름 일치율이 낮다(세종문화회관·올림픽공원·코엑스·롯데월드 없음 — 서울 API 장소명이 "○○ 대극장" 식). 접미사 별칭은 D25 ② 확장이라 사람 결정 필요.
   4. 앵커에 구 정보가 없어 TourAPI 는 늘 서울 전체 조회(명세의 폴백).
+
+### Stage 5 — 배포 패키징 (2026-10-11, 커밋 `9fea28b`)
+- 병렬: T423 · T424 · T425 · T436
+- 파일:
+  - T423 `Dockerfile` · `.dockerignore` · `.gitignore`(`image-data/`·`dist/`) · `deploy/cloudrun/{entrypoint.sh,README.md}` · `scripts/build_image_data.sh` · `scripts/snapshot_catalog.py`(`--keep-ended`) · `tests/test_kc4_{container_files,image_data_filter}.py`
+  - T424 `netlify.toml` · `scripts/netlify_build.sh` · `tests/test_kc4_netlify_build.py`
+  - T425 `scripts/deploy_cloudrun.sh` · `docs/guides/DEPLOY.md` · `deploy/README.md` · `tests/test_kc4_deploy_script.py`
+  - T436 `backend/{chat,story_runner}.py` · `domains/kcontext/schedule/cache.py` · `eval/kc_eval/stability.py`(자식 env 목록 일치) · `tests/backend/test_kc4_audit_rotate.py` · `tests/domains/kcontext/schedule/test_kc4_cache_prune.py`
+- 회귀: pytest 2,208 · node 407 · ruff · eval validate/check 0 · kc_demo `--check`·`--smoke`·`--public --smoke` 0
+- 컨테이너 실측(코디네이터, 키 없음, `--memory 2g`):
+  - 이미지 416MiB(linux/amd64 — 0.5GiB 아래). 데이터: 카탈로그 101M · 실록 색인 43M · 자동 좌표 2M.
+  - `.env` 없음 · 키 문자열 0 · 비루트(uid 10001). `/api/meta` 공개·승인 닫힘.
+  - 검색 2건 동시 + 상세 + 차단 문장에서 메모리 최대 **308MiB**, 응답 각 약 1.5초, `/tmp/kc` 32KB.
+  - LLM 경로는 키가 없어 재지 못함 → T426.
+- reviewer: 1차 **FAIL** — 파이프라인 자식에 `KC_AUTO_PLACES` 가 안 넘어가 컨테이너 채팅에서 자동 좌표·거리 정렬이 꺼짐(D25·D30). 수정 후 이미지를 다시 빌드해 자식이 6,335곳(자동 포함)을 읽는 것을 확인 → 재검토 PASS(블로커·경고 0). 함께 고친 경고: `.dockerignore` 하위 폴더 패턴, 재배포 때 hops 소실(`--trusted-proxy-hops`), 심볼릭 링크 전제 문서화, 관리자 JS 배포물 제외, 문서 결정 번호.
+- 실호출 0 · gcloud·netlify 명령 실행 없음 · 레지스트리 push 없음.
