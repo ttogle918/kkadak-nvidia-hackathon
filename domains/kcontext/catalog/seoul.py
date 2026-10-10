@@ -42,10 +42,15 @@ class SeoulApiError(RuntimeError):
 
 
 def fetch_rows(
-    key: str, *, client: httpx.Client | None = None, page_size: int = PAGE, max_pages: int = 30,
+    key: str, *, client: httpx.Client | None = None, page_size: int = PAGE, max_pages: int = 60,
     start: int = 1,
 ) -> tuple[list[dict], int]:
-    """전체 행을 쪽 단위로 가져온다. (행, list_total_count). 오류 메시지에 키·주소를 싣지 않는다."""
+    """전체 행을 쪽 단위로 가져온다. (행, list_total_count). 오류 메시지에 키·주소를 싣지 않는다.
+
+    ``max_pages`` 가 2 이상인데 ``list_total_count`` 가 ``max_pages × page_size`` 를 넘으면 조용히 자르지 않고
+    ``SeoulApiError`` (수집 실패 — 기존 데이터 유지, D13 ⑤). 1쪽만 부르는 호출(표본·탐침)은 일부만 받는 것이 목적이라 제외.
+    근거: T408 실측 서울 총 19,586행(구 필터 없음) < 60쪽 × 1000 = 6만.
+    """
     if not key:
         raise SeoulApiError(f"{KEY_ENV} 가 설정되지 않았다")
     own = client is None
@@ -79,6 +84,8 @@ def fetch_rows(
             chunk = body.get("row") or []
             if not isinstance(chunk, list):
                 raise SeoulApiError("응답 row 형식 오류")
+            if n == 0 and max_pages > 1 and -(-total // page_size) > max_pages:
+                raise SeoulApiError(f"행 수가 쪽 상한을 넘는다 (total={total}, max_pages={max_pages})")
             rows.extend(r for r in chunk if isinstance(r, dict))
             if b >= total or not chunk:
                 break

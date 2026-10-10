@@ -19,7 +19,8 @@ from domains.kcontext.contract.text import is_date
 from .model import EventEntry
 from .rules import date_range_days, event_lifecycle, is_operating_day, norm_text, to_kst
 
-__all__ = ["participation", "search_events", "summarize_entry"]
+__all__ = ["REASON_CANCELLED", "REASON_ENDED", "REASON_NOT_IN_TARGET", "REASON_TARGET_UNKNOWN",
+           "participation", "pre_exclusion_reason", "search_events", "summarize_entry"]
 
 STALE_HOURS = 72
 _AVAIL_ORDER = {"session_match": 0, "date_range_unconfirmed": 1, "postponed": 2}
@@ -105,6 +106,24 @@ def event_reservation(e: EventEntry, now: datetime) -> str:
     return reservation_status(e.reservation, now)
 
 
+REASON_TARGET_UNKNOWN = "대상 지역에서 열리는지 확인되지 않음"
+REASON_NOT_IN_TARGET = "대상 지역 밖에서 열림"
+REASON_CANCELLED = "취소됨"
+REASON_ENDED = "종료됨"
+
+
+def pre_exclusion_reason(e: EventEntry, lifecycle: str) -> str | None:
+    """요청과 무관하게 정해지는 제외 사유(대상 지역 → 취소 → 종료 순). 없으면 None.
+    색인 생성(store)과 검색 루프가 같은 함수를 쓴다 — 사유 문자열이 갈라지지 않게."""
+    if e.venue.in_target != "yes":
+        return REASON_TARGET_UNKNOWN if e.venue.in_target == "unknown" else REASON_NOT_IN_TARGET
+    if lifecycle == "cancelled":
+        return REASON_CANCELLED
+    if lifecycle == "ended":
+        return REASON_ENDED
+    return None
+
+
 STALE_OPEN_ENDED_DAYS = 365
 STALE_OPEN_ENDED_REASON = "종료일 정보가 없고 시작한 지 1년이 넘음"
 
@@ -136,9 +155,13 @@ def _interest_hits(e: EventEntry, interests: Sequence[str]) -> list[str]:
 
 def search_events(
     entries: Sequence[EventEntry], request: Mapping, *, now: datetime,
-    coverage: Mapping | None = None,
+    coverage: Mapping | None = None, positions: Sequence[int] | None = None,
+    pre_excluded: Sequence[tuple[int, dict]] | None = None,
 ) -> dict:
-    """요청: ``trip{from,to}`` · ``interests[]`` · ``origin{name,lat,lng}`` · ``require_interest`` · ``include_demo``."""
+    """요청: ``trip{from,to}`` · ``interests[]`` · ``origin{name,lat,lng}`` · ``require_interest`` · ``include_demo``.
+
+    색인 경로(T433): ``entries`` 는 후보만, ``positions`` 는 그 원래 순번, ``pre_excluded`` 는 변환 없이 제외된
+    ``[(순번, {"id","title","reason"})]``. 끝에서 순번으로 병합하므로 ``excluded`` 순서·사유가 전체 경로와 같다."""
     now = to_kst(now)
     trip = request.get("trip") or {}
     problems: list[str] = []
@@ -150,24 +173,19 @@ def search_events(
     interests = [str(x) for x in (request.get("interests") or []) if isinstance(x, str)]
     include_demo = bool(request.get("include_demo"))
     results: list[dict] = []
-    excluded: list[dict] = []
-    for e in entries:
+    excl: list[tuple[int, dict]] = []
+    for idx, e in enumerate(entries):
+        pos = positions[idx] if positions is not None else idx
         if e.demo and not include_demo:
             continue
         s = summarize_entry(e, now)
 
-        def drop(reason: str, entry: EventEntry = e) -> None:
-            excluded.append({"id": entry.id, "title": entry.title, "reason": reason})
+        def drop(reason: str, entry: EventEntry = e, pos: int = pos) -> None:
+            excl.append((pos, {"id": entry.id, "title": entry.title, "reason": reason}))
 
-        if e.venue.in_target != "yes":
-            drop("대상 지역에서 열리는지 확인되지 않음" if e.venue.in_target == "unknown"
-                 else "대상 지역 밖에서 열림")
-            continue
-        if s["lifecycle"] == "cancelled":
-            drop("취소됨")
-            continue
-        if s["lifecycle"] == "ended":
-            drop("종료됨")
+        pre = pre_exclusion_reason(e, s["lifecycle"])
+        if pre:
+            drop(pre)
             continue
         if not trip_days:
             drop("여행 날짜가 올바르지 않음")
@@ -196,6 +214,9 @@ def search_events(
             avail = "date_range_unconfirmed"
         s.update({"availability": avail, "matching_dates": dates, "interest_match": hits})
         results.append(s)
+    if pre_excluded:
+        excl = sorted([*excl, *pre_excluded], key=lambda x: x[0])
+    excluded = [x[1] for x in excl]
     results.sort(key=lambda r: (_AVAIL_ORDER[r["availability"]], -len(r["interest_match"]),
                                 r["schedule"]["start_date"] or "9999", r["id"]))
     origin = request.get("origin") if isinstance(request.get("origin"), Mapping) else None

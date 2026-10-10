@@ -1,0 +1,17 @@
+{
+  "id": "dobong",
+  "name": {
+    "ko": "도봉구",
+    "en": "Dobong-gu"
+  },
+  "gu": [
+    "도봉구"
+  ],
+  "bbox": null,
+  "center": null,
+  "keywords": [
+    "도봉구"
+  ],
+  "sillok_keywords": [],
+  "note": "영문 표기는 서울시 공식 자치구 목록(https://english.seoul.go.kr/city-hall/organization-chart/5-districts/)과 대조함(2026-10-10). bbox·center 는 아직 없다 — 사람이 확인한 값만 넣는다(좌표 자동 부착은 D25·T417). sillok_keywords 빈 목록 = 실록 색인 대상 아님(D28 ③) — 사람이 고른 값만 넣는다."
+}

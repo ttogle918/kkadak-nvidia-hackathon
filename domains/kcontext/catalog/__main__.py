@@ -5,6 +5,7 @@
     python -m domains.kcontext.catalog due                                         # 주기가 된 출처만
     python -m domains.kcontext.catalog loop --interval-min 30                      # 주기적 수집(스케줄러)
     python -m domains.kcontext.catalog status                                      # 수집·검토 현황 JSON
+    python -m domains.kcontext.catalog reindex                                     # 검색 색인 다시 만들기(건수·바이트 JSON)
 
 ``--sample`` 은 서울시 sample 키(5행)로 연결만 확인한다(키 없이 가능, 행사 전체가 아니다).
 종료 코드: 0 정상(수집 실패는 기록하고 종료 코드 1) · 2 실행 조건 미충족.
@@ -81,6 +82,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     lp.add_argument("--interval-min", type=float, default=30.0)
     lp.add_argument("--max-rounds", type=int, default=0, help="0 이면 계속")
     sub.add_parser("status")
+    sub.add_parser("reindex")  # entries.json 에서 검색 색인(search_index.json)을 다시 만든다
     a = ap.parse_args(list(sys.argv[1:] if argv is None else argv))
 
     store, region, env = _setup(a)
@@ -88,6 +90,11 @@ def main(argv: Sequence[str] | None = None) -> int:
     now = datetime.now(KST)
     if a.cmd == "status":
         print(json.dumps(status(store, sources), ensure_ascii=False, indent=1))
+        return 0
+    if a.cmd == "reindex":
+        with store.lock():  # update 와 겹쳐 옛 항목으로 만든 색인이 새 entries.json 에 붙지 않게
+            info = store.reindex(now=now)
+        print(json.dumps(info, ensure_ascii=False))
         return 0
     if a.cmd == "update":
         from .store import default_dir

@@ -1,15 +1,15 @@
 {
  "seoul_openapi": {
-  "last_attempt_at": "2026-10-10T01:44",
-  "last_success_at": "2026-10-10T01:44",
+  "last_attempt_at": "2026-10-10T18:48",
+  "last_success_at": "2026-10-10T18:48",
   "last_error": null,
   "consecutive_failures": 0,
   "next_retry_at": null,
-  "attempts_total": 1,
+  "attempts_total": 2,
   "last_counts": {
    "fetched": 8712,
-   "new_entries": 8712,
-   "changes": 8712
+   "new_entries": 0,
+   "changes": 0
   },
   "last_warning": null
  }

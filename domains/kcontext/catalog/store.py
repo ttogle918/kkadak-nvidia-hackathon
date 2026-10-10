@@ -13,18 +13,28 @@ from __future__ import annotations
 
 import fcntl
 import json
+import logging
 import os
+import re
 import tempfile
 from collections.abc import Iterable, Iterator
 from contextlib import contextmanager
+from datetime import datetime
 from pathlib import Path
 from typing import Any
 
 from domains.kcontext.paths import var_dir
 
 from .model import EventEntry, Observation, entry_from_dict, observation_from_dict
+from .query import pre_exclusion_reason
+from .rules import KST, event_lifecycle, to_kst
 
-__all__ = ["CatalogStore", "default_dir"]
+__all__ = ["SEARCH_INDEX", "SEARCH_INDEX_SCHEMA", "CatalogStore", "default_dir"]
+
+SEARCH_INDEX = "search_index.json"
+SEARCH_INDEX_SCHEMA = "kc-search-index/v1"
+_BUILT_AT_HEAD = re.compile(rb'"built_at"\s*:\s*(null|"([^"]*)")')
+_log = logging.getLogger("kc.catalog.index")
 
 
 def default_dir() -> Path:
@@ -69,12 +79,12 @@ class CatalogStore:
         except FileNotFoundError:
             return default
 
-    def _write_json(self, name: str, data: Any) -> None:
+    def _write_json(self, name: str, data: Any, indent: int | None = 1) -> None:
         self.dir.mkdir(parents=True, exist_ok=True)
         fd, tmp = tempfile.mkstemp(dir=self.dir, prefix=f".{name}.", suffix=".tmp")
         try:
             with os.fdopen(fd, "w", encoding="utf-8") as f:
-                json.dump(data, f, ensure_ascii=False, indent=1)
+                json.dump(data, f, ensure_ascii=False, indent=indent)
             os.replace(tmp, self._path(name))
         except BaseException:
             Path(tmp).unlink(missing_ok=True)
@@ -91,15 +101,88 @@ class CatalogStore:
             k: {**v, "observation": _plain(v["observation"])} for k, v in sorted(items.items())})
 
     # ---- 항목 ----
+    def read_entries_raw(self) -> dict:
+        """entries.json 을 한 번 읽은 dict(``built_at``·``entries``). 없으면 빈 항목."""
+        return self._read_json("entries.json", {"entries": []})
+
     def load_entries(self) -> list[EventEntry]:
-        raw = self._read_json("entries.json", {"entries": []})
-        return [entry_from_dict(e) for e in raw.get("entries", [])]
+        return [entry_from_dict(e) for e in self.read_entries_raw().get("entries", [])]
 
     def entries_built_at(self) -> str | None:
+        """파일 앞부분만 읽어 ``built_at`` 을 꺼낸다(23MB 를 다시 파싱하지 않는다). 앞부분에 없으면 전체 파싱."""
+        try:
+            with self._path("entries.json").open("rb") as f:
+                head = f.read(512)
+        except FileNotFoundError:
+            return None
+        m = _BUILT_AT_HEAD.search(head)
+        if m:
+            return m.group(2).decode("utf-8") if m.group(2) is not None else None
         return self._read_json("entries.json", {}).get("built_at")
 
-    def save_entries(self, entries: Iterable[EventEntry], built_at: str) -> None:
+    def save_entries(self, entries: Iterable[EventEntry], built_at: str, *, index: bool = True) -> None:
+        entries = list(entries)
+        self._path(SEARCH_INDEX).unlink(missing_ok=True)  # 항목을 바꾸는 동안 낡은 색인이 남지 않게
         self._write_json("entries.json", {"built_at": built_at, "entries": [e.to_dict() for e in entries]})
+        if index:
+            try:
+                at = to_kst(datetime.fromisoformat(built_at))
+            except (ValueError, TypeError):
+                at = datetime.now(KST)
+            self.save_search_index(entries, built_at, indexed_at=at)
+
+    # ---- 검색 색인(T433) ----
+    def save_search_index(self, entries: Iterable[EventEntry], built_at: str, *, indexed_at: datetime) -> dict:
+        """요청과 무관하게 제외되는 항목(대상 밖·미확인·취소·종료)은 변환 없이 ``{pos,id,title,reason}`` 만,
+        나머지(demo 포함)는 후보로 전체 dict 를 남긴다. 종료는 시간이 지나도 종료라 ``now >= indexed_at`` 에서 유효하다."""
+        indexed_at = to_kst(indexed_at)
+        cands: list[dict] = []
+        pre: list[dict] = []
+        total = 0
+        for pos, e in enumerate(entries):
+            total += 1
+            reason = None if e.demo else pre_exclusion_reason(e, event_lifecycle(e, indexed_at))
+            if reason:
+                pre.append({"pos": pos, "id": e.id, "title": e.title, "reason": reason})
+            else:
+                cands.append({"pos": pos, "entry": e.to_dict()})
+        data = {"schema": SEARCH_INDEX_SCHEMA, "built_at": built_at,
+                "indexed_at": indexed_at.strftime("%Y-%m-%dT%H:%M"), "total": total,
+                "candidates": cands, "pre_excluded": pre}
+        self._write_json(SEARCH_INDEX, data, indent=None)
+        return {"total": total, "candidates": len(cands), "pre_excluded": len(pre)}
+
+    def reindex(self, *, now: datetime) -> dict:
+        """entries.json 에서 색인을 다시 만든다(entries.json 이 없으면 빈 카탈로그로 본다)."""
+        raw = self.read_entries_raw()
+        entries = [entry_from_dict(e) for e in raw.get("entries", [])]
+        info = self.save_search_index(entries, raw.get("built_at"), indexed_at=now)
+        return {**info, "bytes": self._path(SEARCH_INDEX).stat().st_size}
+
+    def load_search_index(self, now: datetime) -> dict | None:
+        """유효한 색인(schema·``built_at`` 일치·``now >= indexed_at``)이면 dict, 아니면 None(경고 로그 — 전체 경로로 폴백)."""
+        try:
+            idx = json.loads(self._path(SEARCH_INDEX).read_text(encoding="utf-8"))
+            if not isinstance(idx, dict):
+                raise TypeError("object 가 아님")
+            problem = None
+            if idx.get("schema") != SEARCH_INDEX_SCHEMA:
+                problem = "schema 가 다르다"
+            elif idx.get("built_at") != self.entries_built_at():
+                problem = "built_at 이 entries.json 과 다르다"
+            elif to_kst(now) < to_kst(datetime.fromisoformat(idx["indexed_at"])):
+                problem = "색인보다 이전 시각의 검색이다"
+            elif not (isinstance(idx["candidates"], list) and isinstance(idx["pre_excluded"], list)
+                      and isinstance(idx["total"], int)):
+                problem = "구조가 올바르지 않다"
+        except FileNotFoundError:
+            problem, idx = "색인 파일이 없다", None
+        except (ValueError, KeyError, TypeError, OSError) as e:
+            problem, idx = f"색인을 읽을 수 없다 ({type(e).__name__})", None
+        if problem:
+            _log.warning("검색 색인을 쓰지 않고 전체 경로로 검색한다: %s", problem)
+            return None
+        return idx
 
     # ---- 변경 이력 ----
     def append_changes(self, changes: Iterable[dict]) -> int:

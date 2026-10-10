@@ -69,7 +69,7 @@ def make_fetcher(
 
         def fetch_seoul() -> list[Observation]:
             rows, _ = fetch_rows(key, client=client, page_size=5 if sample else 1000,
-                                 max_pages=1 if sample else 30)
+                                 max_pages=1 if sample else 60)
             return observations_from_rows(rows, region=region, collected_at=collected)
 
         return fetch_seoul

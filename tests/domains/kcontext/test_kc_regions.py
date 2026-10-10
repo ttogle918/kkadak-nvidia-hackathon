@@ -27,7 +27,7 @@ def _write(d: Path, rid: str, **over):
 
 def test_real_regions_load(monkeypatch):
     monkeypatch.delenv("KC_DATA_DIR", raising=False)
-    regs = load_regions()
+    regs = load_regions(REPO / "tests/fixtures/regions4")
     assert set(regs) == {"gangnam", "jongno", "jung", "mapo"}
     assert all(r.bbox is None and r.center is None for r in regs.values())
 

@@ -21,7 +21,7 @@ STATIC_PORT=8766
 INDEX_DB="var/index/kcontext.db"
 CATALOG_DIR="var/catalog"
 SNAPSHOT_DIR="domains/kcontext/data/snapshots/catalog"
-REGIONS="jung,jongno,mapo,gangnam"
+REGIONS="${KC_DEMO_REGIONS:-jung,jongno,mapo,gangnam}"  # 기본 4개 구, KC_DEMO_REGIONS=all 이면 25개 구
 
 MODE="run"
 PUBLIC=0

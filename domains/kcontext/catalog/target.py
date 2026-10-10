@@ -11,10 +11,11 @@ from collections.abc import Mapping
 
 from domains.kcontext.regions import Region, load_regions
 
-__all__ = ["DEFAULT_ID", "ENV", "region_ids", "target_region"]
+__all__ = ["ALL", "DEFAULT_ID", "ENV", "region_ids", "target_region"]
 
 ENV = "KC_TARGET_REGION"  # 쉼표 목록. 없으면 DEFAULT_ID
 DEFAULT_ID = "jung"
+ALL = "all"  # 단독으로 쓰면 data/regions 의 모든 지역
 _JOIN = "+"
 
 
@@ -31,6 +32,7 @@ def target_region(spec: str | None = None, regions: Mapping[str, Region] | None 
     """spec(쉼표 목록, None 이면 env KC_TARGET_REGION, 그것도 없으면 기본 지역)을 Region 으로.
 
     하나면 그 Region 그대로, 여럿이면 합친 Region(id 는 정렬한 id 를 "+" 로 이음, bbox·center 는 None).
+    spec 이 정확히 ``all`` 이면 모든 지역(``all,jung`` 처럼 섞으면 ValueError).
     모르는 id·빈 문자열은 ValueError.
     """
     raw = spec if spec is not None else os.environ.get(ENV, DEFAULT_ID)
@@ -38,6 +40,12 @@ def target_region(spec: str | None = None, regions: Mapping[str, Region] | None 
     if not raw.strip() or any(not p for p in ids):
         raise ValueError("대상 지역이 비었다")
     known = regions if regions is not None else load_regions()
+    if ALL in ids:
+        if len(ids) > 1:
+            raise ValueError(f'"{ALL}" 는 다른 지역과 섞어 쓸 수 없다')
+        ids = list(known)
+        if not ids:
+            raise ValueError("대상 지역이 비었다")
     unknown = sorted({p for p in ids if p not in known})
     if unknown:
         raise ValueError(f"지역 {unknown} 이 data/regions/ 에 없다")

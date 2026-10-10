@@ -10,6 +10,7 @@
 from __future__ import annotations
 
 import json
+import logging
 import os
 import sys
 from collections.abc import Mapping
@@ -22,6 +23,7 @@ from domains.kcontext.geo.chain import make_route_provider
 from . import reports as reports_mod
 from .cards import build_now_cards
 from .fit import FitConfig, add_to_itinerary, fit_event, remove_from_itinerary, validate_itinerary
+from .model import entry_from_dict
 from .query import search_events, summarize_entry
 from .review import review_queue
 from .routes import RouteProvider
@@ -45,10 +47,13 @@ class ApiError(Exception):
         self.code = code
 
 
-def _coverage(store: CatalogStore, sources: list[dict]) -> dict:
+_log = logging.getLogger("kc.catalog.index")
+
+def _coverage(store: CatalogStore, sources: list[dict], *, built_at: str | None = ...) -> dict:
+    """``built_at`` 을 이미 읽은 쪽에서 넘기면 entries.json 을 다시 열지 않는다."""
     runs = store.load_runs()
     return {
-        "entries_built_at": store.entries_built_at(),
+        "entries_built_at": store.entries_built_at() if built_at is ... else built_at,
         "sources": [{"id": s["id"], "name": s["name"], "method": s["method"], "status": s["status"],
                      "url": s["url"], "last_success_at": (runs.get(s["id"]) or {}).get("last_success_at"),
                      "last_error": (runs.get(s["id"]) or {}).get("last_error")}
@@ -58,9 +63,27 @@ def _coverage(store: CatalogStore, sources: list[dict]) -> dict:
 
 def _search(a: Mapping, store: CatalogStore, sources: list[dict], now: datetime,
             provider: RouteProvider) -> dict:
-    entries = store.load_entries()
-    res = search_events(entries, a, now=now, coverage=_coverage(store, sources))
-    res["catalog_empty"] = not entries
+    idx = store.load_search_index(now)
+    res = None
+    if idx is not None:  # 색인 경로(T433): 후보만 변환한다. 결과 dict 는 전체 경로와 같다
+        try:
+            entries = [entry_from_dict(c["entry"]) for c in idx["candidates"]]
+            positions = [c["pos"] for c in idx["candidates"]]
+            pre = [(p["pos"], {"id": p["id"], "title": p["title"], "reason": p["reason"]})
+                   for p in idx["pre_excluded"]]
+        except (KeyError, TypeError, ValueError, ContractError) as exc:  # 원소가 깨진 색인 → 전체 경로로
+            _log.warning("검색 색인 원소가 올바르지 않아 전체 경로로 검색한다 (%s)", type(exc).__name__)
+        else:
+            res = search_events(
+                entries, a, now=now, coverage=_coverage(store, sources, built_at=idx["built_at"]),
+                positions=positions, pre_excluded=pre)
+            res["catalog_empty"] = idx["total"] == 0
+    if res is None:
+        raw = store.read_entries_raw()
+        entries = [entry_from_dict(e) for e in raw.get("entries", [])]
+        res = search_events(entries, a, now=now,
+                            coverage=_coverage(store, sources, built_at=raw.get("built_at")))
+        res["catalog_empty"] = not entries
     itin_raw = a.get("itinerary")
     if isinstance(itin_raw, list):
         itin, problems = validate_itinerary(itin_raw)

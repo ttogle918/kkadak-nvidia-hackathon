@@ -25,7 +25,7 @@ if str(REPO) not in sys.path:
 
 from domains.kcontext.catalog.envkeys import CATALOG_KEY_NAMES, resolve_catalog_env
 from domains.kcontext.catalog.merge import build_entries
-from domains.kcontext.catalog.rules import to_kst
+from domains.kcontext.catalog.rules import KST, to_kst
 from domains.kcontext.catalog.store import CatalogStore
 
 __all__ = ["SOURCE_ID", "main", "make_snapshot", "restore_snapshot"]
@@ -117,7 +117,7 @@ def make_snapshot(
     shutil.rmtree(tmp, ignore_errors=True)
     out = CatalogStore(tmp)
     out.save_observations(obs)
-    out.save_entries(entries, _now_iso(now))
+    out.save_entries(entries, _now_iso(now), index=False)  # 색인은 스냅샷에 싣지 않는다(복원 때 만든다)
     out.save_runs(runs)
     for p in tmp.glob("*.json"):  # URL 의 키 파라미터 제거(원문 링크가 항목에도 들어간다)
         data = _scrub(json.loads(p.read_text(encoding="utf-8")))
@@ -179,6 +179,7 @@ def restore_snapshot(src: Path, dst: Path, *, force: bool = False) -> None:
     for name in FILES:
         if (src / name).exists():
             shutil.copy2(src / name, dst / name)
+    CatalogStore(dst).reindex(now=datetime.now(KST))  # 복원한 카탈로그의 검색 색인
 
 
 def main(argv: list[str] | None = None) -> int:

@@ -124,15 +124,50 @@ def same_event(a: Observation, b: Observation) -> bool:
     return ratio >= TITLE_SIMILARITY
 
 
+def _month_keys(s: Schedule) -> set[str]:
+    """``_days`` 가 돌려주는 날짜들이 속한 달(``m:YYYY-MM``). 기간 상한이 없다(10년짜리면 120개)."""
+    keys = {f"m:{x.date[:7]}" for x in s.sessions if date.fromisoformat(x.date)}
+    if s.start_date or s.end_date:
+        a = date.fromisoformat(s.start_date or s.end_date)  # type: ignore[arg-type]
+        b = date.fromisoformat(s.end_date or s.start_date)  # type: ignore[arg-type]
+        if a <= b:  # date_range_days 와 같다: 끝이 시작보다 앞서면 날짜 없음
+            y, m = a.year, a.month
+            while (y, m) <= (b.year, b.month):
+                keys.add(f"m:{y:04d}-{m:02d}")
+                y, m = (y + 1, 1) if m == 12 else (y, m + 1)
+    return keys
+
+
+def _block_keys(o: Observation) -> set[str]:
+    return {f"id:{k}" for k in o.external_ids} | _month_keys(o.schedule)
+
+
 def _group(obs: Sequence[Observation]) -> list[list[Observation]]:
+    """관찰값 → 같은 행사끼리 묶음. 결과는 "모든 기존 그룹과 비교"하던 이전 구현과 같다(블로킹).
+
+    ``same_event`` 가 참이려면 (a) 외부 id 를 공유하거나(``id:`` 키) (b) 날짜가 겹쳐 같은 달 키(``m:``)를 공유해야
+    한다. 그룹에 들어가려면 그 그룹의 모든 구성원과 참이어야 하므로 첫 구성원과도 키를 공유한다 → 들어갈 그룹은
+    항상 후보 안에 있다. 후보를 그룹 생성 순으로 돌아 "첫 그룹" 도 이전과 같다. 날짜가 없으면 달 키가 없어
+    외부 id 공유 그룹만 후보인데, 이전에도 날짜 없이는 외부 id 공유 없이 합쳐지지 않았다. demo 는 ``same_event`` 가 거른다.
+    근거 계측(dev): 이전 구현은 2,000건 4.9초(쌍당 약 2.5µs) → 서울 총 19,586행(T408 실측)이면 수 분, 3만 건 약 18분.
+    """
     groups: list[list[Observation]] = []
+    index: dict[str, set[int]] = {}
     for o in sorted(obs, key=lambda x: x.obs_id):
-        for g in groups:
+        keys = _block_keys(o)
+        cand: set[int] = set()
+        for k in keys:
+            cand |= index.get(k, set())
+        for n in sorted(cand):
+            g = groups[n]
             if all(same_event(o, x) for x in g):  # 모든 쌍이 같은 행사일 때만(과병합 방지)
                 g.append(o)
                 break
         else:
+            n = len(groups)
             groups.append([o])
+        for k in keys:
+            index.setdefault(k, set()).add(n)
     return groups
 
 
