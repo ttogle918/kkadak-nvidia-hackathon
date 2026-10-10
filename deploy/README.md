@@ -40,3 +40,7 @@ OpenShell 을 쓰지 않아도 아래는 앱 코드가 보장한다. 바꾸려�
 정책 파일은 사람만 고친다(규칙 2, D7). 허용을 추가하면 이유와 실측 로그를 주석에 남긴다.
 
 다시 필수로 검토할 때: LLM 에 도구(파일·네트워크)를 주거나, 공개 서비스로 띄우거나, 에이전트를 샌드박스 안에서 돌릴 때(D20).
+
+## 배포 — Cloud Run (D27)
+공개 서비스 배포는 `scripts/deploy_cloudrun.sh`(빌드 → Artifact Registry → `gcloud run deploy`)로 한다. 먼저 `--dry-run` 으로 명령만 확인한다(계정 불필요).
+리전 us-central1 · 2Gi/1 CPU · 인스턴스 1개 · 비밀은 Secret Manager 숫자 버전 고정(`latest` 거부). 절차·근거·비밀 교체·한계: `docs/guides/DEPLOY.md`. 이 경로는 OpenShell 과 무관하다.

@@ -26,6 +26,10 @@ __all__ = ["CACHE_ENV", "ScheduleCache", "cache_enabled", "default_root", "key_f
 
 CACHE_ENV = "KC_SCHEDULE_CACHE"  # on(기본) | off
 LLM_CONFIG = Path("deploy") / "llm.chat.yaml"
+MAX_FILES_ENV = "KC_SCHEDULE_CACHE_MAX_FILES"  # 기본 500 (D27 ⑦)
+MAX_BYTES_ENV = "KC_SCHEDULE_CACHE_MAX_BYTES"  # 기본 32MiB
+DEFAULT_MAX_FILES = 500
+DEFAULT_MAX_BYTES = 32 * 1024 * 1024
 _KEY = re.compile(r"^[0-9a-f]{64}$")
 _VERSION = 5  # 5: 키에 LLM_BACKEND*·잘못된 trip 의 today · 4: D22 ② 연도 추정(YEAR_ASSUMED) · 3: D21 시각·조사 · 1: 부분 결과(QUOTE_NOT_FOUND)가 들어 있을 수 있었다 · 2: D21 이전 시각 해석 — 없음으로 본다
 
@@ -74,6 +78,14 @@ def key_for(text: str, trip: tuple[str, str] | None, *, root: Path | None = None
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
+def _limit(name: str, default: int) -> int:
+    try:
+        n = int(os.environ.get(name, ""))
+    except ValueError:
+        return default
+    return n if n > 0 else default
+
+
 class ScheduleCache:
     def __init__(self, root: Path | None = None) -> None:
         self.root = Path(root) if root is not None else default_root()
@@ -119,3 +131,40 @@ class ScheduleCache:
             os.replace(tmp, dest)
         finally:
             tmp.unlink(missing_ok=True)
+        self._prune(keep=dest)
+
+    def _prune(self, *, keep: Path) -> None:
+        """개수·바이트 상한을 넘으면 수정 시각이 오래된 것부터 지운다(``keep`` 은 남김). 의미는 그대로 —
+        지워진 항목은 다음 조회에서 미적중일 뿐이다(D15 ④). 어떤 OSError 도 put 을 실패시키지 않는다."""
+        max_files = _limit(MAX_FILES_ENV, DEFAULT_MAX_FILES)
+        max_bytes = _limit(MAX_BYTES_ENV, DEFAULT_MAX_BYTES)
+        items: list[tuple[float, str, Path, int]] = []
+        try:
+            for p in self.root.glob("*.json"):
+                if p == keep or not _KEY.match(p.stem):
+                    continue
+                try:
+                    st = p.stat()
+                except OSError:
+                    continue
+                items.append((st.st_mtime, p.name, p, st.st_size))
+            try:
+                kept_size = keep.stat().st_size
+            except OSError:
+                kept_size = 0
+        except OSError:
+            return
+        items.sort()  # 오래된 것이 앞
+        count = len(items) + 1
+        total = sum(i[3] for i in items) + kept_size
+        for _, _, p, size in items:
+            if count <= max_files and total <= max_bytes:
+                break
+            try:
+                p.unlink()
+            except FileNotFoundError:
+                pass
+            except OSError:
+                continue
+            count -= 1
+            total -= size

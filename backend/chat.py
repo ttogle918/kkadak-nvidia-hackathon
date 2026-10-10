@@ -15,7 +15,7 @@ import threading
 import time
 import uuid
 from collections import deque
-from collections.abc import Callable
+from collections.abc import Callable, Mapping
 from dataclasses import dataclass
 from datetime import UTC, date, datetime, timedelta, timezone
 from pathlib import Path
@@ -90,6 +90,7 @@ _NOTICE_SUFFIX = f"\n\n{UNVERIFIED_NOTICE['ko']}"
 # 다만 openai/gpt-oss-20b 는 reasoning 토큰도 이 한도에 들어가 너무 낮으면 content 가 비어 502 가 된다.
 # 600 은 짧은 답 + 짧은 추론 기준의 추정이며 실측은 [확인 필요](사람의 라이브 호출로 확인).
 CHAT_MAX_TOKENS = 600
+AUDIT_MAX_BYTES = 8 * 1024 * 1024  # 공개 모드 audit JSONL 한 파일 상한(D27 ⑦). 넘으면 .1 로 회전
 MAX_EVENTS = 1000  # _TeeSink 가 메모리에 들고 있는 audit 이벤트 상한(요청당 몇 건뿐이라 충분)
 
 BLOCKED_REPLY = {
@@ -167,17 +168,43 @@ class ChatResult:
     bundle: dict[str, Any] | None = None  # 일정 흐름일 때만(kc-chat-bundle/v1)
 
 
+def _audit_max_bytes(env: Mapping[str, str] | None = None) -> int:
+    """KC_AUDIT_MAX_BYTES(기본 8MiB). 숫자가 아니거나 0 이하면 기본값."""
+    raw = (env if env is not None else os.environ).get("KC_AUDIT_MAX_BYTES", "")
+    try:
+        n = int(raw)
+    except ValueError:
+        return AUDIT_MAX_BYTES
+    return n if n > 0 else AUDIT_MAX_BYTES
+
+
 class _TeeSink:
-    def __init__(self, inner: JsonlSink) -> None:
+    def __init__(self, inner: JsonlSink, *, path: Path | None = None,
+                 max_bytes: int | None = None) -> None:
         self._inner = inner
+        # path·max_bytes 가 둘 다 있을 때만(공개 모드) 회전한다: 현재 파일 -> <stem>.1.jsonl (최대 2개, D27 ⑦)
+        self._path = path
+        self._max_bytes = max_bytes
         # 상한 있는 deque + 누적 개수. mark/since 는 누적 개수 기준이라 오래된 것이 밀려나도 일관된다(W5).
         self.events: deque[AuditEvent] = deque(maxlen=MAX_EVENTS)
         self._total = 0
         self._lock = threading.Lock()
 
+    def _rotate_if_needed(self) -> None:
+        """호출자가 self._lock 을 잡고 있어야 한다. 실패해도 쓰기는 계속한다(감사 우선)."""
+        if self._path is None or self._max_bytes is None:
+            return
+        try:
+            if self._path.stat().st_size <= self._max_bytes:
+                return
+            os.replace(self._path, self._path.with_name(f"{self._path.stem}.1.jsonl"))
+        except OSError:
+            return
+
     def write(self, event: AuditEvent) -> None:
-        self._inner.write(event)
         with self._lock:
+            self._rotate_if_needed()
+            self._inner.write(event)
             self.events.append(event)
             self._total += 1
         req = _REQ_EVENTS.get()  # 이 요청(컨텍스트)이 시작한 수집 목록에만 쌓는다
@@ -233,7 +260,11 @@ class ChatService:
         self._dotenv = dotenv_path or default_dotenv_path(REPO_ROOT)
         self._client: LlmClient | None = None
         self._run_id = f"backend-chat-{uuid.uuid4().hex[:8]}"  # 파일 stem = run_id, 재시작 충돌 방지
-        self._sink = _TeeSink(JsonlSink(settings.audit_dir / f"{self._run_id}.jsonl"))
+        audit_path = settings.audit_dir / f"{self._run_id}.jsonl"
+        self._sink = _TeeSink(
+            JsonlSink(audit_path),
+            path=audit_path if settings.public_mode else None,  # 로컬 모드는 회전 없음
+            max_bytes=_audit_max_bytes() if settings.public_mode else None)
         self._audit = AuditLog(self._sink, run_id=self._run_id, actor="backend:chat")
         # 일정 흐름 인스턴스 전체 동시 상한(D24 ②). 세션당 1건은 Session.busy 가 맡는다.
         self._story_slots = threading.BoundedSemaphore(settings.story_concurrency)

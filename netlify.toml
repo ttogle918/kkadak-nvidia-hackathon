@@ -1,0 +1,6 @@
+# Netlify 정적 배포 (D27 ②: 직접 CORS). 프록시 리라이트·_redirects·_headers 는 쓰지 않는다.
+# 환경변수(Builds 스코프): KC_KAKAO_JS_KEY, KC_BACKEND_ORIGIN. 운영 컨텍스트에서만 API 가 허용된다
+# (미리보기 도메인은 서버 CORS 에서 거부 — 의도).
+[build]
+  publish = "dist"
+  command = "bash scripts/netlify_build.sh"

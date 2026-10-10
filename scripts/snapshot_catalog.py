@@ -68,6 +68,7 @@ def _now_iso(now: datetime) -> str:
 
 def make_snapshot(
     src: Path, dst: Path, *, now: datetime, command: str, force: bool = False, since: str | None = None,
+    keep_ended: bool = False,
 ) -> dict:
     src_store = CatalogStore(src)
     if not (src / "observations.json").exists():
@@ -101,12 +102,13 @@ def make_snapshot(
 
     n_before = len(entries)
     ended = [e for e in entries if e.schedule.end_date and e.schedule.end_date < since]
-    entries = [e for e in entries if _keep(e)]
-    stale = n_before - len(entries) - len(ended)  # D23 로 빠진 수
+    if not keep_ended:  # 배포 이미지(D27)는 끝난 행사도 남겨 로컬과 같은 excluded 를 만든다
+        entries = [e for e in entries if _keep(e)]
+    stale = 0 if keep_ended else n_before - len(entries) - len(ended)  # D23 로 빠진 수
     keep_ids = {i for e in entries for i in e.external_ids}
     obs = {k: v for k, v in obs.items()
            if keep_ids.intersection(v["observation"].external_ids) or k in keep_ids}
-    if not entries:
+    if not entries and not keep_ended:
         raise SnapshotError(f"{since} 이후에 끝나는 행사가 없다")
     runs = {k: _scrub(v) for k, v in src_store.load_runs().items() if k == SOURCE_ID}
     for r in runs.values():  # 오류 문구는 URL 을 품을 수 있어 예외 이름만 남긴다
@@ -124,7 +126,7 @@ def make_snapshot(
         p.write_text(json.dumps(data, ensure_ascii=False, indent=1), encoding="utf-8")
     dates = sorted({v["observation"].evidence.collected_at for v in obs.values()})
     (tmp / "SNAPSHOT.md").write_text(_snapshot_md(len(obs), len(entries), dates, now, command, since,
-                                                  total_entries - len(entries), stale),
+                                                  total_entries - len(entries), stale, keep_ended),
                                      encoding="utf-8")
     try:
         _assert_no_secret(tmp)
@@ -151,7 +153,12 @@ def _assert_no_secret(folder: Path) -> None:
 
 def _snapshot_md(
     n_obs: int, n_entries: int, dates: list[str], now: datetime, command: str, since: str, dropped: int, stale: int = 0,
+    keep_ended: bool = False,
 ) -> str:
+    scope = (
+        "끝난 행사도 남김(--keep-ended) — 검색 단계에서 제외된다" if keep_ended else
+        f"스냅샷 날짜에 끝나지 않은 행사만 (종료일 {since} 이후이거나, 종료일이 없으면 시작한 지 1년 이내 — D23). "
+        f"걸러낸 항목 {dropped}건 (그중 종료일 없이 1년 넘은 항목 {stale}건)")
     span = dates[0] if len(dates) == 1 else f"{dates[0]} ~ {dates[-1]}"
     return (
         "# 행사 카탈로그 스냅샷\n\n"
@@ -159,8 +166,7 @@ def _snapshot_md(
         f"- 이용 조건: {LICENSE_LINE}\n"
         f"- 수집일: {span} (스냅샷 생성 {now.strftime('%Y-%m-%d')})\n"
         f"- 건수: 관찰값 {n_obs}건 · 행사 항목 {n_entries}건\n"
-        f"- 범위: 스냅샷 날짜에 끝나지 않은 행사만 (종료일 {since} 이후이거나, 종료일이 없으면 시작한 지 1년 이내 — D23). "
-        f"걸러낸 항목 {dropped}건 (그중 종료일 없이 1년 넘은 항목 {stale}건)\n"
+        f"- 범위: {scope}\n"
         "- 포함하지 않은 것: 검색(Tavily 등) 유래 자료, 제보, 원응답, 키 (D12 ⑦, D19)\n\n"
         "스냅샷은 수집 시점 자료이며 이후 바뀌었을 수 있다.\n\n"
         f"생성 명령:\n\n```\n{command}\n```\n\n"
@@ -187,6 +193,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--from", dest="src", required=True, type=Path)
     ap.add_argument("--to", dest="dst", required=True, type=Path)
     ap.add_argument("--since", help="이 날짜(YYYY-MM-DD) 이후에 끝나는 행사만. 기본은 오늘(KST)")
+    ap.add_argument("--keep-ended", action="store_true",
+                    help="끝난 행사도 남긴다(배포 이미지용 — 로컬과 같은 excluded 를 만든다)")
     ap.add_argument("--restore", action="store_true")
     ap.add_argument("--force", action="store_true", help="되돌리기 대상이 있으면 교체")
     a = ap.parse_args(argv)
@@ -198,8 +206,10 @@ def main(argv: list[str] | None = None) -> int:
             cmd = f"python scripts/snapshot_catalog.py --from {a.src} --to {a.dst}"
             if a.since:
                 cmd += f" --since {a.since}"
+            if a.keep_ended:
+                cmd += " --keep-ended"
             r = make_snapshot(a.src, a.dst, now=datetime.now().astimezone(), command=cmd, force=True,
-                              since=a.since)
+                              since=a.since, keep_ended=a.keep_ended)
             print(f"스냅샷: 관찰값 {r['observations']} · 항목 {r['entries']} -> {a.dst}")
     except SnapshotError as e:
         print(f"실패: {e}", file=sys.stderr)
