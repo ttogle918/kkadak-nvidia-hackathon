@@ -15,9 +15,12 @@ from fastapi import APIRouter, Depends, Header, Request
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel, ConfigDict, Field
 
-from backend.catalog_runner import CatalogRunnerError, run_catalog
+from backend.catalog_runner import CatalogBusy, CatalogRunnerError, run_catalog
+from backend.limits import client_ip
 
 router = APIRouter(prefix="/api")
+
+_PUBLIC_MSG = "공개 모드에서는 이 기능이 닫혀 있다"
 
 _STATUS = {"bad_request": 400, "forbidden": 403, "not_found": 404, "conflict": 409, "not_implemented": 501}
 
@@ -30,6 +33,10 @@ def _call(request: Request, op: str, args: dict, actor: str | None = None):
     s = request.app.state.settings
     try:
         out = run_catalog(s.catalog_dir, op, args, actor)
+    except CatalogBusy:
+        r = _err(429, "busy", "지금 처리가 몰려 있다. 잠시 뒤 다시 시도한다")
+        r.headers["Retry-After"] = "3"
+        return r
     except CatalogRunnerError:
         return _err(500, "internal_error", "처리 중 오류가 발생했다")
     if "error" in out:
@@ -166,21 +173,33 @@ def saved_changes(body: SavedBody, request: Request):
 
 @router.post("/reports", status_code=202)
 def submit_report(body: ReportBody, request: Request):
-    """제보는 검토 대기로 저장된다(202). 즉시 공개 데이터가 되지 않는다."""
+    """제보는 검토 대기로 저장된다(202). 즉시 공개 데이터가 되지 않는다. 공개 모드에서는 닫혀 있다(D24 ③)."""
+    if request.app.state.settings.public_mode:
+        raise Forbidden(_PUBLIC_MSG, code="disabled_in_public")
     return _call(request, "report_submit", _dump(body))
 
 
 # ---- 관리자 ---------------------------------------------------------------------------------
 class Forbidden(Exception):
-    pass
+    def __init__(self, message: str = "", *, code: str = "forbidden"):
+        super().__init__(message)
+        self.code = code
 
 
 def require_admin(request: Request, x_admin_token: Annotated[str | None, Header()] = None) -> str:
     s = request.app.state.settings
+    if s.public_mode:  # 공개 모드는 토큰 검사 전에 닫는다(D24 ③)
+        raise Forbidden(_PUBLIC_MSG, code="disabled_in_public")
     if not s.admin_token:
         raise Forbidden("관리자 토큰이 설정되지 않아 관리자 API 가 닫혀 있다")
+    guard = request.app.state.admin_guard
+    ip = client_ip(request, s.trusted_proxy_hops)
+    if guard.blocked(ip):
+        raise Forbidden("실패가 반복되어 잠시 차단되었다", code="admin_blocked")
     if not x_admin_token or not hmac.compare_digest(x_admin_token.encode(), s.admin_token.encode()):
+        guard.fail(ip)
         raise Forbidden("관리자 토큰이 올바르지 않다")
+    guard.ok(ip)
     return s.reviewer_id  # 신원은 서버가 정한다
 
 

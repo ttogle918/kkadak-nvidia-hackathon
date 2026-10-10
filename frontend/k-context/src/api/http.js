@@ -4,6 +4,7 @@
 
 import { validateCard, validateSource } from './schema.js';
 import { buildChatContext, validateChatBundle } from './bundle.js';
+import { SESSION_HEADER, TOKEN_RE, readSession, writeSession } from '../lib/api-base.js';
 
 export class ApiNotImplementedError extends Error {
   constructor(method, baseUrl) {
@@ -46,6 +47,19 @@ const ERROR_MESSAGES = {
   not_decidable: '결정할 수 없는 항목입니다',
   self_approval: '만든 주체는 자신의 요청을 결정할 수 없습니다',
   validation_error: '요청이 올바르지 않습니다',
+  rate_limited: '요청이 너무 많아요. 잠시 후 다시 시도해 주세요',
+  daily_limit: '오늘 사용할 수 있는 양을 모두 썼어요. 내일 다시 시도해 주세요',
+  disabled_in_public: '공개 데모에서는 이 기능을 쓸 수 없어요',
+  no_session: '세션이 만료됐어요. 다시 시도해 주세요',
+};
+
+/** 오류 code -> i18n 키(화면이 t() 로 고정 문구를 보일 때). 서버 message 는 쓰지 않는다. */
+export const ERROR_I18N_KEYS = {
+  rate_limited: 'error.rate_limited',
+  busy: 'error.busy',
+  daily_limit: 'error.daily_limit',
+  disabled_in_public: 'error.disabled_in_public',
+  no_session: 'error.no_session',
 };
 
 const AUDIT_KINDS = ['ok', 'deny', 'pend', 'approved', 'rejected'];
@@ -64,15 +78,25 @@ export function sanitizeAuditEntry(e) {
   };
 }
 
-function apiError(code, status) {
-  const e = new Error(ERROR_MESSAGES[code] ?? `요청에 실패했습니다 (${status ?? '?'})`);
+function apiError(code, status, retryAfterS) {
+  let msg = ERROR_MESSAGES[code] ?? `요청에 실패했습니다 (${status ?? '?'})`;
+  if (code === 'rate_limited' && retryAfterS != null) msg = `요청이 너무 많아요. ${retryAfterS}초 뒤에 다시 시도해 주세요`;
+  const e = new Error(msg);
   e.code = code;
   if (status != null) e.status = status;
+  if (ERROR_I18N_KEYS[code]) e.i18nKey = ERROR_I18N_KEYS[code];
+  if (retryAfterS != null) e.retryAfterS = retryAfterS;
   return e;
 }
 
+/** Retry-After(초 정수)만 받는다. 1~3600 으로 자른다. 날짜 형식·이상한 값은 null. */
+export function parseRetryAfter(v) {
+  if (typeof v !== 'string' || !/^\d{1,6}$/.test(v.trim())) return null;
+  return Math.min(3600, Math.max(1, Number(v)));
+}
+
 /** JSON 요청. 실패는 항상 {code, message(고정 문구)} 를 가진 Error 로 바꾼다. */
-async function requestJson(baseUrl, path, { method = 'GET', body, timeoutMs = REQUEST_TIMEOUT_MS } = {}) {
+async function requestJson(baseUrl, path, { method = 'GET', body, timeoutMs = REQUEST_TIMEOUT_MS, session = null } = {}) {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), timeoutMs);
   let res;
@@ -80,7 +104,10 @@ async function requestJson(baseUrl, path, { method = 'GET', body, timeoutMs = RE
     res = await fetch(`${baseUrl}${path}`, {
       method,
       signal: ctrl.signal,
-      ...(body === undefined ? {} : { headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) }),
+      ...(body === undefined && !session ? {} : {
+        headers: { ...(body === undefined ? {} : { 'Content-Type': 'application/json' }), ...(session ? { [SESSION_HEADER]: session } : {}) },
+        ...(body === undefined ? {} : { body: JSON.stringify(body) }),
+      }),
     });
   } catch (e) {
     throw apiError(ctrl.signal.aborted ? 'timeout' : 'network');
@@ -95,7 +122,7 @@ async function requestJson(baseUrl, path, { method = 'GET', body, timeoutMs = RE
   }
   if (!res.ok) {
     const code = typeof data?.error?.code === 'string' ? data.error.code : 'http_error';
-    throw apiError(code, res.status);
+    throw apiError(code, res.status, code === 'rate_limited' ? parseRetryAfter(res.headers?.get?.('Retry-After')) : null);
   }
   if (data === undefined) throw apiError('bad_response', res.status);
   return data;
@@ -115,38 +142,58 @@ export function createHttpApi({ baseUrl = '/api' } = {}) {
   const nope = (method) => async () => {
     throw new ApiNotImplementedError(method, baseUrl);
   };
+  // 세션: 메모리 -> sessionStorage('kc.session') -> 401 no_session 을 받으면 서버 발급(POST /session) 후 한 번 재시도. 저장소·발급 실패는 헤더 없이 계속한다.
+  let token = readSession();
+  const issue = async () => {
+    try {
+      const d = await requestJson(baseUrl, '/session', { method: 'POST', body: {}, timeoutMs: 10_000 });
+      token = typeof d?.session === 'string' && TOKEN_RE.test(d.session) ? d.session : null;
+    } catch {
+      token = null;
+    }
+    writeSession(token);
+    return token;
+  };
+  const get = (path, opts) => requestJson(baseUrl, path, { ...opts, session: token });
   // 인자 개수(length)를 mock 과 맞추기 위해 이름 있는 함수로 둔다.
   return {
     mode: 'http',
     baseUrl,
     getItinerary: nope('getItinerary'),
     getRoutes: nope('getRoutes'),
+    /** GET /meta -> {schema:'kc-meta/v1', public, decisions:'open'|'closed', reports:'open'|'closed'}. 형식이 틀리면 bad_response. */
+    async getMeta() {
+      const d = await get('/meta');
+      const ok = (v) => v === 'open' || v === 'closed';
+      if (!d || d.schema !== 'kc-meta/v1' || typeof d.public !== 'boolean' || !ok(d.decisions) || !ok(d.reports)) throw apiError('bad_response');
+      return { public: d.public, decisions: d.decisions, reports: d.reports };
+    },
     /** GET /cards -> Card[] (backend/routers/screen.py). 형식이 어긋나면 bad_response. */
     async getCards() {
-      const data = await requestJson(baseUrl, '/cards');
+      const data = await get('/cards');
       if (!Array.isArray(data) || data.some((c) => validateCard(c).length > 0)) throw apiError('bad_response');
       return data;
     },
     async getCard(id) {
-      const data = await requestJson(baseUrl, `/cards/${encodeURIComponent(String(id))}`);
+      const data = await get(`/cards/${encodeURIComponent(String(id))}`);
       if (validateCard(data).length > 0) throw apiError('bad_response');
       return data;
     },
     /** GET /sources -> Source[] */
     async getSources() {
-      const data = await requestJson(baseUrl, '/sources');
+      const data = await get('/sources');
       if (!Array.isArray(data) || data.some((s) => validateSource(s).length > 0)) throw apiError('bad_response');
       return data;
     },
     /** GET /cards/{id}/rationale -> {card_id, chips[], items{}} */
     async getRationale(cardId) {
-      const data = await requestJson(baseUrl, `/cards/${encodeURIComponent(String(cardId))}/rationale`);
+      const data = await get(`/cards/${encodeURIComponent(String(cardId))}/rationale`);
       if (!data || typeof data !== 'object' || !Array.isArray(data.chips) || typeof data.items !== 'object' || data.items === null) throw apiError('bad_response');
       return data;
     },
     /** GET /messages -> Message[] (backend/routers/messages.py) */
     async getMessages() {
-      const data = await requestJson(baseUrl, '/messages');
+      const data = await get('/messages');
       if (!Array.isArray(data)) throw apiError('bad_response');
       return data;
     },
@@ -157,7 +204,18 @@ export function createHttpApi({ baseUrl = '/api' } = {}) {
      */
     async sendMessage(text, context) {
       const body = context == null ? { text } : { text, context: buildChatContext(context) };
-      const data = await requestJson(baseUrl, '/messages', { method: 'POST', body });
+      // 헤더 없이 먼저 보낸다(로컬 모드는 공용 세션 local 로 처리). 공개 모드의 401 no_session 이 오면 그때 발급한다.
+      let data;
+      try {
+        data = await get('/messages', { method: 'POST', body });
+      } catch (e) {
+        if (e.code !== 'no_session') throw e;
+        // 만료: 토큰을 버리고 새로 받아 한 번만 다시 보낸다
+        writeSession(null);
+        token = null;
+        await issue();
+        data = await get('/messages', { method: 'POST', body });
+      }
       if (!data || typeof data.reply !== 'object' || data.reply === null) throw apiError('bad_response');
       let bundle = null;
       if (data.bundle != null) {
@@ -169,7 +227,7 @@ export function createHttpApi({ baseUrl = '/api' } = {}) {
     },
     /** GET /audit -> AuditEntry[] (backend/routers/review.py). 모양이 틀린 항목은 버린다. */
     async getAuditLog() {
-      const data = await requestJson(baseUrl, '/audit');
+      const data = await get('/audit');
       if (!Array.isArray(data)) throw apiError('bad_response');
       return data.map(sanitizeAuditEntry).filter(Boolean);
     },
@@ -179,10 +237,17 @@ export function createHttpApi({ baseUrl = '/api' } = {}) {
      */
     async decideAudit(id, decision) {
       if (decision !== 'approve' && decision !== 'reject') throw apiError('validation_error');
-      const data = await requestJson(baseUrl, `/audit/${encodeURIComponent(String(id))}/decision`, { method: 'POST', body: { decision } });
+      const data = await get(`/audit/${encodeURIComponent(String(id))}/decision`, { method: 'POST', body: { decision } });
       const entry = sanitizeAuditEntry(data);
       if (!entry) throw apiError('bad_response');
       return entry;
     },
   };
+}
+
+/** 제한·상한 오류를 i18n 고정 문구로 바꾼다(t 는 createT 결과). 그 밖의 오류는 e.message(고정 문구) 그대로. 서버 message 는 쓰지 않는다. */
+export function errorText(e, t) {
+  if (e?.code === 'rate_limited' && e.retryAfterS != null) return t('error.rate_limited_wait', { s: e.retryAfterS });
+  if (e?.i18nKey) return t(e.i18nKey);
+  return String(e?.message ?? e);
 }

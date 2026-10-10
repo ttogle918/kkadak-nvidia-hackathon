@@ -1,6 +1,7 @@
 // 행사 API 클라이언트. http(실서버) 와 mock(데모 — 응답마다 demo:true) 두 가지, 같은 메서드 이름.
 // 관리자 토큰은 관리자 메서드의 헤더로만 보내고 로그·오류 메시지에 싣지 않는다.
 import { DEMO_COVERAGE, DEMO_EVENTS } from './demo-data.js';
+import { SESSION_HEADER, configuredBase, readSession } from '../lib/api-base.js';
 
 export class EventsApiError extends Error {
   constructor(code, status, message) {
@@ -11,6 +12,8 @@ export class EventsApiError extends Error {
   }
 }
 
+const FIXED_CODES = new Set(['rate_limited', 'busy', 'daily_limit', 'disabled_in_public', 'no_session']);
+const parseRetryAfter = (v) => (typeof v === 'string' && /^\d{1,6}$/.test(v.trim()) ? Math.min(3600, Math.max(1, Number(v))) : null);
 const LOOPBACK = new Set(['localhost', '127.0.0.1', '[::1]']);
 const BACKEND_PORT = '8000'; // 개발용 backend 의 기본 포트. 다른 포트의 로컬 서버로는 보내지 않는다
 
@@ -34,7 +37,10 @@ export function safeBase(value, loc = globalThis.location) {
 }
 
 /** 정적 서버(8766)에서 열었으면 같은 호스트의 8000 포트 backend 를 기본으로 본다. */
-export function defaultBase(loc = globalThis.location) {
+export function defaultBase(loc = globalThis.location, win = globalThis) {
+  // 배포: config.local.js 의 KC_API_BASE(같은 출처 경로 또는 https:)가 있으면 그것이 먼저다. ?base= 는 계속 safeBase 로만 받는다.
+  const configured = configuredBase(win);
+  if (configured) return configured;
   // 정적 서버(8766)를 로컬에서 열었을 때만 :8000 을 쓴다. 다른 호스트(LAN·원격)는 같은 출처의 /api(프록시)다 — CSP 가 그 밖의 연결을 막는다.
   if (loc && loc.port === '8766' && LOOPBACK.has(loc.hostname)) return `${loc.protocol}//${loc.hostname}:8000/api`;
   return '/api';
@@ -45,6 +51,8 @@ export function createHttpEventsApi({ baseUrl = defaultBase(), fetchImpl = globa
     const headers = {};
     if (body !== undefined) headers['Content-Type'] = 'application/json';
     if (token) headers['X-Admin-Token'] = token;
+    const session = readSession(); // 채팅 화면이 받아 둔 세션이 있으면 같이 보낸다(없으면 생략 — 여기서 발급하지 않는다)
+    if (session) headers[SESSION_HEADER] = session;
     let res;
     try {
       res = await fetchImpl(`${baseUrl}${path}`, { method, headers, body: body === undefined ? undefined : JSON.stringify(body) });
@@ -57,7 +65,11 @@ export function createHttpEventsApi({ baseUrl = defaultBase(), fetchImpl = globa
     } catch { /* JSON 이 아니면 아래에서 오류로 */ }
     if (!res.ok) {
       const e = data?.error;
-      throw new EventsApiError(e?.code ?? 'http_error', res.status, e?.message ?? `HTTP ${res.status}`);
+      const code = e?.code ?? 'http_error';
+      // 제한·상한 오류는 서버 message 를 쓰지 않는다(화면은 code 로 고정 문구를 고른다)
+      const err = new EventsApiError(code, res.status, FIXED_CODES.has(code) ? code : e?.message ?? `HTTP ${res.status}`);
+      if (code === 'rate_limited') err.retryAfterS = parseRetryAfter(res.headers?.get?.('Retry-After'));
+      throw err;
     }
     if (data == null) throw new EventsApiError('bad_response', res.status, 'bad_response');
     return data;

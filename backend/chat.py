@@ -7,6 +7,7 @@ audit 에는 모델명·메시지 수·백엔드만 남고 사용자 본문·키
 from __future__ import annotations
 
 import asyncio
+import contextvars
 import dataclasses
 import os
 import re
@@ -29,8 +30,10 @@ from backend.chat_story import (
     reply_text,
     search_budget_s,
 )
+from backend.limits import DailyBudget
 from backend.schedule_gate import looks_like_schedule
 from backend.security_log import entries_from_events
+from backend.session import LOCAL_SESSION_ID, Session
 from backend.settings import REPO_ROOT, Settings
 from backend.story_runner import LLM_BUDGET_S, StoryRunnerError, run_story
 from core.audit import AuditEvent, AuditLog, JsonlSink
@@ -49,7 +52,6 @@ from core.llm import (
 FEATURE = "chat"
 MAX_TEXT_CHARS = 2000
 CONTEXT_TURNS = 10  # LLM 에 보내는 최근 대화 상한(사용자·답 한 쌍 = 1턴, 즉 최대 20개 메시지)
-MAX_STORED = 200  # 프로세스 메모리에 보관하는 메시지 상한
 CONFIG_PATH = REPO_ROOT / "deploy" / "llm.chat.yaml"
 
 # 챗봇 최소판은 근거(색인) 없이 모델 기억만으로 답한다. 그래서 환각 억제는 프롬프트로 하고(B2 보수안),
@@ -134,8 +136,21 @@ class ChatBusy(Exception):
     pass
 
 
+class DailyLimit(Exception):
+    """일일 소프트 상한(D24 ④)을 넘었다. LLM 을 부르지 않는다."""
+
+
 class ChatUnavailable(Exception):
     """키 없음·설정 오류. 메시지에 키 값은 없다."""
+
+
+STORY_UNITS = 2  # 일정 흐름이 예약하는 일일 상한 단위(LLM 최대 2회). 안 쓴 만큼 돌려준다
+CHAT_UNITS = 1  # 일반 챗봇 1회
+
+# 요청 단위 상태. ContextVar 라 동시 요청끼리 섞이지 않고, asyncio.to_thread 로 넘어간 스레드에도 복사된다.
+_REQ_EVENTS: contextvars.ContextVar[list[AuditEvent] | None] = contextvars.ContextVar("kc_req_events", default=None)
+_CUR_SESSION: contextvars.ContextVar[Session | None] = contextvars.ContextVar("kc_cur_session", default=None)
+_SEARCH_TIMEOUT: contextvars.ContextVar[float | None] = contextvars.ContextVar("kc_search_timeout", default=None)
 
 
 @dataclass
@@ -158,6 +173,9 @@ class _TeeSink:
         with self._lock:
             self.events.append(event)
             self._total += 1
+        req = _REQ_EVENTS.get()  # 이 요청(컨텍스트)이 시작한 수집 목록에만 쌓는다
+        if req is not None:
+            req.append(event)
 
     def mark(self) -> int:
         with self._lock:
@@ -167,6 +185,18 @@ class _TeeSink:
         with self._lock:
             start = max(mark - (self._total - len(self.events)), 0)
             return list(self.events)[start:]
+
+
+def _attempts(bundle: dict[str, Any]) -> int:
+    """묶음이 말하는 LLM 시도 횟수. 캐시 적중이면 0, 알 수 없으면 최대로 센다."""
+    sched = bundle.get("schedule")
+    if isinstance(sched, dict):
+        a = sched.get("attempts")
+        if isinstance(a, int) and not isinstance(a, bool) and a >= 0:
+            return a
+        if sched.get("source") == "cache":
+            return 0
+    return STORY_UNITS
 
 
 def _kst_today() -> date:
@@ -192,34 +222,53 @@ class ChatService:
         self._env = env  # None 이면 호출 시점에 셸 env → .env 허용 목록 순으로 해석
         self._config_path = config_path or CONFIG_PATH
         self._t_llm: float | None = None
-        self._search_timeout_s: float | None = None  # 행사 검색 한도(W5) — _story 가 호출 직전에 정한다
         self._dotenv = dotenv_path or default_dotenv_path(REPO_ROOT)
         self._client: LlmClient | None = None
         self._run_id = f"backend-chat-{uuid.uuid4().hex[:8]}"  # 파일 stem = run_id, 재시작 충돌 방지
         self._sink = _TeeSink(JsonlSink(settings.audit_dir / f"{self._run_id}.jsonl"))
         self._audit = AuditLog(self._sink, run_id=self._run_id, actor="backend:chat")
-        self._lock = threading.Lock()
-        self._seq = 0
-        self._story_lock = threading.Lock()  # 일정 흐름은 한 번에 1건(ChatBusy)
-        # (공개 메시지, LLM 맥락에 넣을지). 차단된 입력·답은 맥락에서 뺀다.
-        self._history: deque[tuple[dict[str, Any], bool]] = deque(maxlen=MAX_STORED)
+        # 일정 흐름 인스턴스 전체 동시 상한(D24 ②). 세션당 1건은 Session.busy 가 맡는다.
+        self._story_slots = threading.BoundedSemaphore(settings.story_concurrency)
+        # 세션을 넘기지 않은 호출(단위 테스트·로컬 직접 사용)은 공용 `local` 세션 하나를 쓴다.
+        self._local = Session(LOCAL_SESSION_ID, 0.0, 0.0)
+
+    # ---- 요청 단위 로그 ----
+    @staticmethod
+    def _mark() -> int:
+        req = _REQ_EVENTS.get()
+        return len(req) if req is not None else 0
+
+    def _since(self, mark: int) -> list[dict[str, Any]]:
+        req = _REQ_EVENTS.get() or []
+        return entries_from_events(req[mark:], run_id=self._run_id)
 
     # ---- 기록 ----
-    def messages(self) -> list[dict[str, Any]]:
-        with self._lock:
-            return [dict(m) for m, _ in self._history]
+    def _session(self, session: Session | None = None) -> Session:
+        return session or _CUR_SESSION.get() or self._local
+
+    def messages(self, session: Session | None = None) -> list[dict[str, Any]]:
+        sess = self._session(session)
+        with sess.lock:
+            return [dict(m) for m, _ in sess.history]
+
+    def _append(self, *pairs: tuple[dict[str, Any], bool]) -> None:
+        sess = self._session()
+        with sess.lock:
+            sess.history.extend(pairs)
 
     def _new(self, role: str, text: Any, blocked: bool = False) -> dict[str, Any]:
-        with self._lock:
-            self._seq += 1
-            m: dict[str, Any] = {"id": f"msg_{self._seq:03d}", "role": role, "text": text}
+        sess = self._session()
+        with sess.lock:
+            sess.seq += 1
+            m: dict[str, Any] = {"id": f"msg_{sess.seq:03d}", "role": role, "text": text}
         if blocked:
             m["blocked"] = True
         return m
 
     def _context(self) -> list[dict[str, str]]:
-        with self._lock:
-            ctx = [m for m, ok in self._history if ok]
+        sess = self._session()
+        with sess.lock:
+            ctx = [m for m, ok in sess.history if ok]
         ctx = ctx[-CONTEXT_TURNS * 2 :]
         return [
             {
@@ -251,15 +300,13 @@ class ChatService:
 
     # ---- 입력 처리 ----
     def _block(self, text: str, exc: Exception) -> ChatResult:
-        mark = self._sink.mark()
+        mark = self._mark()
         cid = self._audit.call("kc_chat_guard", {"chars": len(text)})
         self._audit.error(cid, exc)
-        logs = entries_from_events(self._sink.since(mark), run_id=self._run_id)
+        logs = self._since(mark)
         user = self._new("user", text)
         reply = self._new("agent", BLOCKED_REPLY, blocked=True)
-        with self._lock:
-            self._history.append((user, False))
-            self._history.append((reply, False))
+        self._append((user, False), (reply, False))
         return ChatResult(reply, logs)
 
     # ---- 일정 흐름 ----
@@ -269,7 +316,7 @@ class ChatService:
 
         body = SearchBody.model_validate(args)
         return run_catalog(self._settings.catalog_dir, "search", body.model_dump(by_alias=True, exclude_none=False),
-                           timeout_s=self._search_timeout_s)
+                           timeout_s=_SEARCH_TIMEOUT.get())  # 요청 단위 한도(W5)
 
     def _llm_timeout_s(self) -> float:
         """T_llm — chat 기능 provider 의 timeout_s(설정). 한 번만 읽어 저장한다. 못 읽으면 기본 예산 값."""
@@ -285,26 +332,31 @@ class ChatService:
         """고정 문구 응답. 사용자 문장과 답 모두 LLM 맥락에 넣지 않는다."""
         user = self._new("user", text)
         reply = self._new("agent", dict(reply_text_))
-        with self._lock:
-            self._history.append((user, False))
-            self._history.append((reply, False))
-        return ChatResult(reply, entries_from_events(self._sink.since(mark), run_id=self._run_id))
+        self._append((user, False), (reply, False))
+        return ChatResult(reply, self._since(mark))
 
     def _story_fallback(self, kind: str) -> None:
         """일정 흐름을 못 썼다 — 사유 종류만 audit 에 남기고(본문·경로 없음) 일반 챗봇으로 간다."""
         cid = self._audit.call("kc_chat_story", {"stage": "fallback"})
         self._audit.error(cid, StoryRunnerError(kind))
 
-    async def _story(self, text: str, context: dict[str, Any] | None) -> ChatResult | None:
-        """None 이면 일반 챗봇으로 폴백(색인 없음·일정 아님+예산 있음). 일정 실패는 고정 문구 ChatResult."""
-        if not self._story_lock.acquire(blocking=False):
+    async def _story(self, text: str, context: dict[str, Any] | None, budget: DailyBudget | None = None
+                     ) -> ChatResult | None:
+        """None 이면 일반 챗봇으로 폴백(색인 없음·일정 아님+예산 있음). 일정 실패는 고정 문구 ChatResult.
+
+        일일 상한은 STORY_UNITS 를 먼저 예약하고, 묶음의 schedule.attempts 로 안 쓴 만큼 돌려준다.
+        묶음을 못 받은 실패(시간 초과·비정상 종료)는 LLM 을 몇 번 썼는지 알 수 없어 전부 쓴 것으로 센다.
+        """
+        if not self._story_slots.acquire(blocking=False):  # 인스턴스 전체 동시 상한
             raise ChatBusy
         try:
             if not self._settings.index_db.is_file():
                 self._story_fallback("index_missing")
                 return None
+            if budget is not None and not budget.reserve(STORY_UNITS):
+                raise DailyLimit
             trip = context["trip"] if context else None
-            mark = self._sink.mark()
+            mark = self._mark()
             cid = self._audit.call("kc_chat_story", {"chars": len(text), "trip": trip is not None})
             t0 = self._clock()
             try:
@@ -317,6 +369,8 @@ class ChatService:
             except BadBundle:
                 self._audit.error(cid, StoryRunnerError("bad_shape"))
                 return self._fixed(text, SCHEDULE_UNAVAILABLE_REPLY, mark)
+            if budget is not None:
+                budget.refund(STORY_UNITS - min(_attempts(bundle), STORY_UNITS))
             if bundle["status"] == "no_anchors":
                 codes = {p.get("code") for p in bundle["problems"]}
                 if codes & _LLM_FAILED_CODES:  # #4 — 일반 챗봇으로 덮지 않는다(D15 ⑤)
@@ -336,11 +390,14 @@ class ChatService:
             if isinstance(bt, dict) and isinstance(bt.get("from"), str) and isinstance(bt.get("to"), str):
                 trip = (bt["from"], bt["to"])
             # W5 — 행사 검색 한도 = 프론트 상한 - 여유 - 파이프라인 경과(최대 60초). 3초 미만이면 건너뛴다.
-            budget = search_budget_s(self._clock() - t0, front_limit_s=FRONT_LIMIT_S,
+            budget_s = search_budget_s(self._clock() - t0, front_limit_s=FRONT_LIMIT_S,
                                      margin_s=FALLBACK_MARGIN_S)
-            self._search_timeout_s = budget  # _story_lock 안에서만 쓴다(한 번에 한 흐름)
-            await asyncio.to_thread(attach_events, bundle, trip, self._search_events,
-                                    skip=budget is None, today=self._today())
+            tok = _SEARCH_TIMEOUT.set(budget_s)  # 요청 단위 — to_thread 로 복사돼 넘어간다
+            try:
+                await asyncio.to_thread(attach_events, bundle, trip, self._search_events,
+                                        skip=budget_s is None, today=self._today())
+            finally:
+                _SEARCH_TIMEOUT.reset(tok)
             n, m, k = counts(bundle)
             self._audit.result(cid, {"anchors": n, "mentions": m, "events": k, "problems": len(bundle["problems"])})
             user = self._new("user", text)
@@ -349,15 +406,30 @@ class ChatService:
             if isinstance(sched, dict) and sched.get("source") == "cache":  # D15 ④ — 서버 고정 문구
                 text_out = {k: f"{v} {CACHE_REUSED_NOTE[k]}." for k, v in text_out.items()}
             reply = self._new("agent", text_out)
-            with self._lock:
-                self._history.append((user, False))  # 고정 문구는 LLM 맥락에 넣지 않는다
-                self._history.append((reply, False))
-            logs = entries_from_events(self._sink.since(mark), run_id=self._run_id)
-            return ChatResult(reply, logs, bundle)
+            self._append((user, False), (reply, False))  # 고정 문구는 LLM 맥락에 넣지 않는다
+            return ChatResult(reply, self._since(mark), bundle)
         finally:
-            self._story_lock.release()
+            self._story_slots.release()
 
-    async def send(self, text: str, context: dict[str, Any] | None = None) -> ChatResult:
+    async def send(self, text: str, context: dict[str, Any] | None = None, *, session: Session | None = None,
+                   budget: DailyBudget | None = None) -> ChatResult:
+        """session 이 없으면 공용 `local` 세션. 같은 세션의 겹친 요청은 ChatBusy(세션당 1건)."""
+        sess = session or self._local
+        if not sess.busy.acquire(blocking=False):
+            raise ChatBusy
+        tok_s = _CUR_SESSION.set(sess)
+        tok_e = _REQ_EVENTS.set([])
+        try:
+            res = await self._send(text, context, budget)
+            with sess.lock:
+                sess.logs.extend(res.logs)  # 공개 모드 GET /api/audit 이 세션 logs 만 보여 준다(T412)
+            return res
+        finally:
+            _REQ_EVENTS.reset(tok_e)
+            _CUR_SESSION.reset(tok_s)
+            sess.busy.release()
+
+    async def _send(self, text: str, context: dict[str, Any] | None, budget: DailyBudget | None) -> ChatResult:
         res = scan(text)
         if res.verdict is Verdict.INJECTION:
             ids = ",".join(sorted({f.rule_id for f in res.findings}))
@@ -368,7 +440,7 @@ class ChatService:
                 text, PathDenied(f"파일 읽기 요청 거부 · {path} · 허용된 폴더 밖 (앱 차단)")
             )
         if looks_like_schedule(text):
-            story = await self._story(text, context)
+            story = await self._story(text, context, budget)
             if story is not None:
                 return story
         client = self._get_client()
@@ -379,14 +451,14 @@ class ChatService:
             *self._context(),
             {"role": "user", "content": text},
         ]
-        mark = self._sink.mark()
+        if budget is not None and not budget.reserve(CHAT_UNITS):
+            raise DailyLimit  # LLM 을 부르지 않는다
+        mark = self._mark()
         answer = await client.complete(FEATURE, messages)  # LlmError·ValueError 는 호출자가 502 로
         if not answer.strip():
             raise ValueError("빈 응답")
         user = self._new("user", text)
         # 화면에는 고정 문구를 붙이지만, 다음 턴 LLM 맥락에는 모델이 쓴 원문만 넣는다.
         reply = self._new("agent", f"{answer.rstrip()}{_NOTICE_SUFFIX}")
-        with self._lock:
-            self._history.append((user, True))
-            self._history.append((reply, True))
-        return ChatResult(reply, entries_from_events(self._sink.since(mark), run_id=self._run_id))
+        self._append((user, True), (reply, True))
+        return ChatResult(reply, self._since(mark))

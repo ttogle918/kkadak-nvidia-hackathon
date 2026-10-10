@@ -300,4 +300,11 @@ export default {
   'bundle.problem.route_off': '이동 시간을 계산하지 못해 이동 시간이 없어요',
   'bundle.problem.mention': '일부 실록 기록을 불러오지 못했어요',
   'bundle.problem.generic': '확인이 필요한 항목이 있어요',
+  'error.rate_limited': '요청이 너무 많아요. 잠시 후 다시 시도해 주세요',
+  'error.rate_limited_wait': '요청이 너무 많아요. {s}초 뒤에 다시 시도해 주세요',
+  'error.busy': '지금 다른 요청을 처리하고 있어요. 잠시 후 다시 시도해 주세요',
+  'error.daily_limit': '오늘 사용할 수 있는 양을 모두 썼어요. 내일 다시 시도해 주세요',
+  'error.disabled_in_public': '공개 데모에서는 이 기능을 쓸 수 없어요',
+  'error.no_session': '세션이 만료됐어요. 다시 시도해 주세요',
+  'log.decision_closed': '공개 데모에서는 승인과 거절을 할 수 없어요',
 };

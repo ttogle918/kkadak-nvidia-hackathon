@@ -13,6 +13,7 @@
 //   decideAudit(id, decision)     -> AuditEntry             (decision: 'approve'|'reject', 사람 전용)
 import { createMockApi } from './mock.js';
 import { createHttpApi, probeBackend } from './http.js';
+import { configuredBase } from '../lib/api-base.js';
 
 /** 챗봇 backend 기본 주소: uvicorn 기본 포트. backend CORS 기본 허용 origin 은 http://localhost:8766. */
 export const DEFAULT_CHAT_BASE = 'http://localhost:8000/api';
@@ -63,6 +64,7 @@ export function createApi({ mode = 'mock', baseUrl, latencyMs } = {}) {
     const http = createHttpApi({ baseUrl });
     const api = { ...emptyMethods(), mode, baseUrl: http.baseUrl, dataKinds: { ...DATA_KINDS[mode] } };
     for (const n of HTTP_METHODS) api[n] = http[n];
+    api.getMeta = http.getMeta; // 화면 데이터가 아닌 서버 메타(공개 모드 승인 닫힘) — API_METHODS 계약 밖
     return api;
   }
   throw new Error(`알 수 없는 api mode: ${mode} (mock|http|chat)`);
@@ -76,8 +78,8 @@ export function createApi({ mode = 'mock', baseUrl, latencyMs } = {}) {
  */
 export async function resolveApi({ mode = 'auto', baseUrl, latencyMs, probeMs } = {}) {
   // 명시 chat·http 에 base 가 없으면 auto 와 같은 기본 주소(같은 출처 /api 는 정적 서버로 가서 501 이 난다)
-  if (mode !== 'auto') return createApi({ mode, baseUrl: mode === 'mock' ? baseUrl : baseUrl || DEFAULT_CHAT_BASE, latencyMs });
-  const base = baseUrl || DEFAULT_CHAT_BASE;
+  if (mode !== 'auto') return createApi({ mode, baseUrl: mode === 'mock' ? baseUrl : baseUrl || configuredBase() || DEFAULT_CHAT_BASE, latencyMs });
+  const base = baseUrl || configuredBase() || DEFAULT_CHAT_BASE;
   const up = await probeBackend(base, probeMs);
   return up ? createApi({ mode: 'chat', baseUrl: base, latencyMs }) : createApi({ mode: 'mock', latencyMs });
 }

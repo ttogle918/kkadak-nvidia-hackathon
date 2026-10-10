@@ -7,8 +7,9 @@ import logging
 from fastapi import APIRouter, Request
 from fastapi.responses import JSONResponse
 
-from backend.chat import MAX_TEXT_CHARS, ChatBusy, ChatService, ChatUnavailable
+from backend.chat import MAX_TEXT_CHARS, ChatBusy, ChatService, ChatUnavailable, DailyLimit
 from backend.chat_story import BadContext, validate_context
+from backend.session import session_from_request
 
 router = APIRouter(prefix="/api")
 _log = logging.getLogger(__name__)
@@ -16,6 +17,10 @@ _log = logging.getLogger(__name__)
 
 def _err(status: int, code: str, message: str) -> JSONResponse:
     return JSONResponse({"error": {"code": code, "message": message}}, status_code=status)
+
+
+def _no_session() -> JSONResponse:
+    return _err(401, "no_session", "세션이 없다. 새 세션을 만든 뒤 다시 시도한다")
 
 
 def _service(request: Request) -> ChatService:
@@ -26,8 +31,11 @@ def _service(request: Request) -> ChatService:
 
 
 @router.get("/messages")
-def get_messages(request: Request) -> list[dict]:
-    return _service(request).messages()
+def get_messages(request: Request):
+    sess = session_from_request(request)
+    if sess is None:  # 계약(sprint-4 §5.1): 세션 없음·만료 -> 200 []. 읽기는 오류가 아니다
+        return []
+    return _service(request).messages(sess)
 
 
 @router.post("/messages")
@@ -36,6 +44,9 @@ async def post_message(request: Request):
     # 'simple request' 라 다른 사이트의 폼이 로컬 backend 로 대화를 보낼 수 있기 때문이다(W6).
     # 상태 코드는 415 대신 422 bad_text 를 쓴다 — sprint-2 §5.1 계약에 본문 오류 코드가 bad_text 하나뿐이고
     # 프론트 ERROR_MESSAGES 도 이를 안다. 415 는 새 오류 코드가 되어 계약 변경이 필요하다.
+    sess = session_from_request(request)
+    if sess is None:
+        return _no_session()
     ctype = request.headers.get("content-type", "").split(";")[0].strip().lower()
     body = None
     if ctype == "application/json":
@@ -55,9 +66,13 @@ async def post_message(request: Request):
         except BadContext:
             return _err(422, "bad_text", "context 가 올바르지 않다")
     try:
-        result = await _service(request).send(text, context)
+        # 하루 상한은 공개 모드에서만(로컬 모드는 지금 동작 그대로 — §0.2).
+        budget = request.app.state.budget if request.app.state.settings.public_mode else None
+        result = await _service(request).send(text, context, session=sess, budget=budget)
     except ChatBusy:
         return _err(429, "busy", "다른 요청을 처리하는 중이다")
+    except DailyLimit:
+        return _err(503, "daily_limit", "오늘 쓸 수 있는 양을 모두 썼다. 내일 다시 시도한다")
     except ChatUnavailable:
         return _err(503, "llm_unavailable", "LLM 을 지금 쓸 수 없다")
     except Exception as exc:  # noqa: BLE001 - LlmCallError·transport 오류 모두 같은 응답

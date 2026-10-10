@@ -28,7 +28,7 @@ export function mount(root, ctx) {
         pending > 0 ? h('span', { class: 'securitylog__pending' }, t('securitylog.pending_count', { n: pending })) : null,
         h('span', { class: 'securitylog__live' }, h('i', { class: 'securitylog__dot', 'aria-hidden': 'true' }), t('securitylog.live'))),
       open ? h('ul', { class: 'securitylog__list', role: 'log', 'aria-live': 'polite', 'aria-label': t('securitylog.list_label') },
-        sortNewestFirst(s.logs).map((entry) => logRowNode({ entry, t, busy: busy.has(entry.id), error: errors.get(entry.id) ?? null }))) : null,
+        sortNewestFirst(s.logs).map((entry) => logRowNode({ entry, t, busy: busy.has(entry.id), error: errors.get(entry.id) ?? null, closed: !!s.decisionsClosed }))) : null,
       open ? h('p', { class: 'securitylog__note' }, t('securitylog.note')) : null));
     // 새 로그가 오면 — 날짜(at) 있는 서버 기록은 최신이 위(맨 위로), 없는 예시 기록은 기존대로 맨 아래로. 스크롤하는 건 슬롯(root)이다
     if (open && s.logs.length !== lastCount) root.scrollTop = s.logs.some((l) => l.at) ? 0 : root.scrollHeight;
@@ -61,6 +61,6 @@ export function mount(root, ctx) {
   });
 
   draw();
-  const off = store.select((s) => [s.logs, s.securityOpen, s.lang], draw, { equals: (a, b) => a.every((v, i) => v === b[i]) });
+  const off = store.select((s) => [s.logs, s.securityOpen, s.lang, s.decisionsClosed], draw, { equals: (a, b) => a.every((v, i) => v === b[i]) });
   return { destroy() { destroyed = true; off(); offClick(); root.replaceChildren(); } };
 }

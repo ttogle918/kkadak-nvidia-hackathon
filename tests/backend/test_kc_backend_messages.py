@@ -13,6 +13,7 @@ from backend.chat import (
     ChatService,
     _TeeSink,
 )
+from backend.session import Session
 from backend.settings import Settings
 from core.llm import TransportResponse
 
@@ -204,11 +205,13 @@ def test_busy_429_when_concurrency_full(make):
 
         c, _ = make(Slow())
         svc = c.app.state.chat
-        tasks = [asyncio.create_task(svc.send(f"q{i}")) for i in range(2)]  # 한도 2
+        # T411: 같은 세션의 겹친 요청은 세션 busy 로 먼저 막히므로, LLM 동시 한도를 보려면 세션을 나눈다
+        sess = [Session(f"s{i}", 0.0, 0.0) for i in range(3)]
+        tasks = [asyncio.create_task(svc.send(f"q{i}", session=sess[i])) for i in range(2)]  # 한도 2
         await entered.wait()
         await asyncio.sleep(0)
         with pytest.raises(Exception) as ei:
-            await svc.send("third")
+            await svc.send("third", session=sess[2])
         assert type(ei.value).__name__ == "ChatBusy"
         gate.set()
         await asyncio.gather(*tasks)

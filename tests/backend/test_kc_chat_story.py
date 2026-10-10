@@ -362,12 +362,12 @@ def test_bad_requests_422(make, body):
 
 def test_busy_when_story_running(make):
     c, _, _, _ = make()
-    svc = c.app.state.chat
-    assert svc._story_lock.acquire(blocking=False)
+    # T411: 전역 _story_lock 이 세션당 busy + 인스턴스 슬롯으로 바뀌었다 — 같은 세션이 처리 중인 상태를 만든다
+    assert c.app.state.sessions.local().busy.acquire(blocking=False)
     try:
         r = c.post("/api/messages", json={"text": SCHED})
     finally:
-        svc._story_lock.release()
+        c.app.state.sessions.local().busy.release()
     assert r.status_code == 429 and r.json()["error"]["code"] == "busy"
 
 

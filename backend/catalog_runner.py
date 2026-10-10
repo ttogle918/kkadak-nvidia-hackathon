@@ -10,6 +10,7 @@ import json
 import os
 import subprocess
 import sys
+import threading
 from pathlib import Path
 
 from core.llm.envfile import default_dotenv_path, load_allowed_keys
@@ -32,9 +33,35 @@ class CatalogRunnerError(RuntimeError):
     """자식 프로세스가 죽었거나 JSON 이 아닌 응답을 줬다. 메시지에 출력 본문을 싣지 않는다."""
 
 
+class CatalogBusy(CatalogRunnerError):
+    """자식 프로세스 동시 실행 상한(D24 ②)을 넘었다. 기다리지 않고 바로 낸다."""
+
+
+_slots = threading.BoundedSemaphore(2)  # 기본 2, 서버 시작 때 configure_concurrency 로 덮는다
+
+
+def configure_concurrency(n: int) -> None:
+    """동시 자식 수 상한을 바꾼다(1~8). 진행 중인 호출은 자기 슬롯을 그대로 반납한다."""
+    global _slots
+    if not isinstance(n, int) or not 1 <= n <= 8:
+        raise ValueError("카탈로그 동시성은 1~8 이어야 한다")
+    _slots = threading.BoundedSemaphore(n)
+
+
 def run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None = None,
                 *, timeout_s: float | None = None) -> dict:
-    """``timeout_s`` 가 있으면 기본 한도보다 짧게만 줄인다(채팅 시간 예산용)."""
+    """``timeout_s`` 가 있으면 기본 한도보다 짧게만 줄인다(채팅 시간 예산용). 동시 상한 초과면 ``CatalogBusy``."""
+    slots = _slots
+    if not slots.acquire(blocking=False):
+        raise CatalogBusy("카탈로그 처리가 몰려 있다")
+    try:
+        return _run_catalog(catalog_dir, op, args, actor, timeout_s=timeout_s)
+    finally:
+        slots.release()
+
+
+def _run_catalog(catalog_dir: Path | None, op: str, args: dict, actor: str | None,
+                 *, timeout_s: float | None) -> dict:
     env = {k: os.environ[k] for k in _BASE_ENV if k in os.environ}
     env["APP_PROCESS_ROLE"] = "agent"
     if catalog_dir is not None:

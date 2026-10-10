@@ -45,7 +45,13 @@ function cleanSaved(v) {
     && typeof it.title === 'string' && typeof it.seenAt === 'string').slice(0, 100));
 }
 
-const errKey = (e) => (e instanceof EventsApiError && e.code === 'network' ? 'error.network' : 'error.server');
+// 제한·상한 오류는 서버 message 가 아니라 코드로 고정 문구를 고른다(i18n 키 error.*).
+const CODE_KEYS = { rate_limited: 'error.rate_limited', busy: 'error.busy', daily_limit: 'error.daily_limit', disabled_in_public: 'error.disabled_in_public', no_session: 'error.no_session' };
+export const errKey = (e) => {
+  if (!(e instanceof EventsApiError)) return 'error.server';
+  if (e.code === 'network') return 'error.network';
+  return Object.hasOwn(CODE_KEYS, e.code) ? CODE_KEYS[e.code] : 'error.server';
+};
 
 export function createController({ store, api, storage = null, now = () => new Date() }) {
   const get = store.getState;

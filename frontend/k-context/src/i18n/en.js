@@ -288,4 +288,11 @@ export default {
   'bundle.problem.route_off': 'Travel times could not be calculated, so none are shown',
   'bundle.problem.mention': 'Some Sillok records could not be loaded',
   'bundle.problem.generic': 'Some items need checking',
+  'error.rate_limited': 'Too many requests. Please try again in a moment.',
+  'error.rate_limited_wait': 'Too many requests. Please try again in {s} seconds.',
+  'error.busy': 'Another request is being handled. Please try again in a moment.',
+  'error.daily_limit': 'Today\'s usage limit has been reached. Please try again tomorrow.',
+  'error.disabled_in_public': 'This feature is not available in the public demo.',
+  'error.no_session': 'Your session has expired. Please try again.',
+  'log.decision_closed': 'Approving and rejecting are disabled in the public demo.',
 };

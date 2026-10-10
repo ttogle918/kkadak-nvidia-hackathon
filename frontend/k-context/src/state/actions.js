@@ -52,6 +52,10 @@ export function createActions({ store, api }) {
       const real = isRealApi(api);
       // 실제 모드: 기본 선택은 없음(예시 카드 id 를 들고 있지 않는다). getCard·getRationale 는 부르지 않는다.
       if (real) setState({ selectedSeg: null, selectedNow: null, openEvidence: null });
+      if (real && typeof api.getMeta === 'function') {
+        // 공개 모드면 승인이 닫혀 있다(D24). decisionsClosed 는 초기 상태 키 표에 없고 여기서만 생긴다(없으면 열림). 메타를 못 읽어도 화면은 계속 — 서버가 403 disabled_in_public 으로 막는다.
+        try { setState({ decisionsClosed: (await api.getMeta()).decisions === 'closed' }); } catch { /* 무시 */ }
+      }
       try {
         const [itinerary, routes, cards, sources, messages, logs] = await Promise.all([
           api.getItinerary(), api.getRoutes(), api.getCards(), api.getSources(), api.getMessages(), api.getAuditLog(),
