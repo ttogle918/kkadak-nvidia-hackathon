@@ -673,3 +673,25 @@ pm·dev 는 `docs/DECISIONS.md` 를 고치지 않는다. **아래 §2.1 문안�
 - **명세와 다른 점(코디네이터 상한)**: T408 은 서울 API 3회·NVIDIA 0회 상한 때문에 `--full`(구별·끝나지 않은 행·좌표 행)과 LLM 경로 RSS 를 재지 않았다 → **T418 2차 측정 항목에 추가**.
 - 결론: Netlify 는 직접 CORS(프록시 26초). TourAPI 표본 전부 공공누리 3유형. 검색 병목은 `entry_from_dict`(D29 불필요, T433 은 변환 건수 축소). 서울 총 19,586행. 메모리 2Gi 권고(추정, 카탈로그 동시 2 기준).
 - G1 에 올릴 충돌 목록(reviewer): D26·D25 의 TourAPI 병합·좌표는 3유형과 충돌 / 실시간 원문 표시는 D7(런타임 외부 호출 금지)과 충돌 / XFF 미확인 시 IP 제한 폴백 / 리전·송출비 / 카탈로그 동시성 3 과 메모리 2Gi 불일치 / max-instances 잠깐 초과 / 비밀 버전 고정.
+
+### Stage 2 — 공개 안전장치 D24 (2026-10-10, 커밋 `413afea`)
+- 파일:
+  - T409 `backend/{session,limits}.py` · `backend/routers/meta.py` · `backend/{app,settings,catalog_runner}.py` · `.env.example` · `tests/backend/test_kc4_{session,limits,app_middleware}.py`
+  - T410 `frontend/k-context/src/lib/api-base.js` · `src/api/{http,index}.js` · `src/events/api.js` · `src/components/securitylog/approve-buttons.js` · `src/i18n/{ko,en}.js` · `{events,admin}.html` · `config.local.example.js` · `tests/session.kc4.test.js`
+  - T411 `backend/chat.py` · `backend/routers/messages.py` · `tests/backend/test_kc4_chat_sessions.py`
+  - T412 `backend/routers/{review,events}.py` · `tests/backend/test_kc4_public_mode.py`
+  - T413 `tests/test_kc4_public_e2e.py` · `scripts/kc_demo.sh`(`--public`) · `src/state/actions.js` · `src/components/securitylog/{index,log-row}.js` · `src/events/{controller,i18n}.js` · `tests/public.kc4.test.js`
+- 회귀: pytest 2,038 · node 388 · ruff · eval validate/check 0 · kc_demo `--check`·`--smoke`·`--public --smoke` 0 (착수 기준 pytest 1,943 · node 365)
+- 실호출: 0 (가짜 transport 만)
+- 기존 테스트 수정(기대값 불변): `test_kc_chat_story.py::test_busy_when_story_running`·`test_kc_backend_messages.py::test_busy_429_when_concurrency_full` — 공용 잠금이 세션 잠금으로 바뀌어 준비 코드만.
+- 계약 정렬: 공개 모드 세션 없는 `GET /api/messages`·`/api/audit` 은 §5.1 대로 200 `[]`(2b 구현이 401 이던 것을 T413 이 맞춤).
+- reviewer: PASS(블로커 0, 경고 9). 커밋 전 반영 — ① 실제 `createApi` 에 `getMeta` 가 빠져 승인 닫힘이 화면에 안 붙던 것(가짜 api 테스트가 못 잡음 → 실제 `createApi` 테스트 추가) ③ 로컬 모드에도 하루 상한이 걸리던 것 → 공개 모드에서만(§0.2) ⑨ `review.py` 독스트링.
+- **이월(경고, 블로커 아님)**:
+  - audit id 에 서버 공용 run_id·전역 seq — 다른 방문자 활동량 간접 노출. 공개 모드는 세션별 번호로 다시 쓸 것.
+  - 처리 안 된 500 은 ServerErrorMiddleware(CORS 바깥)라 CORS 헤더 없음 — 순수 ASGI 래퍼 또는 문서화(Stage 5).
+  - GZip `minimum_size` 무시(앞단 BaseHTTPMiddleware 스트리밍) — 작은 응답 수십 바이트, BREACH 경로 없음. 명세 문구 정정.
+  - 413 은 Content-Length 만 봄(chunked 우회) — Cloud Run 32MiB 가 바깥 한계.
+  - hops 미설정이면 세션 발급은 전역 600/시간만 → 한 사람이 소진 가능. **T426 XFF 실측 뒤 hops 설정을 배포 점검표 필수 항목으로.**
+  - `_TeeSink` 의 `mark/since`·전역 deque 미사용 잔존 — 테스트와 함께 정리.
+  - 공개 모드 검사보다 본문 검증이 먼저라 잘못된 본문은 403 대신 422. 자정을 걸친 환불은 새 날짜에서 빠짐(최대 2단위).
+  - 로컬 모드도 같은 `local` 세션 안에서는 동시 1건(D24 ② 취지와 일치 — 유지).
